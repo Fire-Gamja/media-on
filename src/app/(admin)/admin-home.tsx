@@ -170,6 +170,26 @@ export default function AdminHomeScreen() {
 
         <Pressable
           accessibilityRole="button"
+          onPress={() => router.push('/admin-assistant-inquiries')}
+          style={({ pressed }) => [
+            styles.managementCard,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.managementIcon}>
+            <Text style={styles.managementIconText}>문</Text>
+          </View>
+          <View style={styles.managementTextArea}>
+            <Text style={styles.managementTitle}>조교 문의 관리</Text>
+            <Text style={styles.managementDescription}>
+              학생 문의를 확인하고 답변을 전송합니다.
+            </Text>
+          </View>
+          <Text style={styles.managementChevron}>›</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
           onPress={() => router.push('/admin-room-requests')}
           style={({ pressed }) => [
             styles.managementCard,

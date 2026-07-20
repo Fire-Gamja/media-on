@@ -16,6 +16,11 @@ import { useNoticeSettings } from '../../context/notice-settings-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { signOutUser } from '../../services/auth';
 import {
+  type AssistantInquiry,
+  getAssistantStatusLabel,
+  getMyAssistantInquiries,
+} from '../../services/assistant-inquiries';
+import {
   type FacilityReport,
   getFacilityStatusLabel,
   getMyFacilityReports,
@@ -33,7 +38,7 @@ import {
 } from '../../services/room-reservations';
 
 type QuickAction = {
-  id: 'notice' | 'equipment' | 'room' | 'report';
+  id: 'notice' | 'equipment' | 'room' | 'report' | 'assistant';
   icon: string;
   title: string;
   description: string;
@@ -85,6 +90,13 @@ const QUICK_ACTIONS: QuickAction[] = [
     description: '고장·불편 접수',
     iconBackground: '#FCECEF',
   },
+  {
+    id: 'assistant',
+    icon: '💬',
+    title: '조교 문의',
+    description: '학사·실습 상담',
+    iconBackground: '#F1F2F6',
+  },
 ];
 
 const NOTICES: Notice[] = [
@@ -118,18 +130,6 @@ const NOTICES: Notice[] = [
   },
 ];
 
-const DEMO_REQUESTS: RequestItem[] = [
-  {
-    id: 'request-assistant',
-    type: '조교 문의',
-    title: '수강 관련 문의',
-    status: '답변 대기',
-    detail: '문의일 · 7월 20일',
-    statusBackground: '#F1F2F6',
-    statusColor: COLORS.subText,
-  },
-];
-
 export default function HomeScreen() {
   const { noticeCount } = useNoticeSettings();
   const [notices, setNotices] = useState<Notice[]>(NOTICES);
@@ -139,11 +139,14 @@ export default function HomeScreen() {
     useState<EquipmentRentalRequest | null>(null);
   const [latestRoomRequest, setLatestRoomRequest] =
     useState<RoomReservationRequest | null>(null);
+  const [latestAssistantInquiry, setLatestAssistantInquiry] =
+    useState<AssistantInquiry | null>(null);
   const visibleNotices = notices.slice(0, noticeCount);
   const requests = createHomeRequests(
     latestEquipmentRequest,
     latestFacilityReport,
     latestRoomRequest,
+    latestAssistantInquiry,
   );
 
   useEffect(() => {
@@ -177,6 +180,12 @@ export default function HomeScreen() {
       void getMyRoomReservationRequests(1)
         .then(([latestRequest]) => setLatestRoomRequest(latestRequest ?? null))
         .catch(() => setLatestRoomRequest(null));
+
+      void getMyAssistantInquiries(1)
+        .then(([latestInquiry]) =>
+          setLatestAssistantInquiry(latestInquiry ?? null),
+        )
+        .catch(() => setLatestAssistantInquiry(null));
     }, []),
   );
 
@@ -198,6 +207,11 @@ export default function HomeScreen() {
 
     if (action.id === 'room') {
       router.push('/rooms');
+      return;
+    }
+
+    if (action.id === 'assistant') {
+      router.push('/assistant-inquiry');
       return;
     }
 
@@ -411,9 +425,11 @@ export default function HomeScreen() {
                 </Pressable>
               ))}
 
-              <Text style={styles.demoCaption}>
-                조교 문의는 현재 화면 확인용 예시 데이터입니다.
-              </Text>
+              {requests.length === 0 ? (
+                <Text style={styles.demoCaption}>
+                  진행 중인 신청이나 문의가 없습니다.
+                </Text>
+              ) : null}
             </View>
           </View>
 
@@ -456,6 +472,7 @@ function createHomeRequests(
   equipmentRequest: EquipmentRentalRequest | null,
   facilityReport: FacilityReport | null,
   roomRequest: RoomReservationRequest | null,
+  assistantInquiry: AssistantInquiry | null,
 ) {
   return [
     ...(equipmentRequest
@@ -463,8 +480,37 @@ function createHomeRequests(
       : []),
     ...(facilityReport ? [createFacilityRequestItem(facilityReport)] : []),
     ...(roomRequest ? [createRoomRequestItem(roomRequest)] : []),
-    ...DEMO_REQUESTS,
+    ...(assistantInquiry
+      ? [createAssistantInquiryRequestItem(assistantInquiry)]
+      : []),
   ];
+}
+
+function createAssistantInquiryRequestItem(
+  inquiry: AssistantInquiry,
+): RequestItem {
+  const statusStyle = getAssistantInquiryStatusStyle(inquiry.status);
+
+  return {
+    id: `request-assistant-${inquiry.id}`,
+    type: '조교 문의',
+    title: inquiry.title,
+    status: getAssistantStatusLabel(inquiry.status),
+    detail: `${formatRequestDate(inquiry.created_at)} 문의`,
+    statusBackground: statusStyle.backgroundColor,
+    statusColor: statusStyle.color,
+    route: `/assistant-inquiries/${inquiry.id}`,
+  };
+}
+
+function getAssistantInquiryStatusStyle(status: AssistantInquiry['status']) {
+  if (status === 'in_progress') {
+    return { backgroundColor: '#FFF3DB', color: '#9A5B00' };
+  }
+  if (status === 'answered') {
+    return { backgroundColor: '#EAF8F0', color: COLORS.success };
+  }
+  return { backgroundColor: COLORS.softNavy, color: COLORS.navy };
 }
 
 function createRoomRequestItem(request: RoomReservationRequest): RequestItem {
