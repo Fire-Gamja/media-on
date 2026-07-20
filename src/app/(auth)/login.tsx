@@ -38,10 +38,21 @@ export default function LoginScreen() {
       return;
     }
 
+    const loginMessage =
+      `학번 ${studentNumber}의 입력이 확인되었습니다.`;
+
+    // React Native Web에서는 Alert 버튼 콜백을 지원하지 않으므로
+    // 안내를 표시한 뒤 학생 홈으로 바로 이동합니다.
+    if (Platform.OS === 'web') {
+      Alert.alert('로그인 테스트', loginMessage);
+      router.replace('/home');
+      return;
+    }
+
     // Supabase 연결 전까지는 입력값 확인 후 학생 홈으로 이동합니다.
     Alert.alert(
       '로그인 테스트',
-      `학번 ${studentNumber}의 입력이 확인되었습니다.`,
+      loginMessage,
       [
         {
           text: '학생 홈으로 이동',
