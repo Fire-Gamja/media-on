@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { useNoticeSettings } from '../../context/notice-settings-context';
 
 type QuickAction = {
   id: 'notice' | 'equipment' | 'room' | 'report';
@@ -69,14 +70,30 @@ const QUICK_ACTIONS: QuickAction[] = [
 const NOTICES: Notice[] = [
   {
     id: 'notice-1',
-    title: '2026학년도 2학기 수강신청 안내',
+    title: '2026년 대한민국 인재상 홍보(한국장학재단)',
   },
   {
     id: 'notice-2',
-    title: '301호·501호 실습실 포맷 작업 안내',
+    title: '2026학년도 2학기 세명대학교 학점교류 수학 안내',
   },
   {
     id: 'notice-3',
+    title: '2026학년도 2학기 한국교원대학교 수학 안내',
+  },
+  {
+    id: 'notice-4',
+    title: '2026학년도 2학기 수강신청 일정 안내',
+  },
+  {
+    id: 'notice-5',
+    title: '미디어문화학부 졸업작품 전시 일정 안내',
+  },
+  {
+    id: 'notice-6',
+    title: '301호·501호 실습실 포맷 작업 안내',
+  },
+  {
+    id: 'notice-7',
     title: '방학 중 학부 사무실 운영시간 안내',
   },
 ];
@@ -121,6 +138,9 @@ const REQUESTS: RequestItem[] = [
 ];
 
 export default function HomeScreen() {
+  const { noticeCount } = useNoticeSettings();
+  const visibleNotices = NOTICES.slice(0, noticeCount);
+
   const handleQuickAction = (action: QuickAction) => {
     Alert.alert(
       action.title,
@@ -234,40 +254,56 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.sectionSpacing}>
-            <SectionHeader title="학과 공지사항" />
-
             <View style={styles.noticeCard}>
-              {NOTICES.map((notice, index) => (
+              <View style={styles.noticeCardHeader}>
+                <Text style={styles.noticeHeading}>학과 공지사항</Text>
                 <Pressable
-                  key={notice.id}
                   accessibilityRole="button"
-                  onPress={() => Alert.alert('공지사항', notice.title)}
+                  accessibilityLabel="공지사항 표시 건수 설정"
+                  hitSlop={10}
+                  onPress={() => router.push('/notice-settings')}
                   style={({ pressed }) => [
-                    styles.noticeRow,
-                    index < NOTICES.length - 1 && styles.noticeDivider,
+                    styles.noticeMenuButton,
                     pressed && styles.noticePressed,
                   ]}
                 >
-                  <Text style={styles.noticeTitle} numberOfLines={1}>
-                    {notice.title}
-                  </Text>
+                  <Text style={styles.noticeMenuDots}>•••</Text>
                 </Pressable>
-              ))}
-            </View>
+              </View>
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={() =>
-                Alert.alert('공지사항', '공지 목록 화면을 준비 중입니다.')
-              }
-              style={({ pressed }) => [
-                styles.noticeMoreButton,
-                pressed && styles.noticeMoreButtonPressed,
-              ]}
-            >
-              <Text style={styles.noticeMoreButtonText}>더보기</Text>
-              <Text style={styles.noticeMoreChevron}>›</Text>
-            </Pressable>
+              <View style={styles.noticeList}>
+                {visibleNotices.map((notice, index) => (
+                  <Pressable
+                    key={notice.id}
+                    accessibilityRole="button"
+                    onPress={() => Alert.alert('공지사항', notice.title)}
+                    style={({ pressed }) => [
+                      styles.noticeRow,
+                      index < visibleNotices.length - 1 &&
+                        styles.noticeDivider,
+                      pressed && styles.noticePressed,
+                    ]}
+                  >
+                    <Text style={styles.noticeTitle} numberOfLines={1}>
+                      {notice.title}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  Alert.alert('공지사항', '공지 목록 화면을 준비 중입니다.')
+                }
+                style={({ pressed }) => [
+                  styles.noticeMoreButton,
+                  pressed && styles.noticeMoreButtonPressed,
+                ]}
+              >
+                <Text style={styles.noticeMoreButtonText}>더보기</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.sectionSpacing}>
@@ -552,14 +588,42 @@ const styles = StyleSheet.create({
   },
   noticeCard: {
     overflow: 'hidden',
+    padding: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 16,
+    borderRadius: 22,
     backgroundColor: COLORS.surface,
   },
+  noticeCardHeader: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  noticeHeading: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  noticeMenuButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  noticeMenuDots: {
+    color: COLORS.text,
+    fontSize: 15,
+    letterSpacing: 3,
+    fontWeight: '800',
+  },
+  noticeList: {
+    marginTop: 18,
+  },
   noticeRow: {
-    minHeight: 60,
-    paddingHorizontal: 16,
+    minHeight: 58,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -574,33 +638,27 @@ const styles = StyleSheet.create({
     width: '100%',
     color: COLORS.text,
     fontSize: 14,
-    fontWeight: '700',
+    lineHeight: 21,
+    fontWeight: '600',
   },
   noticeMoreButton: {
-    height: 46,
-    marginTop: 10,
+    height: 50,
+    marginTop: 18,
     paddingHorizontal: 16,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 13,
+    borderRadius: 14,
     backgroundColor: COLORS.surface,
   },
   noticeMoreButtonPressed: {
     backgroundColor: '#F3F4F8',
   },
   noticeMoreButtonText: {
-    color: COLORS.navy,
+    color: COLORS.text,
     fontSize: 14,
     fontWeight: '800',
-  },
-  noticeMoreChevron: {
-    marginLeft: 6,
-    color: COLORS.navy,
-    fontSize: 21,
-    lineHeight: 22,
   },
   requestList: {
     overflow: 'hidden',
