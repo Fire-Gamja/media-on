@@ -13,6 +13,11 @@ export type StudentProfile = {
   approval_status: ApprovalStatus;
 };
 
+export type AdminStudentProfile = StudentProfile & {
+  phone_number: string;
+  created_at: string;
+};
+
 export type StudentSignupInput = {
   name: string;
   studentNumber: string;
@@ -28,7 +33,8 @@ export type StudentSignupInput = {
 
 export type StudentLoginResult =
   | { status: 'approved'; profile: StudentProfile }
-  | { status: 'pending' | 'rejected' };
+  | { status: 'pending' }
+  | { status: 'rejected' };
 
 const studentNumberToEmail = (studentNumber: string) =>
   `${studentNumber.trim()}@student.media-on.app`;
@@ -110,7 +116,44 @@ export async function registerStudent(input: StudentSignupInput) {
   await client.auth.signOut();
 }
 
-export async function signOutStudent() {
+export async function getPendingStudents(): Promise<AdminStudentProfile[]> {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('profiles')
+    .select(
+      'id, student_number, name, grade, major, enrollment_status, phone_number, role, approval_status, created_at',
+    )
+    .eq('role', 'student')
+    .eq('approval_status', 'pending')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw new Error('가입 대기 목록을 불러오지 못했습니다.');
+  }
+
+  return (data ?? []) as AdminStudentProfile[];
+}
+
+export async function reviewStudentAccount(
+  userId: string,
+  decision: Exclude<ApprovalStatus, 'pending'>,
+) {
+  const client = requireSupabase();
+  const { error } = await client.rpc('review_student_account', {
+    target_user_id: userId,
+    decision,
+  });
+
+  if (error) {
+    throw new Error(
+      decision === 'approved'
+        ? '학생 계정을 승인하지 못했습니다.'
+        : '학생 계정을 거절 처리하지 못했습니다.',
+    );
+  }
+}
+
+export async function signOutUser() {
   if (supabase) {
     await supabase.auth.signOut();
   }

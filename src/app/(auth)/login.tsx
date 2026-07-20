@@ -67,7 +67,9 @@ export default function LoginScreen() {
           return;
         }
 
-        router.replace('/home');
+        router.replace(
+          result.profile.role === 'admin' ? '/admin-home' : '/home',
+        );
       } catch (error) {
         Alert.alert('로그인 실패', getAuthErrorMessage(error));
       } finally {
