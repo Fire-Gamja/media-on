@@ -22,10 +22,17 @@ type QuickAction = {
 
 type Notice = {
   id: string;
-  category: string;
   title: string;
-  date: string;
-  important?: boolean;
+};
+
+type RequestItem = {
+  id: string;
+  type: string;
+  title: string;
+  status: string;
+  detail: string;
+  statusBackground: string;
+  statusColor: string;
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
@@ -62,22 +69,54 @@ const QUICK_ACTIONS: QuickAction[] = [
 const NOTICES: Notice[] = [
   {
     id: 'notice-1',
-    category: '학사',
     title: '2026학년도 2학기 수강신청 안내',
-    date: '07.20',
-    important: true,
   },
   {
     id: 'notice-2',
-    category: '실습',
     title: '301호·501호 실습실 포맷 작업 안내',
-    date: '07.18',
   },
   {
     id: 'notice-3',
-    category: '학부',
     title: '방학 중 학부 사무실 운영시간 안내',
-    date: '07.15',
+  },
+];
+
+const REQUESTS: RequestItem[] = [
+  {
+    id: 'request-equipment',
+    type: '기자재 대여',
+    title: 'DSLR 카메라 1대',
+    status: '준비 중',
+    detail: '수령 예정 · 7월 22일 10:00',
+    statusBackground: '#FFF3DB',
+    statusColor: '#9A5B00',
+  },
+  {
+    id: 'request-facility',
+    type: '시설 신고',
+    title: '301호 인터넷 연결 불량',
+    status: '접수 완료',
+    detail: '접수일 · 7월 20일',
+    statusBackground: '#E8EDFF',
+    statusColor: COLORS.navy,
+  },
+  {
+    id: 'request-room',
+    type: '실습실 대여',
+    title: '501호 14:00~16:00',
+    status: '확인 완료',
+    detail: '이용 예정 · 7월 23일',
+    statusBackground: '#EAF8F0',
+    statusColor: '#167447',
+  },
+  {
+    id: 'request-assistant',
+    type: '조교 문의',
+    title: '수강 관련 문의',
+    status: '답변 대기',
+    detail: '문의일 · 7월 20일',
+    statusBackground: '#F1F2F6',
+    statusColor: COLORS.subText,
   },
 ];
 
@@ -127,6 +166,17 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
+          <View style={styles.topOperationBar}>
+            <Text
+              style={styles.topOperationText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}
+            >
+              방학 중 운영 시간  평일 09:00~17:00  주말 및 공휴일 휴무
+            </Text>
+          </View>
+
           <View style={styles.greetingRow}>
             <View style={styles.greetingTextArea}>
               <Text style={styles.greeting}>학생님, 안녕하세요!</Text>
@@ -142,8 +192,7 @@ export default function HomeScreen() {
 
           <View style={styles.profileMeta}>
             <View style={styles.profileChip}>
-              <View style={styles.onlineDot} />
-              <Text style={styles.profileChipText}>승인 완료</Text>
+              <Text style={styles.profileChipText}>4학년</Text>
             </View>
             <Text style={styles.profileInfo}>재학 · 학생 계정</Text>
           </View>
@@ -185,68 +234,83 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.sectionSpacing}>
-            <SectionHeader
-              title="중요 공지"
-              actionLabel="전체보기"
-              onActionPress={() =>
-                Alert.alert('공지사항', '공지 목록 화면을 준비 중입니다.')
-              }
-            />
+            <SectionHeader title="학과 공지사항" />
 
             <View style={styles.noticeCard}>
               {NOTICES.map((notice, index) => (
                 <Pressable
                   key={notice.id}
                   accessibilityRole="button"
-                  onPress={() => Alert.alert(notice.category, notice.title)}
+                  onPress={() => Alert.alert('공지사항', notice.title)}
                   style={({ pressed }) => [
                     styles.noticeRow,
                     index < NOTICES.length - 1 && styles.noticeDivider,
                     pressed && styles.noticePressed,
                   ]}
                 >
-                  <View style={styles.noticeBody}>
-                    <View style={styles.noticeMetaRow}>
-                      <Text style={styles.noticeCategory}>
-                        {notice.category}
-                      </Text>
-                      {notice.important ? (
-                        <View style={styles.importantBadge}>
-                          <Text style={styles.importantBadgeText}>중요</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={styles.noticeTitle} numberOfLines={1}>
-                      {notice.title}
-                    </Text>
-                  </View>
-                  <Text style={styles.noticeDate}>{notice.date}</Text>
+                  <Text style={styles.noticeTitle} numberOfLines={1}>
+                    {notice.title}
+                  </Text>
                 </Pressable>
               ))}
             </View>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                Alert.alert('공지사항', '공지 목록 화면을 준비 중입니다.')
+              }
+              style={({ pressed }) => [
+                styles.noticeMoreButton,
+                pressed && styles.noticeMoreButtonPressed,
+              ]}
+            >
+              <Text style={styles.noticeMoreButtonText}>더보기</Text>
+              <Text style={styles.noticeMoreChevron}>›</Text>
+            </Pressable>
           </View>
 
           <View style={styles.sectionSpacing}>
             <SectionHeader title="내 신청 현황" />
 
-            <View style={styles.requestCard}>
-              <View style={styles.requestHeader}>
-                <View>
-                  <Text style={styles.requestType}>기자재 대여</Text>
-                  <Text style={styles.requestTitle}>DSLR 카메라 1대</Text>
-                </View>
+            <View style={styles.requestList}>
+              {REQUESTS.map((request, index) => (
+                <View
+                  key={request.id}
+                  style={[
+                    styles.requestItem,
+                    index < REQUESTS.length - 1 &&
+                      styles.requestItemDivider,
+                  ]}
+                >
+                  <View style={styles.requestHeader}>
+                    <View style={styles.requestTextArea}>
+                      <Text style={styles.requestType}>{request.type}</Text>
+                      <Text style={styles.requestTitle} numberOfLines={1}>
+                        {request.title}
+                      </Text>
+                    </View>
 
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusBadgeText}>준비 중</Text>
-                </View>
-              </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: request.statusBackground },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusBadgeText,
+                          { color: request.statusColor },
+                        ]}
+                      >
+                        {request.status}
+                      </Text>
+                    </View>
+                  </View>
 
-              <View style={styles.requestDivider} />
-              <DetailRow label="수령 예정" value="7월 22일 10:00" />
-              <DetailRow
-                label="수령 장소"
-                value="제1자연관 학부사무실"
-              />
+                  <Text style={styles.requestDetail}>{request.detail}</Text>
+                </View>
+              ))}
 
               <Text style={styles.demoCaption}>
                 현재는 화면 확인을 위한 예시 데이터입니다.
@@ -274,16 +338,9 @@ export default function HomeScreen() {
 type SectionHeaderProps = {
   title: string;
   description?: string;
-  actionLabel?: string;
-  onActionPress?: () => void;
 };
 
-function SectionHeader({
-  title,
-  description,
-  actionLabel,
-  onActionPress,
-}: SectionHeaderProps) {
+function SectionHeader({ title, description }: SectionHeaderProps) {
   return (
     <View style={styles.sectionHeader}>
       <View style={styles.sectionTitleArea}>
@@ -292,25 +349,6 @@ function SectionHeader({
           <Text style={styles.sectionDescription}>{description}</Text>
         ) : null}
       </View>
-
-      {actionLabel && onActionPress ? (
-        <Pressable
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={onActionPress}
-        >
-          <Text style={styles.sectionAction}>{actionLabel}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
 }
@@ -361,8 +399,24 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.72,
   },
+  topOperationBar: {
+    minHeight: 34,
+    marginTop: 18,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  topOperationText: {
+    width: '100%',
+    color: '#E8EAF3',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   greetingRow: {
-    marginTop: 30,
+    marginTop: 24,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -405,17 +459,10 @@ const styles = StyleSheet.create({
   profileChip: {
     minHeight: 28,
     paddingHorizontal: 10,
-    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 14,
     backgroundColor: 'rgba(255, 255, 255, 0.14)',
-  },
-  onlineDot: {
-    width: 7,
-    height: 7,
-    marginRight: 6,
-    borderRadius: 4,
-    backgroundColor: '#69DB9D',
   },
   profileChipText: {
     color: COLORS.white,
@@ -452,12 +499,6 @@ const styles = StyleSheet.create({
     color: COLORS.subText,
     fontSize: 13,
     lineHeight: 19,
-  },
-  sectionAction: {
-    marginTop: 3,
-    color: COLORS.navy,
-    fontSize: 13,
-    fontWeight: '700',
   },
   actionGrid: {
     flexDirection: 'row',
@@ -517,10 +558,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   noticeRow: {
-    minHeight: 78,
+    minHeight: 60,
     paddingHorizontal: 16,
-    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   noticeDivider: {
     borderBottomWidth: 1,
@@ -529,52 +570,60 @@ const styles = StyleSheet.create({
   noticePressed: {
     backgroundColor: '#F3F4F8',
   },
-  noticeBody: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  noticeMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  noticeCategory: {
-    color: COLORS.navy,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  importantBadge: {
-    marginLeft: 7,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-    backgroundColor: '#FDECEC',
-  },
-  importantBadgeText: {
-    color: COLORS.error,
-    fontSize: 10,
-    fontWeight: '800',
-  },
   noticeTitle: {
-    marginTop: 7,
+    width: '100%',
     color: COLORS.text,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  noticeDate: {
-    color: COLORS.subText,
-    fontSize: 12,
+  noticeMoreButton: {
+    height: 46,
+    marginTop: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 13,
+    backgroundColor: COLORS.surface,
   },
-  requestCard: {
-    padding: 18,
+  noticeMoreButtonPressed: {
+    backgroundColor: '#F3F4F8',
+  },
+  noticeMoreButtonText: {
+    color: COLORS.navy,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  noticeMoreChevron: {
+    marginLeft: 6,
+    color: COLORS.navy,
+    fontSize: 21,
+    lineHeight: 22,
+  },
+  requestList: {
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 16,
     backgroundColor: COLORS.surface,
   },
+  requestItem: {
+    padding: 18,
+  },
+  requestItemDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
   requestHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+  },
+  requestTextArea: {
+    flex: 1,
+    paddingRight: 12,
   },
   requestType: {
     color: COLORS.subText,
@@ -591,35 +640,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: '#FFF3DB',
   },
   statusBadgeText: {
-    color: '#9A5B00',
     fontSize: 11,
     fontWeight: '800',
   },
-  requestDivider: {
-    height: 1,
-    marginVertical: 16,
-    backgroundColor: COLORS.border,
-  },
-  detailRow: {
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  detailLabel: {
+  requestDetail: {
+    marginTop: 11,
     color: COLORS.subText,
     fontSize: 12,
   },
-  detailValue: {
-    color: COLORS.text,
-    fontSize: 12,
-    fontWeight: '700',
-  },
   demoCaption: {
-    marginTop: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
     color: COLORS.placeholder,
     fontSize: 11,
     lineHeight: 17,
