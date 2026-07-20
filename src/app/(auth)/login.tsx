@@ -38,10 +38,16 @@ export default function LoginScreen() {
       return;
     }
 
-    // 다음 단계에서 Supabase 로그인 기능을 연결합니다.
+    // Supabase 연결 전까지는 입력값 확인 후 학생 홈으로 이동합니다.
     Alert.alert(
       '로그인 테스트',
-      `학번 ${studentNumber}의 로그인 화면 입력이 확인되었습니다.`,
+      `학번 ${studentNumber}의 입력이 확인되었습니다.`,
+      [
+        {
+          text: '학생 홈으로 이동',
+          onPress: () => router.replace('/home'),
+        },
+      ],
     );
   };
 
