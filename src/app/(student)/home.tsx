@@ -26,6 +26,11 @@ import {
   getMyEquipmentRentalRequests,
 } from '../../services/equipment-rentals';
 import { getPublishedNotices } from '../../services/notices';
+import {
+  getMyRoomReservationRequests,
+  getRoomStatusLabel,
+  type RoomReservationRequest,
+} from '../../services/room-reservations';
 
 type QuickAction = {
   id: 'notice' | 'equipment' | 'room' | 'report';
@@ -115,15 +120,6 @@ const NOTICES: Notice[] = [
 
 const DEMO_REQUESTS: RequestItem[] = [
   {
-    id: 'request-room',
-    type: '실습실 대여',
-    title: '501호 14:00~16:00',
-    status: '확인 완료',
-    detail: '이용 예정 · 7월 23일',
-    statusBackground: '#EAF8F0',
-    statusColor: '#167447',
-  },
-  {
     id: 'request-assistant',
     type: '조교 문의',
     title: '수강 관련 문의',
@@ -141,10 +137,13 @@ export default function HomeScreen() {
     useState<FacilityReport | null>(null);
   const [latestEquipmentRequest, setLatestEquipmentRequest] =
     useState<EquipmentRentalRequest | null>(null);
+  const [latestRoomRequest, setLatestRoomRequest] =
+    useState<RoomReservationRequest | null>(null);
   const visibleNotices = notices.slice(0, noticeCount);
   const requests = createHomeRequests(
     latestEquipmentRequest,
     latestFacilityReport,
+    latestRoomRequest,
   );
 
   useEffect(() => {
@@ -174,6 +173,10 @@ export default function HomeScreen() {
           setLatestEquipmentRequest(latestRequest ?? null),
         )
         .catch(() => setLatestEquipmentRequest(null));
+
+      void getMyRoomReservationRequests(1)
+        .then(([latestRequest]) => setLatestRoomRequest(latestRequest ?? null))
+        .catch(() => setLatestRoomRequest(null));
     }, []),
   );
 
@@ -190,6 +193,11 @@ export default function HomeScreen() {
 
     if (action.id === 'equipment') {
       router.push('/equipment');
+      return;
+    }
+
+    if (action.id === 'room') {
+      router.push('/rooms');
       return;
     }
 
@@ -404,7 +412,7 @@ export default function HomeScreen() {
               ))}
 
               <Text style={styles.demoCaption}>
-                기자재 대여와 시설 신고 외 항목은 현재 화면 확인용 예시 데이터입니다.
+                조교 문의는 현재 화면 확인용 예시 데이터입니다.
               </Text>
             </View>
           </View>
@@ -447,14 +455,44 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
 function createHomeRequests(
   equipmentRequest: EquipmentRentalRequest | null,
   facilityReport: FacilityReport | null,
+  roomRequest: RoomReservationRequest | null,
 ) {
   return [
     ...(equipmentRequest
       ? [createEquipmentRequestItem(equipmentRequest)]
       : []),
     ...(facilityReport ? [createFacilityRequestItem(facilityReport)] : []),
+    ...(roomRequest ? [createRoomRequestItem(roomRequest)] : []),
     ...DEMO_REQUESTS,
   ];
+}
+
+function createRoomRequestItem(request: RoomReservationRequest): RequestItem {
+  const statusStyle = getRoomRequestStatusStyle(request.status);
+
+  return {
+    id: `request-room-${request.id}`,
+    type: '실습실 대여',
+    title: request.room?.name ?? '실습실',
+    status: getRoomStatusLabel(request.status),
+    detail: `${request.reservation_date} · ${request.start_time.slice(0, 5)}~${request.end_time.slice(0, 5)}`,
+    statusBackground: statusStyle.backgroundColor,
+    statusColor: statusStyle.color,
+    route: `/room-requests/${request.id}`,
+  };
+}
+
+function getRoomRequestStatusStyle(status: RoomReservationRequest['status']) {
+  if (status === 'approved') {
+    return { backgroundColor: COLORS.softNavy, color: COLORS.navy };
+  }
+  if (status === 'completed') {
+    return { backgroundColor: '#EAF8F0', color: COLORS.success };
+  }
+  if (status === 'rejected') {
+    return { backgroundColor: '#FCECEF', color: COLORS.error };
+  }
+  return { backgroundColor: '#F1F2F6', color: COLORS.subText };
 }
 
 function createEquipmentRequestItem(
