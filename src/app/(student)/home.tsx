@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -15,6 +15,11 @@ import { COLORS } from '../../constants/colors';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import { signOutUser } from '../../services/auth';
+import {
+  type FacilityReport,
+  getFacilityStatusLabel,
+  getMyFacilityReports,
+} from '../../services/facility-reports';
 import { getPublishedNotices } from '../../services/notices';
 
 type QuickAction = {
@@ -38,6 +43,7 @@ type RequestItem = {
   detail: string;
   statusBackground: string;
   statusColor: string;
+  route?: string;
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
@@ -113,15 +119,6 @@ const REQUESTS: RequestItem[] = [
     statusColor: '#9A5B00',
   },
   {
-    id: 'request-facility',
-    type: '시설 신고',
-    title: '301호 인터넷 연결 불량',
-    status: '접수 완료',
-    detail: '접수일 · 7월 20일',
-    statusBackground: '#E8EDFF',
-    statusColor: COLORS.navy,
-  },
-  {
     id: 'request-room',
     type: '실습실 대여',
     title: '501호 14:00~16:00',
@@ -144,6 +141,7 @@ const REQUESTS: RequestItem[] = [
 export default function HomeScreen() {
   const { noticeCount } = useNoticeSettings();
   const [notices, setNotices] = useState<Notice[]>(NOTICES);
+  const [requests, setRequests] = useState<RequestItem[]>(REQUESTS);
   const visibleNotices = notices.slice(0, noticeCount);
 
   useEffect(() => {
@@ -158,9 +156,35 @@ export default function HomeScreen() {
       .catch(() => setNotices(NOTICES));
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!isSupabaseConfigured) {
+        return;
+      }
+
+      void getMyFacilityReports(1)
+        .then(([latestReport]) => {
+          if (!latestReport) {
+            setRequests(REQUESTS);
+            return;
+          }
+
+          const nextRequests = [...REQUESTS];
+          nextRequests.splice(1, 0, createFacilityRequestItem(latestReport));
+          setRequests(nextRequests);
+        })
+        .catch(() => setRequests(REQUESTS));
+    }, []),
+  );
+
   const handleQuickAction = (action: QuickAction) => {
     if (action.id === 'notice') {
       router.push('/notices');
+      return;
+    }
+
+    if (action.id === 'report') {
+      router.push('/facility-report');
       return;
     }
 
@@ -333,13 +357,16 @@ export default function HomeScreen() {
             <SectionHeader title="내 신청 현황" />
 
             <View style={styles.requestList}>
-              {REQUESTS.map((request, index) => (
-                <View
+              {requests.map((request, index) => (
+                <Pressable
                   key={request.id}
-                  style={[
+                  accessibilityRole={request.route ? 'button' : undefined}
+                  disabled={!request.route}
+                  onPress={() => request.route && router.push(request.route)}
+                  style={({ pressed }) => [
                     styles.requestItem,
-                    index < REQUESTS.length - 1 &&
-                      styles.requestItemDivider,
+                    index < requests.length - 1 && styles.requestItemDivider,
+                    pressed && request.route && styles.requestPressed,
                   ]}
                 >
                   <View style={styles.requestHeader}>
@@ -368,11 +395,11 @@ export default function HomeScreen() {
                   </View>
 
                   <Text style={styles.requestDetail}>{request.detail}</Text>
-                </View>
+                </Pressable>
               ))}
 
               <Text style={styles.demoCaption}>
-                현재는 화면 확인을 위한 예시 데이터입니다.
+                시설 신고 외 항목은 현재 화면 확인용 예시 데이터입니다.
               </Text>
             </View>
           </View>
@@ -410,6 +437,41 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
       </View>
     </View>
   );
+}
+
+function createFacilityRequestItem(report: FacilityReport): RequestItem {
+  const statusStyle = getFacilityRequestStatusStyle(report.status);
+
+  return {
+    id: `request-facility-${report.id}`,
+    type: '시설 신고',
+    title: report.title,
+    status: getFacilityStatusLabel(report.status),
+    detail: `${report.location} · ${formatRequestDate(report.created_at)} 접수`,
+    statusBackground: statusStyle.backgroundColor,
+    statusColor: statusStyle.color,
+    route: `/facility-reports/${report.id}`,
+  };
+}
+
+function getFacilityRequestStatusStyle(status: FacilityReport['status']) {
+  if (status === 'resolved') {
+    return { backgroundColor: '#EAF8F0', color: COLORS.success };
+  }
+  if (status === 'in_progress') {
+    return { backgroundColor: '#FFF3DB', color: '#9A5B00' };
+  }
+  if (status === 'rejected') {
+    return { backgroundColor: '#FCECEF', color: COLORS.error };
+  }
+  return { backgroundColor: COLORS.softNavy, color: COLORS.navy };
+}
+
+function formatRequestDate(value: string) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(value));
 }
 
 const styles = StyleSheet.create({
@@ -696,6 +758,9 @@ const styles = StyleSheet.create({
   requestItemDivider: {
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+  },
+  requestPressed: {
+    backgroundColor: '#F3F4F8',
   },
   requestHeader: {
     flexDirection: 'row',

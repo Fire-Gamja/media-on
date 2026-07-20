@@ -168,6 +168,26 @@ export default function AdminHomeScreen() {
           <Text style={styles.managementChevron}>›</Text>
         </Pressable>
 
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/admin-facility-reports')}
+          style={({ pressed }) => [
+            styles.managementCard,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.managementIcon}>
+            <Text style={styles.managementIconText}>시</Text>
+          </View>
+          <View style={styles.managementTextArea}>
+            <Text style={styles.managementTitle}>시설 신고 관리</Text>
+            <Text style={styles.managementDescription}>
+              학생 신고를 확인하고 처리 상태를 관리합니다.
+            </Text>
+          </View>
+          <Text style={styles.managementChevron}>›</Text>
+        </Pressable>
+
         <View style={styles.summaryCard}>
           <View>
             <Text style={styles.summaryLabel}>가입 승인 대기</Text>
