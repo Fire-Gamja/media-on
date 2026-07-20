@@ -43,8 +43,9 @@ export default function RoomRequestsScreen() {
 }
 
 function getStatusStyle(status: RoomReservationStatus) {
-  if (status === 'approved') return { backgroundColor: COLORS.softNavy, color: COLORS.navy };
-  if (status === 'completed') return { backgroundColor: '#EAF8F0', color: COLORS.success };
+  if (status === 'received') return { backgroundColor: COLORS.softNavy, color: COLORS.navy };
+  if (status === 'erp_checking') return { backgroundColor: '#FFF3DB', color: '#9A5B00' };
+  if (status === 'approved') return { backgroundColor: '#EAF8F0', color: COLORS.success };
   if (status === 'rejected') return { backgroundColor: '#FCECEF', color: COLORS.error };
   return { backgroundColor: '#F1F2F6', color: COLORS.subText };
 }

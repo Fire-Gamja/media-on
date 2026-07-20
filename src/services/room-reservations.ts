@@ -2,8 +2,9 @@ import { supabase } from '../lib/supabase';
 
 export type RoomReservationStatus =
   | 'submitted'
+  | 'received'
+  | 'erp_checking'
   | 'approved'
-  | 'completed'
   | 'rejected';
 
 export type PracticeRoom = {
@@ -59,7 +60,6 @@ export type RoomReservationInput = {
   reservationDate: string;
   startTime: string;
   endTime: string;
-  attendeeCount: number;
   purpose: string;
 };
 
@@ -76,8 +76,9 @@ export const ROOM_STATUS_OPTIONS: ReadonlyArray<{
   label: string;
 }> = [
   { value: 'submitted', label: '신청 완료' },
+  { value: 'received', label: '접수 완료' },
+  { value: 'erp_checking', label: 'ERP 확인 중' },
   { value: 'approved', label: '승인 완료' },
-  { value: 'completed', label: '이용 완료' },
   { value: 'rejected', label: '반려' },
 ];
 
@@ -145,7 +146,7 @@ export async function createRoomReservationRequest(
     reservation_date: input.reservationDate,
     start_time: input.startTime,
     end_time: input.endTime,
-    attendee_count: input.attendeeCount,
+    attendee_count: 40,
     purpose: input.purpose.trim(),
   });
 

@@ -22,7 +22,7 @@ export default function RoomRequestDetailScreen() {
     <StatusBar style="dark" /><View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.headerTitle}>실습실 신청 상세</Text><View style={styles.headerSide} /></View>
     {isLoading ? <View style={styles.loadingBox}><ActivityIndicator size="large" color={COLORS.navy} /></View> : request ? <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
       <View style={styles.statusCard}><Text style={styles.statusLabel}>현재 상태</Text><Text style={styles.statusValue}>{getRoomStatusLabel(request.status)}</Text><Text style={styles.statusDescription}>{getStatusDescription(request)}</Text></View>
-      <View style={styles.card}><DetailRow label="실습실" value={request.room?.name ?? '실습실'} /><DetailRow label="위치" value={request.room?.location ?? '-'} /><DetailRow label="이용일" value={request.reservation_date} /><DetailRow label="이용 시간" value={`${request.start_time.slice(0, 5)}~${request.end_time.slice(0, 5)}`} /><DetailRow label="이용 인원" value={`${request.attendee_count}명`} /><View style={styles.purposeSection}><Text style={styles.detailLabel}>사용 목적</Text><Text style={styles.purpose}>{request.purpose}</Text></View></View>
+      <View style={styles.card}><DetailRow label="실습실" value={request.room?.name ?? '실습실'} /><DetailRow label="이용일" value={request.reservation_date} /><DetailRow label="이용 시간" value={`${request.start_time.slice(0, 5)}~${request.end_time.slice(0, 5)}`} /><DetailRow label="이용 인원" value="40명 고정" /><View style={styles.purposeSection}><Text style={styles.detailLabel}>사용 목적</Text><Text style={styles.purpose}>{request.purpose}</Text></View></View>
       <View style={styles.noteCard}><Text style={styles.noteTitle}>{request.status === 'rejected' ? '반려 사유' : '관리자 안내'}</Text><Text style={styles.noteText}>{request.admin_note?.trim() || getDefaultNote(request.status)}</Text></View>
     </ScrollView> : null}
   </SafeAreaView>;
@@ -31,14 +31,16 @@ export default function RoomRequestDetailScreen() {
 function DetailRow({ label, value }: { label: string; value: string }) { return <View style={styles.detailRow}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>; }
 function getStatusDescription(request: RoomReservationRequest) {
   if (request.status === 'submitted') return '관리자가 신청 내용을 확인 중입니다.';
-  if (request.status === 'approved') return `${request.reservation_date} ${request.start_time.slice(0, 5)}에 이용해 주세요.`;
-  if (request.status === 'completed') return '실습실 이용이 완료되었습니다.';
+  if (request.status === 'received') return '신청이 접수되어 ERP 등록 내용을 확인할 예정입니다.';
+  if (request.status === 'erp_checking') return '통합정보시스템의 신청 내용을 확인 중입니다.';
+  if (request.status === 'approved') return '통합정보시스템 신청 확인과 승인이 완료되었습니다.';
   return '신청이 반려되었습니다. 아래 사유를 확인해 주세요.';
 }
 function getDefaultNote(status: RoomReservationRequest['status']) {
   if (status === 'submitted') return '승인 결과를 기다려 주세요.';
-  if (status === 'approved') return '승인이 완료되었습니다. 이용 후 정리 상태를 확인해 주세요.';
-  if (status === 'completed') return '이용 완료 처리가 되었습니다.';
+  if (status === 'received') return '신청 접수가 완료되었습니다.';
+  if (status === 'erp_checking') return 'ERP 신청 정보를 확인하고 있습니다.';
+  if (status === 'approved') return 'ERP 신청 확인과 승인이 완료되었습니다.';
   return '등록된 반려 사유가 없습니다.';
 }
 

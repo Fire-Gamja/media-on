@@ -483,10 +483,13 @@ function createRoomRequestItem(request: RoomReservationRequest): RequestItem {
 }
 
 function getRoomRequestStatusStyle(status: RoomReservationRequest['status']) {
-  if (status === 'approved') {
+  if (status === 'received') {
     return { backgroundColor: COLORS.softNavy, color: COLORS.navy };
   }
-  if (status === 'completed') {
+  if (status === 'erp_checking') {
+    return { backgroundColor: '#FFF3DB', color: '#9A5B00' };
+  }
+  if (status === 'approved') {
     return { backgroundColor: '#EAF8F0', color: COLORS.success };
   }
   if (status === 'rejected') {

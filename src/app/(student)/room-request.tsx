@@ -30,7 +30,6 @@ export default function RoomRequestScreen() {
   const [reservationDate, setReservationDate] = useState(() => getLocalDate(1));
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('11:00');
-  const [attendeeCount, setAttendeeCount] = useState('1');
   const [purpose, setPurpose] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,11 +51,6 @@ export default function RoomRequestScreen() {
 
   const handleSubmit = async () => {
     if (!roomId || !room) return;
-    const count = Number(attendeeCount);
-    if (!Number.isInteger(count) || count < 1 || count > room.capacity) {
-      Alert.alert('인원 확인', `1명부터 최대 ${room.capacity}명까지 신청할 수 있습니다.`);
-      return;
-    }
     if (!isValidDate(reservationDate) || reservationDate < getLocalDate(0)) {
       Alert.alert('날짜 확인', '이용일은 오늘 이후의 정확한 날짜를 입력해 주세요.');
       return;
@@ -83,7 +77,6 @@ export default function RoomRequestScreen() {
         reservationDate,
         startTime,
         endTime,
-        attendeeCount: count,
         purpose,
       });
       Alert.alert('신청 완료', '실습실 대여 신청이 완료되었습니다.', [
@@ -135,10 +128,20 @@ export default function RoomRequestScreen() {
               </View>
 
               <Text style={[styles.label, styles.spacedLabel]}>이용 인원</Text>
-              <TextInput value={attendeeCount} onChangeText={(value) => setAttendeeCount(value.replace(/\D/g, ''))} maxLength={2} keyboardType="number-pad" placeholder="1" placeholderTextColor={COLORS.placeholder} style={styles.input} />
+              <View style={styles.fixedCapacityBox}>
+                <Text style={styles.fixedCapacityText}>40명 고정</Text>
+              </View>
 
               <Text style={[styles.label, styles.spacedLabel]}>사용 목적</Text>
-              <TextInput value={purpose} onChangeText={setPurpose} maxLength={1000} multiline textAlignVertical="top" placeholder="수업명, 팀 활동 등 사용 목적을 입력해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.purposeInput} />
+              <View style={styles.purposeGuide}>
+                <Text style={styles.purposeGuideText}>
+                  통합정보시스템에 작성하신 목적과 동일하게 작성해 주세요.
+                </Text>
+                <Text style={styles.purposeGuideText}>
+                  24시간 대여하신 경우에는 실습조교에게 상담 요청해 주세요.
+                </Text>
+              </View>
+              <TextInput value={purpose} onChangeText={setPurpose} maxLength={1000} multiline textAlignVertical="top" placeholder="통합정보시스템에 입력한 사용 목적을 작성해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.purposeInput} />
             </ScrollView>
             <View style={styles.footer}>
               <Pressable disabled={isSubmitting} onPress={() => void handleSubmit()} style={({ pressed }) => [styles.submitButton, isSubmitting && styles.disabled, pressed && !isSubmitting && styles.pressed]}>
@@ -193,5 +196,6 @@ const styles = StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' }, scrollView: { flex: 1, backgroundColor: COLORS.background }, content: { padding: 22, paddingBottom: 38 },
   roomCard: { marginBottom: 26, padding: 19, borderRadius: 17, backgroundColor: COLORS.navy }, location: { color: '#D9DDEF', fontSize: 11, fontWeight: '700' }, roomName: { marginTop: 7, color: COLORS.white, fontSize: 21, fontWeight: '900' }, roomDescription: { marginTop: 8, color: '#D9DDEF', fontSize: 12, lineHeight: 19 }, roomMeta: { marginTop: 12, color: COLORS.white, fontSize: 12, fontWeight: '800' },
   label: { marginBottom: 9, color: COLORS.text, fontSize: 14, fontWeight: '800' }, input: { height: 56, paddingHorizontal: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 15 }, row: { marginTop: 23, flexDirection: 'row', gap: 10 }, halfField: { flex: 1 }, spacedLabel: { marginTop: 23 }, purposeInput: { minHeight: 150, padding: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 22 },
+  fixedCapacityBox: { height: 56, paddingHorizontal: 15, justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.softNavy }, fixedCapacityText: { color: COLORS.navy, fontSize: 15, fontWeight: '800' }, purposeGuide: { marginBottom: 10, padding: 14, gap: 5, borderRadius: 13, backgroundColor: COLORS.softNavy }, purposeGuideText: { color: COLORS.navy, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface }, submitButton: { height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: COLORS.navy }, submitText: { color: COLORS.white, fontSize: 16, fontWeight: '800' }, disabled: { opacity: 0.55 }, pressed: { opacity: 0.7 },
 });
