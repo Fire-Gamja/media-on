@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
 import { useNoticeSettings } from '../../context/notice-settings-context';
+import { signOutStudent } from '../../services/auth';
 
 type QuickAction = {
   id: 'notice' | 'equipment' | 'room' | 'report';
@@ -154,7 +155,10 @@ export default function HomeScreen() {
       {
         text: '로그아웃',
         style: 'destructive',
-        onPress: () => router.replace('/login'),
+        onPress: async () => {
+          await signOutStudent();
+          router.replace('/login');
+        },
       },
     ]);
   };

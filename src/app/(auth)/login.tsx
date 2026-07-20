@@ -13,6 +13,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { isSupabaseConfigured } from '../../lib/supabase';
+import {
+  getAuthErrorMessage,
+  signInStudent,
+} from '../../services/auth';
+
 const COLORS = {
   navy: '#182366',
   white: '#FFFFFF',
@@ -27,19 +33,51 @@ export default function LoginScreen() {
   const [studentNumber, setStudentNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isLoginEnabled =
     studentNumber.trim().length > 0 &&
-    password.trim().length > 0;
+    password.trim().length > 0 &&
+    !isSubmitting;
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!isLoginEnabled) {
       Alert.alert('입력 확인', '학번과 비밀번호를 입력해 주세요.');
       return;
     }
 
-    const loginMessage =
-      `학번 ${studentNumber}의 입력이 확인되었습니다.`;
+    if (isSupabaseConfigured) {
+      try {
+        setIsSubmitting(true);
+        const result = await signInStudent(studentNumber, password);
+
+        if (result.status === 'pending') {
+          Alert.alert(
+            '승인 대기 중',
+            '관리자가 가입 정보를 확인하고 있습니다. 승인 완료 후 로그인해 주세요.',
+          );
+          return;
+        }
+
+        if (result.status === 'rejected') {
+          Alert.alert(
+            '가입 승인 확인',
+            '가입 신청이 승인되지 않았습니다. 학부 사무실에 문의해 주세요.',
+          );
+          return;
+        }
+
+        router.replace('/home');
+      } catch (error) {
+        Alert.alert('로그인 실패', getAuthErrorMessage(error));
+      } finally {
+        setIsSubmitting(false);
+      }
+
+      return;
+    }
+
+    const loginMessage = `학번 ${studentNumber}의 입력이 확인되었습니다.`;
 
     // React Native Web에서는 Alert 버튼 콜백을 지원하지 않으므로
     // 안내를 표시한 뒤 학생 홈으로 바로 이동합니다.
@@ -124,7 +162,7 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
-                  onSubmitEditing={handleLogin}
+                  onSubmitEditing={() => void handleLogin()}
                 />
 
                 <Pressable
@@ -148,10 +186,12 @@ export default function LoginScreen() {
                   isLoginEnabled &&
                   styles.loginButtonPressed,
               ]}
-              onPress={handleLogin}
+              onPress={() => void handleLogin()}
               disabled={!isLoginEnabled}
             >
-              <Text style={styles.loginButtonText}>로그인</Text>
+              <Text style={styles.loginButtonText}>
+                {isSubmitting ? '로그인 중...' : '로그인'}
+              </Text>
             </Pressable>
 
             <View style={styles.accountLinks}>

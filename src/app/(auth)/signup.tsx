@@ -14,6 +14,12 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { isSupabaseConfigured } from '../../lib/supabase';
+import {
+  getAuthErrorMessage,
+  registerStudent,
+} from '../../services/auth';
+
 const COLORS = {
   navy: '#182366',
   white: '#FFFFFF',
@@ -63,6 +69,7 @@ export default function SignUpScreen() {
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [marketingAgreed, setMarketingAgreed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const passwordIsValid = useMemo(() => {
     const hasLetter = /[A-Za-z]/.test(password);
@@ -189,8 +196,49 @@ export default function SignUpScreen() {
     setStep((previous) => Math.max(previous - 1, 1));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateStepThree()) {
+      return;
+    }
+
+    if (!grade || !major || !enrollmentStatus) {
+      setStep(2);
+      Alert.alert('선택 확인', '학적정보를 다시 확인해 주세요.');
+      return;
+    }
+
+    if (isSupabaseConfigured) {
+      try {
+        setIsSubmitting(true);
+        await registerStudent({
+          name,
+          studentNumber,
+          password,
+          grade: Number(grade.slice(0, 1)),
+          major,
+          enrollmentStatus,
+          phoneNumber,
+          privacyAgreed,
+          termsAgreed,
+          marketingAgreed,
+        });
+
+        Alert.alert(
+          '가입 신청 완료',
+          '회원가입 신청이 저장되었습니다.\n관리자 승인 후 로그인할 수 있습니다.',
+          [
+            {
+              text: '확인',
+              onPress: () => router.replace('/login'),
+            },
+          ],
+        );
+      } catch (error) {
+        Alert.alert('가입 신청 실패', getAuthErrorMessage(error));
+      } finally {
+        setIsSubmitting(false);
+      }
+
       return;
     }
 
@@ -299,12 +347,20 @@ export default function SignUpScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.nextButton,
-              pressed && styles.buttonPressed,
+              isSubmitting && styles.nextButtonDisabled,
+              pressed && !isSubmitting && styles.buttonPressed,
             ]}
-            onPress={step === 3 ? handleSubmit : handleNext}
+            onPress={
+              step === 3 ? () => void handleSubmit() : handleNext
+            }
+            disabled={isSubmitting}
           >
             <Text style={styles.nextButtonText}>
-              {step === 3 ? '가입 신청' : '다음'}
+              {step === 3
+                ? isSubmitting
+                  ? '신청 중...'
+                  : '가입 신청'
+                : '다음'}
             </Text>
           </Pressable>
         </View>
@@ -912,6 +968,9 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 17,
     fontWeight: '800',
+  },
+  nextButtonDisabled: {
+    opacity: 0.55,
   },
   buttonPressed: {
     opacity: 0.8,
