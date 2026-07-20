@@ -1,11 +1,15 @@
 import { Stack } from 'expo-router';
 
+import { NoticeSettingsProvider } from '../../context/notice-settings-context';
+
 export default function StudentLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    />
+    <NoticeSettingsProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      />
+    </NoticeSettingsProvider>
   );
 }
