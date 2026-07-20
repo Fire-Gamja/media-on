@@ -20,6 +20,11 @@ import {
   getFacilityStatusLabel,
   getMyFacilityReports,
 } from '../../services/facility-reports';
+import {
+  type EquipmentRentalRequest,
+  getEquipmentStatusLabel,
+  getMyEquipmentRentalRequests,
+} from '../../services/equipment-rentals';
 import { getPublishedNotices } from '../../services/notices';
 
 type QuickAction = {
@@ -108,16 +113,7 @@ const NOTICES: Notice[] = [
   },
 ];
 
-const REQUESTS: RequestItem[] = [
-  {
-    id: 'request-equipment',
-    type: '기자재 대여',
-    title: 'DSLR 카메라 1대',
-    status: '준비 중',
-    detail: '수령 예정 · 7월 22일 10:00',
-    statusBackground: '#FFF3DB',
-    statusColor: '#9A5B00',
-  },
+const DEMO_REQUESTS: RequestItem[] = [
   {
     id: 'request-room',
     type: '실습실 대여',
@@ -141,8 +137,15 @@ const REQUESTS: RequestItem[] = [
 export default function HomeScreen() {
   const { noticeCount } = useNoticeSettings();
   const [notices, setNotices] = useState<Notice[]>(NOTICES);
-  const [requests, setRequests] = useState<RequestItem[]>(REQUESTS);
+  const [latestFacilityReport, setLatestFacilityReport] =
+    useState<FacilityReport | null>(null);
+  const [latestEquipmentRequest, setLatestEquipmentRequest] =
+    useState<EquipmentRentalRequest | null>(null);
   const visibleNotices = notices.slice(0, noticeCount);
+  const requests = createHomeRequests(
+    latestEquipmentRequest,
+    latestFacilityReport,
+  );
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -163,17 +166,14 @@ export default function HomeScreen() {
       }
 
       void getMyFacilityReports(1)
-        .then(([latestReport]) => {
-          if (!latestReport) {
-            setRequests(REQUESTS);
-            return;
-          }
+        .then(([latestReport]) => setLatestFacilityReport(latestReport ?? null))
+        .catch(() => setLatestFacilityReport(null));
 
-          const nextRequests = [...REQUESTS];
-          nextRequests.splice(1, 0, createFacilityRequestItem(latestReport));
-          setRequests(nextRequests);
-        })
-        .catch(() => setRequests(REQUESTS));
+      void getMyEquipmentRentalRequests(1)
+        .then(([latestRequest]) =>
+          setLatestEquipmentRequest(latestRequest ?? null),
+        )
+        .catch(() => setLatestEquipmentRequest(null));
     }, []),
   );
 
@@ -185,6 +185,11 @@ export default function HomeScreen() {
 
     if (action.id === 'report') {
       router.push('/facility-report');
+      return;
+    }
+
+    if (action.id === 'equipment') {
+      router.push('/equipment');
       return;
     }
 
@@ -399,7 +404,7 @@ export default function HomeScreen() {
               ))}
 
               <Text style={styles.demoCaption}>
-                시설 신고 외 항목은 현재 화면 확인용 예시 데이터입니다.
+                기자재 대여와 시설 신고 외 항목은 현재 화면 확인용 예시 데이터입니다.
               </Text>
             </View>
           </View>
@@ -437,6 +442,54 @@ function SectionHeader({ title, description }: SectionHeaderProps) {
       </View>
     </View>
   );
+}
+
+function createHomeRequests(
+  equipmentRequest: EquipmentRentalRequest | null,
+  facilityReport: FacilityReport | null,
+) {
+  return [
+    ...(equipmentRequest
+      ? [createEquipmentRequestItem(equipmentRequest)]
+      : []),
+    ...(facilityReport ? [createFacilityRequestItem(facilityReport)] : []),
+    ...DEMO_REQUESTS,
+  ];
+}
+
+function createEquipmentRequestItem(
+  request: EquipmentRentalRequest,
+): RequestItem {
+  const statusStyle = getEquipmentRequestStatusStyle(request.status);
+
+  return {
+    id: `request-equipment-${request.id}`,
+    type: '기자재 대여',
+    title: `${request.equipment?.name ?? '기자재'} ${request.quantity}개`,
+    status: getEquipmentStatusLabel(request.status),
+    detail: `${request.pickup_date} ~ ${request.return_date}`,
+    statusBackground: statusStyle.backgroundColor,
+    statusColor: statusStyle.color,
+    route: `/equipment-requests/${request.id}`,
+  };
+}
+
+function getEquipmentRequestStatusStyle(
+  status: EquipmentRentalRequest['status'],
+) {
+  if (status === 'approved') {
+    return { backgroundColor: '#FFF3DB', color: '#9A5B00' };
+  }
+  if (status === 'checked_out') {
+    return { backgroundColor: COLORS.softNavy, color: COLORS.navy };
+  }
+  if (status === 'returned') {
+    return { backgroundColor: '#EAF8F0', color: COLORS.success };
+  }
+  if (status === 'rejected') {
+    return { backgroundColor: '#FCECEF', color: COLORS.error };
+  }
+  return { backgroundColor: '#F1F2F6', color: COLORS.subText };
 }
 
 function createFacilityRequestItem(report: FacilityReport): RequestItem {

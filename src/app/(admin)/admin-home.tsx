@@ -170,6 +170,26 @@ export default function AdminHomeScreen() {
 
         <Pressable
           accessibilityRole="button"
+          onPress={() => router.push('/admin-equipment-requests')}
+          style={({ pressed }) => [
+            styles.managementCard,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.managementIcon}>
+            <Text style={styles.managementIconText}>장</Text>
+          </View>
+          <View style={styles.managementTextArea}>
+            <Text style={styles.managementTitle}>기자재 대여 관리</Text>
+            <Text style={styles.managementDescription}>
+              학생 대여 신청과 반납 상태를 관리합니다.
+            </Text>
+          </View>
+          <Text style={styles.managementChevron}>›</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
           onPress={() => router.push('/admin-facility-reports')}
           style={({ pressed }) => [
             styles.managementCard,
