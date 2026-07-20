@@ -69,7 +69,7 @@ export default function FacilityReportDetailScreen() {
               {getFacilityStatusLabel(report.status)}
             </Text>
             <Text style={styles.statusDate}>
-              접수일 {formatDateTime(report.created_at)}
+              신청일 {formatDateTime(report.created_at)}
             </Text>
           </View>
 
@@ -84,9 +84,15 @@ export default function FacilityReportDetailScreen() {
           </View>
 
           <View style={styles.noteCard}>
-            <Text style={styles.noteTitle}>관리자 처리 메모</Text>
+            <Text style={styles.noteTitle}>
+              {report.status === 'rejected'
+                ? '반려 사유'
+                : report.status === 'resolved'
+                  ? '처리 메모'
+                  : '처리 안내'}
+            </Text>
             <Text style={styles.noteText}>
-              {report.admin_note?.trim() || '아직 등록된 처리 메모가 없습니다.'}
+              {report.admin_note?.trim() || getStatusGuide(report.status)}
             </Text>
           </View>
         </ScrollView>
@@ -102,6 +108,19 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
+}
+
+function getStatusGuide(status: FacilityReport['status']) {
+  if (status === 'submitted') {
+    return '관리자가 신청 내용을 확인 중입니다.';
+  }
+  if (status === 'received') {
+    return '관리자가 신고를 접수했습니다.';
+  }
+  if (status === 'in_progress') {
+    return '현재 시설 조치가 진행 중입니다.';
+  }
+  return '등록된 처리 내용이 없습니다.';
 }
 
 function formatDateTime(value: string) {

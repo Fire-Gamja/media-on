@@ -447,7 +447,7 @@ function createFacilityRequestItem(report: FacilityReport): RequestItem {
     type: '시설 신고',
     title: report.title,
     status: getFacilityStatusLabel(report.status),
-    detail: `${report.location} · ${formatRequestDate(report.created_at)} 접수`,
+    detail: `${report.location} · ${formatRequestDate(report.created_at)} 신청`,
     statusBackground: statusStyle.backgroundColor,
     statusColor: statusStyle.color,
     route: `/facility-reports/${report.id}`,
@@ -455,6 +455,9 @@ function createFacilityRequestItem(report: FacilityReport): RequestItem {
 }
 
 function getFacilityRequestStatusStyle(status: FacilityReport['status']) {
+  if (status === 'submitted') {
+    return { backgroundColor: '#F1F2F6', color: COLORS.subText };
+  }
   if (status === 'resolved') {
     return { backgroundColor: '#EAF8F0', color: COLORS.success };
   }

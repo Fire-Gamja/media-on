@@ -39,7 +39,7 @@ export default function FacilityReportScreen() {
     try {
       setIsSubmitting(true);
       await createFacilityReport({ location, category, title, description });
-      Alert.alert('접수 완료', '시설 신고가 정상적으로 접수되었습니다.', [
+      Alert.alert('신청 완료', '시설 신고 신청이 정상적으로 완료되었습니다.', [
         {
           text: '내 신고 확인',
           onPress: () => router.replace('/facility-reports'),
@@ -160,7 +160,7 @@ export default function FacilityReportScreen() {
             ]}
           >
             <Text style={styles.submitText}>
-              {isSubmitting ? '접수 중...' : '시설 신고 접수'}
+              {isSubmitting ? '신청 중...' : '시설 신고 신청'}
             </Text>
           </Pressable>
         </View>

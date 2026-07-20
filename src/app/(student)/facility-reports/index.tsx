@@ -155,6 +155,9 @@ export default function FacilityReportsScreen() {
 }
 
 function getStatusStyle(status: FacilityReportStatus) {
+  if (status === 'submitted') {
+    return { backgroundColor: '#F1F2F6', color: COLORS.subText };
+  }
   if (status === 'resolved') {
     return { backgroundColor: '#EAF8F0', color: COLORS.success };
   }

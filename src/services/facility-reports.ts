@@ -9,6 +9,7 @@ export type FacilityIssueCategory =
   | 'other';
 
 export type FacilityReportStatus =
+  | 'submitted'
   | 'received'
   | 'in_progress'
   | 'resolved'
@@ -65,9 +66,10 @@ export const FACILITY_STATUS_OPTIONS: ReadonlyArray<{
   value: FacilityReportStatus;
   label: string;
 }> = [
+  { value: 'submitted', label: '신청 완료' },
   { value: 'received', label: '접수 완료' },
-  { value: 'in_progress', label: '처리 중' },
-  { value: 'resolved', label: '처리 완료' },
+  { value: 'in_progress', label: '조치 중' },
+  { value: 'resolved', label: '조치 완료' },
   { value: 'rejected', label: '반려' },
 ];
 
@@ -92,7 +94,7 @@ export function getFacilityCategoryLabel(category: FacilityIssueCategory) {
 export function getFacilityStatusLabel(status: FacilityReportStatus) {
   return (
     FACILITY_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
-    '접수 완료'
+    '신청 완료'
   );
 }
 
@@ -106,7 +108,7 @@ export async function createFacilityReport(input: FacilityReportInput) {
   });
 
   if (error) {
-    throw new Error('시설 신고를 접수하지 못했습니다.');
+    throw new Error('시설 신고를 신청하지 못했습니다.');
   }
 }
 
@@ -199,32 +201,23 @@ function normalizeAdminFacilityReport(
   };
 }
 
-export async function updateFacilityReportStatus(
+export async function transitionFacilityReport(
   id: string,
   status: FacilityReportStatus,
   adminNote: string,
 ) {
   const client = requireSupabase();
-  const {
-    data: { user },
-    error: userError,
-  } = await client.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error('관리자 로그인 정보를 확인할 수 없습니다.');
-  }
-
-  const { error } = await client
-    .from('facility_reports')
-    .update({
-      status,
-      admin_note: adminNote.trim() || null,
-      reviewed_by: user.id,
-      resolved_at: status === 'resolved' ? new Date().toISOString() : null,
-    })
-    .eq('id', id);
+  const { error } = await client.rpc('transition_facility_report', {
+    target_report_id: id,
+    new_status: status,
+    note: adminNote.trim() || null,
+  });
 
   if (error) {
-    throw new Error('시설 신고 처리 상태를 저장하지 못했습니다.');
+    throw new Error(
+      status === 'rejected'
+        ? '시설 신고를 반려 처리하지 못했습니다.'
+        : '시설 신고 처리 상태를 변경하지 못했습니다.',
+    );
   }
 }
