@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -12,7 +13,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
 import { useNoticeSettings } from '../../context/notice-settings-context';
+import { isSupabaseConfigured } from '../../lib/supabase';
 import { signOutUser } from '../../services/auth';
+import { getPublishedNotices } from '../../services/notices';
 
 type QuickAction = {
   id: 'notice' | 'equipment' | 'room' | 'report';
@@ -140,9 +143,27 @@ const REQUESTS: RequestItem[] = [
 
 export default function HomeScreen() {
   const { noticeCount } = useNoticeSettings();
-  const visibleNotices = NOTICES.slice(0, noticeCount);
+  const [notices, setNotices] = useState<Notice[]>(NOTICES);
+  const visibleNotices = notices.slice(0, noticeCount);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    void getPublishedNotices(7)
+      .then((data) =>
+        setNotices(data.map(({ id, title }) => ({ id, title }))),
+      )
+      .catch(() => setNotices(NOTICES));
+  }, []);
 
   const handleQuickAction = (action: QuickAction) => {
+    if (action.id === 'notice') {
+      router.push('/notices');
+      return;
+    }
+
     Alert.alert(
       action.title,
       `${action.title} 화면은 다음 단계에서 연결합니다.`,
@@ -280,7 +301,7 @@ export default function HomeScreen() {
                   <Pressable
                     key={notice.id}
                     accessibilityRole="button"
-                    onPress={() => Alert.alert('공지사항', notice.title)}
+                    onPress={() => router.push(`/notices/${notice.id}`)}
                     style={({ pressed }) => [
                       styles.noticeRow,
                       index < visibleNotices.length - 1 &&
@@ -297,9 +318,7 @@ export default function HomeScreen() {
 
               <Pressable
                 accessibilityRole="button"
-                onPress={() =>
-                  Alert.alert('공지사항', '공지 목록 화면을 준비 중입니다.')
-                }
+                onPress={() => router.push('/notices')}
                 style={({ pressed }) => [
                   styles.noticeMoreButton,
                   pressed && styles.noticeMoreButtonPressed,

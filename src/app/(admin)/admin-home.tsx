@@ -148,6 +148,26 @@ export default function AdminHomeScreen() {
           />
         }
       >
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/admin-notices')}
+          style={({ pressed }) => [
+            styles.managementCard,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.managementIcon}>
+            <Text style={styles.managementIconText}>공</Text>
+          </View>
+          <View style={styles.managementTextArea}>
+            <Text style={styles.managementTitle}>공지사항 관리</Text>
+            <Text style={styles.managementDescription}>
+              공지를 작성하고 게시 상태를 관리합니다.
+            </Text>
+          </View>
+          <Text style={styles.managementChevron}>›</Text>
+        </Pressable>
+
         <View style={styles.summaryCard}>
           <View>
             <Text style={styles.summaryLabel}>가입 승인 대기</Text>
@@ -374,6 +394,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: 18,
     backgroundColor: COLORS.surface,
+  },
+  managementCard: {
+    minHeight: 88,
+    marginBottom: 14,
+    padding: 17,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 18,
+    backgroundColor: COLORS.navy,
+  },
+  managementIcon: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+  },
+  managementIconText: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: '900',
+  },
+  managementTextArea: {
+    flex: 1,
+    marginLeft: 13,
+  },
+  managementTitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  managementDescription: {
+    marginTop: 5,
+    color: '#D9DDEF',
+    fontSize: 12,
+  },
+  managementChevron: {
+    color: COLORS.white,
+    fontSize: 26,
   },
   summaryLabel: {
     color: COLORS.text,
