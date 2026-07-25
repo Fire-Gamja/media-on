@@ -57,7 +57,7 @@ export default function FacilityReportScreen() {
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -77,6 +77,10 @@ export default function FacilityReportScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={
+            Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+          }
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
           <View style={styles.guideBox}>
             <Text style={styles.guideTitle}>시설 불편 사항을 알려 주세요.</Text>
@@ -186,7 +190,7 @@ const styles = StyleSheet.create({
   historyText: { width: 40, color: COLORS.navy, fontSize: 12, fontWeight: '800', textAlign: 'right' },
   pressed: { opacity: 0.7 },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 22, paddingBottom: 36 },
+  content: { padding: 22, paddingBottom: 120 },
   guideBox: { marginBottom: 26, padding: 18, borderRadius: 16, backgroundColor: COLORS.softNavy },
   guideTitle: { color: COLORS.navy, fontSize: 16, fontWeight: '800' },
   guideText: { marginTop: 7, color: COLORS.subText, fontSize: 12, lineHeight: 19 },
