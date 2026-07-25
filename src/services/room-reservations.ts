@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { sendPushNotificationEvent } from './push-notifications';
 
 export type RoomReservationStatus =
   | 'submitted'
@@ -250,6 +251,8 @@ export async function transitionRoomReservationRequest(
     }
     throw new Error('실습실 대여 처리 상태를 변경하지 못했습니다.');
   }
+
+  await sendPushNotificationEvent('room_request_status', id);
 }
 
 function normalizeRoomReservationRequest(

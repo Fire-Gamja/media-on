@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { sendPushNotificationEvent } from './push-notifications';
 
 export type Notice = {
   id: string;
@@ -95,32 +96,57 @@ export async function getAdminNotice(id: string): Promise<Notice> {
 
 export async function createNotice(input: NoticeInput) {
   const client = requireSupabase();
-  const { error } = await client.from('notices').insert({
-    title: input.title.trim(),
-    content: input.content.trim(),
-    is_published: input.isPublished,
-    published_at: input.isPublished ? new Date().toISOString() : null,
-  });
+  const { data, error } = await client
+    .from('notices')
+    .insert({
+      title: input.title.trim(),
+      content: input.content.trim(),
+      is_published: input.isPublished,
+      published_at: input.isPublished ? new Date().toISOString() : null,
+    })
+    .select('id')
+    .single<{ id: string }>();
 
-  if (error) {
+  if (error || !data) {
     throw new Error('공지사항을 저장하지 못했습니다.');
+  }
+
+  if (input.isPublished) {
+    await sendPushNotificationEvent('notice_published', data.id);
   }
 }
 
 export async function updateNotice(id: string, input: NoticeInput) {
   const client = requireSupabase();
+  const { data: currentNotice, error: currentNoticeError } = await client
+    .from('notices')
+    .select('is_published, published_at')
+    .eq('id', id)
+    .single<Pick<Notice, 'is_published' | 'published_at'>>();
+
+  if (currentNoticeError || !currentNotice) {
+    throw new Error('공지사항을 찾을 수 없습니다.');
+  }
+
+  const isNewlyPublished = input.isPublished && !currentNotice.is_published;
   const { error } = await client
     .from('notices')
     .update({
       title: input.title.trim(),
       content: input.content.trim(),
       is_published: input.isPublished,
-      published_at: input.isPublished ? new Date().toISOString() : null,
+      published_at: input.isPublished
+        ? (currentNotice.published_at ?? new Date().toISOString())
+        : null,
     })
     .eq('id', id);
 
   if (error) {
     throw new Error('공지사항을 수정하지 못했습니다.');
+  }
+
+  if (isNewlyPublished) {
+    await sendPushNotificationEvent('notice_published', id);
   }
 }
 

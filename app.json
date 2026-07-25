@@ -35,7 +35,14 @@
       ],
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "color": "#182366",
+          "defaultChannel": "media-on"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

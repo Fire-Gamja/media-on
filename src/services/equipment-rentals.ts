@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { sendPushNotificationEvent } from './push-notifications';
 
 export type EquipmentRequestStatus =
   | 'submitted'
@@ -249,6 +250,8 @@ export async function transitionEquipmentRentalRequest(
 
     throw new Error('기자재 대여 처리 상태를 변경하지 못했습니다.');
   }
+
+  await sendPushNotificationEvent('equipment_request_status', id);
 }
 
 function normalizeEquipmentRentalRequest(

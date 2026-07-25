@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { sendPushNotificationEvent } from './push-notifications';
 
 export type FacilityIssueCategory =
   | 'network'
@@ -220,4 +221,6 @@ export async function transitionFacilityReport(
         : '시설 신고 처리 상태를 변경하지 못했습니다.',
     );
   }
+
+  await sendPushNotificationEvent('facility_report_status', id);
 }

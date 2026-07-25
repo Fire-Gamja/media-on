@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { sendPushNotificationEvent } from './push-notifications';
 
 export type AssistantInquiryCategory =
   | 'academic'
@@ -201,6 +202,10 @@ export async function transitionAssistantInquiry(
     reply: answer.trim() || null,
   });
   if (error) throw new Error('조교 문의 상태를 변경하지 못했습니다.');
+
+  if (status === 'answered') {
+    await sendPushNotificationEvent('assistant_inquiry_answered', id);
+  }
 }
 
 function normalizeAdminInquiry(

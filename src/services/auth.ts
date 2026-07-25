@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { disablePushForCurrentDevice } from './push-notifications';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
@@ -155,6 +156,7 @@ export async function reviewStudentAccount(
 
 export async function signOutUser() {
   if (supabase) {
+    await disablePushForCurrentDevice();
     await supabase.auth.signOut();
   }
 }
