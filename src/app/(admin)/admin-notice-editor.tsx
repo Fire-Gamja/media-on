@@ -81,7 +81,7 @@ export default function AdminNoticeEditorScreen() {
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -103,6 +103,10 @@ export default function AdminNoticeEditorScreen() {
               style={styles.scrollView}
               contentContainerStyle={styles.content}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={
+                Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+              }
+              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             >
               <Text style={styles.label}>제목</Text>
               <TextInput
@@ -195,7 +199,7 @@ const styles = StyleSheet.create({
   headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 24, paddingBottom: 40 },
+  content: { padding: 24, paddingBottom: 120 },
   label: { marginBottom: 9, color: COLORS.text, fontSize: 15, fontWeight: '800' },
   contentLabel: { marginTop: 24 },
   titleInput: {

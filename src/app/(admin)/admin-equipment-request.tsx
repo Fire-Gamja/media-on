@@ -115,7 +115,7 @@ export default function AdminEquipmentRequestScreen() {
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -134,6 +134,10 @@ export default function AdminEquipmentRequestScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={
+              Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+            }
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           >
             <View style={styles.studentCard}>
               <View style={styles.studentTextArea}>
@@ -303,7 +307,7 @@ const styles = StyleSheet.create({
   headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 120 },
   studentCard: { padding: 18, flexDirection: 'row', alignItems: 'center', borderRadius: 16, backgroundColor: COLORS.navy },
   studentTextArea: { flex: 1 },
   studentName: { color: COLORS.white, fontSize: 18, fontWeight: '800' },

@@ -132,7 +132,7 @@ export default function AdminFacilityReportScreen() {
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -151,6 +151,10 @@ export default function AdminFacilityReportScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={
+              Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+            }
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           >
             <View style={styles.studentCard}>
               <View style={styles.studentTopRow}>
@@ -376,7 +380,7 @@ const styles = StyleSheet.create({
   headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 120 },
   studentCard: { padding: 18, borderRadius: 16, backgroundColor: COLORS.navy },
   studentTopRow: { flexDirection: 'row', alignItems: 'center' },
   studentTextArea: { flex: 1, paddingRight: 12 },

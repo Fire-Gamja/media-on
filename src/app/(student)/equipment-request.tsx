@@ -117,7 +117,7 @@ export default function EquipmentRequestScreen() {
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -137,6 +137,10 @@ export default function EquipmentRequestScreen() {
               style={styles.scrollView}
               contentContainerStyle={styles.content}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={
+                Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+              }
+              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             >
               <View style={styles.equipmentCard}>
                 <Text style={styles.category}>{equipment.category}</Text>
@@ -264,7 +268,7 @@ const styles = StyleSheet.create({
   headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 22, paddingBottom: 38 },
+  content: { padding: 22, paddingBottom: 120 },
   equipmentCard: { marginBottom: 26, padding: 19, borderRadius: 17, backgroundColor: COLORS.navy },
   category: { color: '#D9DDEF', fontSize: 11, fontWeight: '700' },
   name: { marginTop: 7, color: COLORS.white, fontSize: 21, fontWeight: '900' },

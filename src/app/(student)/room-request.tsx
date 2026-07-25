@@ -92,7 +92,7 @@ export default function RoomRequestScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Text style={styles.backText}>‹</Text>
@@ -105,7 +105,13 @@ export default function RoomRequestScreen() {
           <View style={styles.loadingBox}><ActivityIndicator size="large" color={COLORS.navy} /></View>
         ) : room ? (
           <>
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            >
               <View style={styles.roomCard}>
                 <Text style={styles.location}>{room.location}</Text>
                 <Text style={styles.roomName}>{room.name}</Text>
@@ -193,7 +199,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.surface }, flex: { flex: 1 },
   header: { height: 64, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: COLORS.border },
   backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 }, headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' }, headerSide: { width: 40 },
-  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' }, scrollView: { flex: 1, backgroundColor: COLORS.background }, content: { padding: 22, paddingBottom: 38 },
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' }, scrollView: { flex: 1, backgroundColor: COLORS.background }, content: { padding: 22, paddingBottom: 120 },
   roomCard: { marginBottom: 26, padding: 19, borderRadius: 17, backgroundColor: COLORS.navy }, location: { color: '#D9DDEF', fontSize: 11, fontWeight: '700' }, roomName: { marginTop: 7, color: COLORS.white, fontSize: 21, fontWeight: '900' }, roomDescription: { marginTop: 8, color: '#D9DDEF', fontSize: 12, lineHeight: 19 }, roomMeta: { marginTop: 12, color: COLORS.white, fontSize: 12, fontWeight: '800' },
   label: { marginBottom: 9, color: COLORS.text, fontSize: 14, fontWeight: '800' }, input: { height: 56, paddingHorizontal: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 15 }, row: { marginTop: 23, flexDirection: 'row', gap: 10 }, halfField: { flex: 1 }, spacedLabel: { marginTop: 23 }, purposeInput: { minHeight: 150, padding: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 22 },
   fixedCapacityBox: { height: 56, paddingHorizontal: 15, justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.softNavy }, fixedCapacityText: { color: COLORS.navy, fontSize: 15, fontWeight: '800' }, purposeGuide: { marginBottom: 10, padding: 14, gap: 5, borderRadius: 13, backgroundColor: COLORS.softNavy }, purposeGuideText: { color: COLORS.navy, fontSize: 12, lineHeight: 18, fontWeight: '700' },
