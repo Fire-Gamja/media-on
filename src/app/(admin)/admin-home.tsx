@@ -123,16 +123,28 @@ export default function AdminHomeScreen() {
           </Text>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={handleLogout}
-          style={({ pressed }) => [
-            styles.logoutButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [
+              styles.profileButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.profileButtonText}>내 정보</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleLogout}
+            style={({ pressed }) => [
+              styles.logoutButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.logoutText}>로그아웃</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -448,6 +460,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.34)',
     borderRadius: 10,
+  },
+  headerActions: {
+    gap: 8,
+  },
+  profileButton: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+  },
+  profileButtonText: {
+    color: COLORS.navy,
+    fontSize: 12,
+    fontWeight: '800',
   },
   logoutText: {
     color: COLORS.white,

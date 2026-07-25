@@ -14,7 +14,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/colors';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import { signOutUser } from '../../services/auth';
+import {
+  getCurrentProfile,
+  signOutUser,
+  type StudentProfile,
+} from '../../services/auth';
 import {
   type AssistantInquiry,
   getAssistantStatusLabel,
@@ -132,6 +136,7 @@ const NOTICES: Notice[] = [
 
 export default function HomeScreen() {
   const { noticeCount } = useNoticeSettings();
+  const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [notices, setNotices] = useState<Notice[]>(NOTICES);
   const [latestFacilityReport, setLatestFacilityReport] =
     useState<FacilityReport | null>(null);
@@ -166,6 +171,10 @@ export default function HomeScreen() {
       if (!isSupabaseConfigured) {
         return;
       }
+
+      void getCurrentProfile()
+        .then(setProfile)
+        .catch(() => setProfile(null));
 
       void getMyFacilityReports(1)
         .then(([latestReport]) => setLatestFacilityReport(latestReport ?? null))
@@ -275,22 +284,44 @@ export default function HomeScreen() {
 
           <View style={styles.greetingRow}>
             <View style={styles.greetingTextArea}>
-              <Text style={styles.greeting}>학생님, 안녕하세요!</Text>
+              <Text style={styles.greeting}>
+                {profile?.name ?? '학생'}님, 안녕하세요!
+              </Text>
               <Text style={styles.greetingDescription}>
                 오늘의 학부 소식과 신청 현황을 확인해 보세요.
               </Text>
             </View>
 
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>학</Text>
+              <Text style={styles.avatarText}>
+                {(profile?.name ?? '학생').slice(0, 1)}
+              </Text>
             </View>
           </View>
 
           <View style={styles.profileMeta}>
             <View style={styles.profileChip}>
-              <Text style={styles.profileChipText}>4학년</Text>
+              <Text style={styles.profileChipText}>
+                {profile ? `${profile.grade}학년` : '학년 정보'}
+              </Text>
             </View>
-            <Text style={styles.profileInfo}>재학 · 학생 계정</Text>
+            <Text style={styles.profileInfo} numberOfLines={1}>
+              {profile
+                ? `${profile.major} · ${profile.enrollment_status}`
+                : '학생 계정'}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="내 정보 열기"
+              hitSlop={8}
+              onPress={() => router.push('/profile')}
+              style={({ pressed }) => [
+                styles.profileLink,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.profileLinkText}>내 정보 ›</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -735,9 +766,24 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     marginLeft: 10,
+    flex: 1,
     color: '#D9DDEF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  profileLink: {
+    minHeight: 28,
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  profileLinkText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '700',
   },
   content: {
     paddingHorizontal: 20,
