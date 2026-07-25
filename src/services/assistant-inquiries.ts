@@ -41,6 +41,11 @@ export type AssistantInquiryInput = {
   content: string;
 };
 
+export type AssistantInquirySuggestion = {
+  category: AssistantInquiryCategory;
+  title: string;
+};
+
 type AdminAssistantInquiryRow = AssistantInquiry & {
   requester: RequesterProfile | RequesterProfile[] | null;
 };
@@ -89,6 +94,37 @@ export function getAssistantStatusLabel(status: AssistantInquiryStatus) {
     ASSISTANT_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
     '접수 완료'
   );
+}
+
+export async function suggestAssistantInquiry(
+  content: string,
+): Promise<AssistantInquirySuggestion> {
+  const client = requireSupabase();
+  const { data, error } = await client.functions.invoke(
+    'suggest-assistant-inquiry',
+    { body: { content: content.trim() } },
+  );
+
+  if (error || !data) {
+    throw new Error('AI가 문의를 정리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+
+  const suggestion = data as Partial<AssistantInquirySuggestion>;
+  const isValidCategory = ASSISTANT_CATEGORY_OPTIONS.some(
+    (option) => option.value === suggestion.category,
+  );
+  if (
+    !isValidCategory ||
+    typeof suggestion.title !== 'string' ||
+    !suggestion.title.trim()
+  ) {
+    throw new Error('AI 추천 결과를 확인하지 못했습니다.');
+  }
+
+  return {
+    category: suggestion.category as AssistantInquiryCategory,
+    title: suggestion.title.trim().slice(0, 30),
+  };
 }
 
 export async function createAssistantInquiry(input: AssistantInquiryInput) {
