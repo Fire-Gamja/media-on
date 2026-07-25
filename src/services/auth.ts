@@ -41,7 +41,11 @@ export type StudentSignupInput = {
 };
 
 export type StudentLoginResult =
-  | { status: 'approved'; profile: StudentProfile }
+  | {
+      status: 'approved';
+      profile: StudentProfile;
+      requiresPasswordChange: boolean;
+    }
   | { status: 'pending' }
   | { status: 'rejected' };
 
@@ -88,7 +92,12 @@ export async function signInStudent(
     return { status: profile.approval_status };
   }
 
-  return { status: 'approved', profile };
+  return {
+    status: 'approved',
+    profile,
+    requiresPasswordChange:
+      data.user.user_metadata?.must_change_password === true,
+  };
 }
 
 export async function registerStudent(input: StudentSignupInput) {
@@ -220,6 +229,16 @@ export async function changeCurrentPassword(
   if (updateError) {
     throw new Error(
       '비밀번호를 변경하지 못했습니다. 현재 비밀번호를 확인하고 다시 시도해 주세요.',
+    );
+  }
+
+  const { error: metadataError } = await client.auth.updateUser({
+    data: { must_change_password: false },
+  });
+
+  if (metadataError) {
+    throw new Error(
+      '비밀번호는 변경되었지만 계정 상태를 갱신하지 못했습니다. 다시 로그인해 주세요.',
     );
   }
 }

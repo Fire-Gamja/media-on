@@ -260,6 +260,28 @@ export default function AdminHomeScreen() {
           <Text style={styles.managementChevron}>›</Text>
         </Pressable>
 
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/admin-password-reset-requests')}
+          style={({ pressed }) => [
+            styles.managementCard,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.managementIcon}>
+            <Text style={styles.managementIconText}>비</Text>
+          </View>
+          <View style={styles.managementTextArea}>
+            <Text style={styles.managementTitle}>
+              비밀번호 재설정 관리
+            </Text>
+            <Text style={styles.managementDescription}>
+              본인 확인 요청과 임시 비밀번호 발급을 처리합니다.
+            </Text>
+          </View>
+          <Text style={styles.managementChevron}>›</Text>
+        </Pressable>
+
         <View style={styles.summaryCard}>
           <View>
             <Text style={styles.summaryLabel}>가입 승인 대기</Text>
