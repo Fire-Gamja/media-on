@@ -10,13 +10,21 @@ export type StudentProfile = {
   grade: number;
   major: string;
   enrollment_status: string;
+  phone_number: string;
   role: 'student' | 'admin';
   approval_status: ApprovalStatus;
 };
 
 export type AdminStudentProfile = StudentProfile & {
-  phone_number: string;
   created_at: string;
+};
+
+export type ProfileUpdateInput = {
+  name: string;
+  grade: number;
+  major: string;
+  enrollmentStatus: string;
+  phoneNumber: string;
 };
 
 export type StudentSignupInput = {
@@ -65,7 +73,7 @@ export async function signInStudent(
   const { data: profile, error: profileError } = await client
     .from('profiles')
     .select(
-      'id, student_number, name, grade, major, enrollment_status, role, approval_status',
+      'id, student_number, name, grade, major, enrollment_status, phone_number, role, approval_status',
     )
     .eq('id', data.user.id)
     .single<StudentProfile>();
@@ -150,6 +158,68 @@ export async function reviewStudentAccount(
       decision === 'approved'
         ? '학생 계정을 승인하지 못했습니다.'
         : '학생 계정을 거절 처리하지 못했습니다.',
+    );
+  }
+}
+
+export async function getCurrentProfile(): Promise<StudentProfile> {
+  const client = requireSupabase();
+  const {
+    data: { user },
+    error: userError,
+  } = await client.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error('로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.');
+  }
+
+  const { data, error } = await client
+    .from('profiles')
+    .select(
+      'id, student_number, name, grade, major, enrollment_status, phone_number, role, approval_status',
+    )
+    .eq('id', user.id)
+    .single<StudentProfile>();
+
+  if (error || !data) {
+    throw new Error('내 정보를 불러오지 못했습니다.');
+  }
+
+  return data;
+}
+
+export async function updateCurrentProfile(
+  input: ProfileUpdateInput,
+): Promise<StudentProfile> {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('update_my_profile', {
+    profile_name: input.name.trim(),
+    profile_grade: input.grade,
+    profile_major: input.major,
+    profile_enrollment_status: input.enrollmentStatus,
+    profile_phone_number: input.phoneNumber.replace(/\D/g, ''),
+  });
+
+  if (error || !data) {
+    throw new Error('내 정보를 저장하지 못했습니다. 다시 시도해 주세요.');
+  }
+
+  return data as StudentProfile;
+}
+
+export async function changeCurrentPassword(
+  currentPassword: string,
+  newPassword: string,
+) {
+  const client = requireSupabase();
+  const { error: updateError } = await client.auth.updateUser({
+    password: newPassword,
+    current_password: currentPassword,
+  });
+
+  if (updateError) {
+    throw new Error(
+      '비밀번호를 변경하지 못했습니다. 현재 비밀번호를 확인하고 다시 시도해 주세요.',
     );
   }
 }
