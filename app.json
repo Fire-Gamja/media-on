@@ -19,7 +19,9 @@
         "foregroundImage": "./assets/images/media-on-app-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.leeinjun.mediaon",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -49,6 +51,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1d2828b7-d6d9-47fa-9d31-f9d683a5e19e"
+      }
+    },
+    "owner": "leeinjun"
   }
 }
