@@ -152,6 +152,21 @@ export async function getPendingStudents(): Promise<AdminStudentProfile[]> {
   return (data ?? []) as AdminStudentProfile[];
 }
 
+export async function getApprovedStudentCount(): Promise<number> {
+  const client = requireSupabase();
+  const { count, error } = await client
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'student')
+    .eq('approval_status', 'approved');
+
+  if (error) {
+    throw new Error('학생 수를 불러오지 못했습니다.');
+  }
+
+  return count ?? 0;
+}
+
 export async function reviewStudentAccount(
   userId: string,
   decision: Exclude<ApprovalStatus, 'pending'>,

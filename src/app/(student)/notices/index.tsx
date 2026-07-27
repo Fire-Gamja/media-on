@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,6 +19,9 @@ import {
   getPublishedNotices,
   type Notice,
 } from '../../../services/notices';
+
+const backIcon = require('../../../../assets/figma/student/back.png');
+const homeIcon = require('../../../../assets/figma/student/home.png');
 
 export default function NoticesScreen() {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -46,12 +50,33 @@ export default function NoticesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
+
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Text style={styles.backText}>‹</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="뒤로 가기"
+          hitSlop={8}
+          onPress={() => router.back()}
+          style={({ pressed }) => [
+            styles.headerIconButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Image source={backIcon} style={styles.headerIcon} />
         </Pressable>
         <Text style={styles.headerTitle}>학과 공지사항</Text>
-        <View style={styles.headerSide} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="홈으로 이동"
+          hitSlop={8}
+          onPress={() => router.replace('/home')}
+          style={({ pressed }) => [
+            styles.headerIconButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Image source={homeIcon} style={styles.headerIcon} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -59,23 +84,29 @@ export default function NoticesScreen() {
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => void loadNotices(true)}
             colors={[COLORS.navy]}
+            onRefresh={() => void loadNotices(true)}
+            refreshing={isRefreshing}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
           <View style={styles.stateBox}>
-            <ActivityIndicator size="large" color={COLORS.navy} />
+            <ActivityIndicator color="#182365" size="large" />
           </View>
         ) : errorMessage ? (
           <View style={styles.stateBox}>
-            <Text style={styles.errorTitle}>공지사항을 불러오지 못했습니다.</Text>
+            <Text style={styles.errorTitle}>
+              공지사항을 불러오지 못했습니다.
+            </Text>
             <Text style={styles.stateText}>{errorMessage}</Text>
             <Pressable
               onPress={() => void loadNotices()}
-              style={styles.retryButton}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.pressed,
+              ]}
             >
               <Text style={styles.retryText}>다시 시도</Text>
             </Pressable>
@@ -95,10 +126,15 @@ export default function NoticesScreen() {
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.title}>{notice.title}</Text>
-                <Text style={styles.date}>
-                  {formatDate(notice.published_at ?? notice.created_at)}
-                </Text>
+                <View style={styles.noticeTextArea}>
+                  <Text numberOfLines={2} style={styles.title}>
+                    {notice.title}
+                  </Text>
+                  <Text style={styles.date}>
+                    {formatDate(notice.published_at ?? notice.created_at)}
+                  </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
               </Pressable>
             ))}
           </View>
@@ -109,30 +145,128 @@ export default function NoticesScreen() {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(value));
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  const hour = `${date.getHours()}`.padStart(2, '0');
+  const minute = `${date.getMinutes()}`.padStart(2, '0');
+  return `${year}.${month}.${day}~ ${hour}:${minute}`;
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: COLORS.surface },
-  header: { height: 64, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
-  headerSide: { width: 40 },
-  scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingBottom: 40 },
-  stateBox: { minHeight: 260, padding: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: COLORS.surface },
-  errorTitle: { color: COLORS.error, fontSize: 15, fontWeight: '800' },
-  stateText: { marginTop: 10, color: COLORS.subText, fontSize: 13, textAlign: 'center' },
-  retryButton: { marginTop: 18, paddingHorizontal: 18, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 11, backgroundColor: COLORS.navy },
-  retryText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
-  emptyTitle: { color: COLORS.subText, fontSize: 15, fontWeight: '700' },
-  list: { overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, borderRadius: 17, backgroundColor: COLORS.surface },
-  noticeRow: { minHeight: 88, padding: 18, justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  title: { color: COLORS.text, fontSize: 15, lineHeight: 22, fontWeight: '700' },
-  date: { marginTop: 8, color: COLORS.placeholder, fontSize: 11 },
-  pressed: { backgroundColor: '#F3F4F8' },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  header: {
+    height: 56,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    backgroundColor: '#FFFFFF',
+  },
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    resizeMode: 'contain',
+  },
+  headerTitle: {
+    flex: 1,
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 24,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#F8F8F8',
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 28,
+  },
+  list: {
+    gap: 16,
+  },
+  noticeRow: {
+    minHeight: 77,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#F2F2F2',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  noticeTextArea: {
+    flex: 1,
+  },
+  title: {
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 16,
+    lineHeight: 21,
+  },
+  date: {
+    marginTop: 8,
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 13,
+  },
+  chevron: {
+    color: '#5C5C5C',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 34,
+    lineHeight: 36,
+  },
+  stateBox: {
+    minHeight: 300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorTitle: {
+    color: COLORS.error,
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 16,
+  },
+  stateText: {
+    marginTop: 10,
+    color: '#8C8C8C',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  retryButton: {
+    height: 42,
+    marginTop: 18,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: '#182365',
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 13,
+  },
+  emptyTitle: {
+    color: '#8C8C8C',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 15,
+  },
+  pressed: {
+    opacity: 0.65,
+  },
 });
