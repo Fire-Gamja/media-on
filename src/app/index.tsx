@@ -1,104 +1,88 @@
 import { router } from 'expo-router';
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const COLORS = {
-  navy: '#182366',
-  white: '#FFFFFF',
-  softWhite: '#E8EAF3',
-};
+import AuthButton from '../components/auth/AuthButton';
+import {
+  AUTH_COLORS,
+  AUTH_FONTS,
+} from '../constants/auth-theme';
+
+const logoMark = require('../../assets/figma/auth/logo-mark.png');
 
 export default function StartScreen() {
-  const handleStart = () => {
-    router.push('/onboarding');
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Image
-          source={require('../../assets/images/media-on-logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={styles.safeArea}
+    >
+      <StatusBar style="light" />
 
-        <View style={styles.titleArea}>
-          <Text style={styles.appName}>MEDIA ON</Text>
-
-          <Text style={styles.description}>
-            서원대학교 미디어콘텐츠학부
+      <View style={styles.logoArea}>
+        <View style={styles.logoTextArea}>
+          <Text style={styles.department}>서원대학교</Text>
+          <Text style={styles.department}>미디어콘텐츠학부</Text>
+          <Text style={styles.departmentEnglish}>
+            Division of Media Contents
           </Text>
         </View>
+        <Image
+          accessibilityLabel="미디어콘텐츠학부 로고"
+          source={logoMark}
+          style={styles.logoMark}
+        />
       </View>
 
-      <TouchableOpacity
+      <AuthButton
+        title="시작하기"
+        onPress={() => router.push('/onboarding')}
         style={styles.startButton}
-        onPress={handleStart}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.startButtonText}>시작하기</Text>
-      </TouchableOpacity>
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: COLORS.navy,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 32,
+    backgroundColor: AUTH_COLORS.background,
   },
-
-  content: {
-    flex: 1,
+  logoArea: {
+    position: 'absolute',
+    top: '42%',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 14,
+    transform: [{ translateY: -38 }],
   },
-
-  logo: {
-    width: '100%',
-    height: 180,
+  logoTextArea: {
+    alignItems: 'flex-end',
   },
-
-  titleArea: {
-    marginTop: 24,
-    alignItems: 'center',
+  department: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 25,
+    lineHeight: 28,
   },
-
-  appName: {
-    color: COLORS.white,
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: 1.8,
+  departmentEnglish: {
+    marginTop: 1,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.regular,
+    fontSize: 13,
+    lineHeight: 15,
   },
-
-  description: {
-    marginTop: 10,
-    color: COLORS.softWhite,
-    fontSize: 16,
-    fontWeight: '400',
+  logoMark: {
+    width: 76,
+    height: 76,
   },
-
   startButton: {
-    width: '100%',
-    minHeight: 56,
-    borderRadius: 14,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  startButtonText: {
-    color: COLORS.navy,
-    fontSize: 17,
-    fontWeight: '700',
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 15,
   },
 });

@@ -1,4 +1,8 @@
-import { router, useFocusEffect } from 'expo-router';
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+} from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -34,6 +38,10 @@ const MAJORS = [
 const ENROLLMENT_STATUSES = ['재학', '휴학', '졸업', '제적·자퇴'] as const;
 
 export default function ProfileScreen() {
+  const { mustChangePassword } = useLocalSearchParams<{
+    mustChangePassword?: string;
+  }>();
+  const isPasswordChangeRequired = mustChangePassword === '1';
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [name, setName] = useState('');
   const [grade, setGrade] = useState<number>(1);
@@ -91,6 +99,18 @@ export default function ProfileScreen() {
     } else if (major === '전공 미정') {
       setMajor('영상미디어전공');
     }
+  };
+
+  const handleBack = () => {
+    if (isPasswordChangeRequired) {
+      Alert.alert(
+        '비밀번호 변경 필요',
+        '임시 비밀번호를 새 비밀번호로 변경한 뒤 서비스를 이용할 수 있습니다.',
+      );
+      return;
+    }
+
+    router.back();
   };
 
   const handleSave = async () => {
@@ -175,6 +195,12 @@ export default function ProfileScreen() {
       setNewPassword('');
       setNewPasswordConfirm('');
       Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');
+
+      if (isPasswordChangeRequired) {
+        router.replace(
+          profile.role === 'admin' ? '/admin-home' : '/home',
+        );
+      }
     } catch (error) {
       Alert.alert('변경 실패', getAuthErrorMessage(error));
     } finally {
@@ -195,12 +221,14 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="뒤로 가기"
             hitSlop={10}
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={({ pressed }) => [pressed && styles.pressed]}
           >
             <Text style={styles.backText}>‹</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>내 정보</Text>
+          <Text style={styles.headerTitle}>
+            {isPasswordChangeRequired ? '새 비밀번호 설정' : '내 정보'}
+          </Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -252,7 +280,19 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.sectionCard}>
+            {isPasswordChangeRequired ? (
+              <View style={styles.requiredBanner}>
+                <Text style={styles.requiredBannerTitle}>
+                  임시 비밀번호로 로그인했습니다
+                </Text>
+                <Text style={styles.requiredBannerText}>
+                  아래에서 새 비밀번호를 설정하면 홈 화면으로 이동합니다.
+                </Text>
+              </View>
+            ) : null}
+
+            {!isPasswordChangeRequired ? (
+              <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>기본 정보</Text>
               <Text style={styles.sectionDescription}>
                 학번과 계정 권한은 관리자 확인 항목으로 직접 변경할 수
@@ -317,16 +357,23 @@ export default function ProfileScreen() {
                 loading={isSaving}
                 onPress={() => void handleSave()}
               />
-            </View>
+              </View>
+            ) : null}
 
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>비밀번호 변경</Text>
               <Text style={styles.sectionDescription}>
-                본인 확인을 위해 현재 비밀번호를 먼저 입력해 주세요.
+                {isPasswordChangeRequired
+                  ? '관리자에게 안내받은 임시 비밀번호를 입력해 주세요.'
+                  : '본인 확인을 위해 현재 비밀번호를 먼저 입력해 주세요.'}
               </Text>
 
               <FormField
-                label="현재 비밀번호"
+                label={
+                  isPasswordChangeRequired
+                    ? '임시 비밀번호'
+                    : '현재 비밀번호'
+                }
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 secureTextEntry
@@ -537,6 +584,25 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 20,
     backgroundColor: COLORS.surface,
+  },
+  requiredBanner: {
+    marginTop: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#F5C264',
+    borderRadius: 16,
+    backgroundColor: '#FFF8E8',
+  },
+  requiredBannerTitle: {
+    color: '#7C4A03',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  requiredBannerText: {
+    marginTop: 7,
+    color: '#8A5A12',
+    fontSize: 13,
+    lineHeight: 20,
   },
   sectionTitle: {
     color: COLORS.text,

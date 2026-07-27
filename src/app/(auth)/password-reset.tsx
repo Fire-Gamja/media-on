@@ -1,122 +1,106 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const COLORS = {
-  navy: '#182366',
-  white: '#FFFFFF',
-  background: '#F7F8FC',
-  border: '#D9DDEB',
-  text: '#111827',
-  subText: '#6B7280',
-  selectedBackground: '#E9ECF8',
-};
+import {
+  AUTH_COLORS,
+  AUTH_FONTS,
+} from '../../constants/auth-theme';
+
+const backIcon = require('../../../assets/figma/auth/back.png');
+const phoneIcon = require('../../../assets/figma/auth/phone.png');
+const passwordAlertIcon = require('../../../assets/figma/auth/password-alert.png');
+const managerIcon = require('../../../assets/figma/auth/manager.png');
 
 export default function PasswordResetScreen() {
   return (
     <SafeAreaView
-      style={styles.safeArea}
       edges={['top', 'bottom']}
+      style={styles.safeArea}
     >
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="이전 화면으로 이동"
-        >
-          <Text style={styles.backText}>‹</Text>
-        </Pressable>
+      <StatusBar style="light" />
 
-        <Text style={styles.headerTitle}>비밀번호 찾기</Text>
+      <Pressable
+        accessibilityLabel="로그인 화면으로 돌아가기"
+        accessibilityRole="button"
+        hitSlop={12}
+        onPress={() => router.back()}
+        style={({ pressed }) => [
+          styles.backButton,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Image source={backIcon} style={styles.backIcon} />
+      </Pressable>
 
-        <View style={styles.headerSpacer} />
-      </View>
+      <Text style={styles.title}>
+        비밀번호 재설정 방법을{'\n'}선택해 주세요
+      </Text>
 
-      <View style={styles.content}>
-        <View style={styles.titleArea}>
-          <Text style={styles.title}>
-            비밀번호 재설정 방법을{'\n'}선택해 주세요
-          </Text>
-
-          <Text style={styles.description}>
-            본인 인증 또는 관리자 요청을 통해 비밀번호를
-            재설정할 수 있습니다.
-          </Text>
-        </View>
-
-        <View style={styles.optionList}>
-          <ResetOption
-            number="01"
-            title="휴대전화번호로 재설정"
-            description={
-              '가입할 때 등록한 휴대전화번호로\n본인 인증 후 비밀번호를 변경합니다.'
-            }
-            onPress={() =>
-              router.push('/password-reset-phone')
-            }
-          />
-
-          <ResetOption
-            number="02"
-            title="관리자에게 재설정 요청"
-            description={
-              '휴대전화번호 인증이 어려운 경우\n관리자에게 초기화를 요청합니다.'
-            }
-            onPress={() =>
-              router.push('/password-reset-request')
-            }
-          />
-        </View>
-
-        <View style={styles.guideBox}>
-          <Text style={styles.guideTitle}>안내사항</Text>
-
-          <Text style={styles.guideText}>
-            관리자에게 재설정을 요청한 경우 확인 후 임시
-            비밀번호가 발급될 수 있습니다. 임시 비밀번호는
-            발급 후 1시간 동안만 사용할 수 있습니다.
-          </Text>
-        </View>
+      <View style={styles.methodRow}>
+        <ResetMethod
+          description={
+            '가입할 때 등록한 휴대전화번호로\n본인 인증 후 비밀번호를 변경합니다.'
+          }
+          icon={
+            <View style={styles.phoneIconArea}>
+              <Image source={phoneIcon} style={styles.phoneIcon} />
+              <Image
+                source={passwordAlertIcon}
+                style={styles.passwordAlertIcon}
+              />
+            </View>
+          }
+          onPress={() => router.push('/password-reset-phone')}
+          title="휴대전화번호로 재설정"
+        />
+        <ResetMethod
+          description={
+            '휴대전화번호 인증이 어려운 경우\n관리자에게 초기화를 요청합니다.'
+          }
+          icon={
+            <Image source={managerIcon} style={styles.managerIcon} />
+          }
+          onPress={() => router.push('/password-reset-request')}
+          title="관리자에게 재설정 요청"
+        />
       </View>
     </SafeAreaView>
   );
 }
 
-type ResetOptionProps = {
-  number: string;
+type ResetMethodProps = {
   title: string;
   description: string;
+  icon: React.ReactNode;
   onPress: () => void;
 };
 
-function ResetOption({
-  number,
+function ResetMethod({
   title,
   description,
+  icon,
   onPress,
-}: ResetOptionProps) {
+}: ResetMethodProps) {
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.optionCard,
-        pressed && styles.optionCardPressed,
-      ]}
-      onPress={onPress}
       accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.methodCard,
+        pressed && styles.methodCardPressed,
+      ]}
     >
-      <View style={styles.optionNumber}>
-        <Text style={styles.optionNumberText}>{number}</Text>
-      </View>
-
-      <View style={styles.optionContent}>
-        <Text style={styles.optionTitle}>{title}</Text>
-        <Text style={styles.optionDescription}>
-          {description}
-        </Text>
-      </View>
-
-      <Text style={styles.arrow}>›</Text>
+      <View style={styles.iconArea}>{icon}</View>
+      <Text style={styles.methodTitle}>{title}</Text>
+      <Text style={styles.methodDescription}>{description}</Text>
     </Pressable>
   );
 }
@@ -124,118 +108,89 @@ function ResetOption({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: AUTH_COLORS.background,
   },
-  header: {
-    height: 58,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  backButton: {
+    position: 'absolute',
+    top: 15,
+    left: 16,
+    width: 30,
+    height: 30,
   },
-  backText: {
-    width: 32,
-    color: COLORS.navy,
-    fontSize: 38,
-    lineHeight: 40,
-  },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  headerSpacer: {
-    width: 32,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 38,
-  },
-  titleArea: {
-    marginBottom: 34,
+  backIcon: {
+    width: 30,
+    height: 30,
   },
   title: {
-    color: COLORS.text,
-    fontSize: 28,
-    lineHeight: 39,
-    fontWeight: '800',
+    position: 'absolute',
+    top: 126,
+    left: 20,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.extraBold,
+    fontSize: 24,
+    lineHeight: 28,
   },
-  description: {
-    marginTop: 12,
-    color: COLORS.subText,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  optionList: {
-    gap: 14,
-  },
-  optionCard: {
-    minHeight: 128,
-    padding: 18,
+  methodRow: {
+    position: 'absolute',
+    top: 248,
+    right: 16,
+    left: 16,
     flexDirection: 'row',
+    gap: 16,
+  },
+  methodCard: {
+    flex: 1,
+    height: 228,
+    paddingHorizontal: 10,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    backgroundColor: COLORS.white,
+    borderWidth: 2,
+    borderColor: AUTH_COLORS.text,
+    borderRadius: 10,
   },
-  optionCardPressed: {
-    opacity: 0.78,
-    backgroundColor: COLORS.selectedBackground,
+  methodCardPressed: {
+    borderColor: AUTH_COLORS.link,
+    backgroundColor: AUTH_COLORS.overlay,
   },
-  optionNumber: {
-    width: 48,
-    height: 48,
-    marginRight: 16,
+  iconArea: {
+    height: 132,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 24,
-    backgroundColor: COLORS.selectedBackground,
   },
-  optionNumberText: {
-    color: COLORS.navy,
+  phoneIconArea: {
+    width: 100,
+    height: 100,
+  },
+  phoneIcon: {
+    width: 100,
+    height: 100,
+  },
+  passwordAlertIcon: {
+    position: 'absolute',
+    top: 38,
+    left: 38,
+    width: 24,
+    height: 24,
+  },
+  managerIcon: {
+    width: 90,
+    height: 90,
+  },
+  methodTitle: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.extraBold,
     fontSize: 15,
-    fontWeight: '800',
+    lineHeight: 19,
+    textAlign: 'center',
   },
-  optionContent: {
-    flex: 1,
+  methodDescription: {
+    marginTop: 18,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.regular,
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: 'center',
   },
-  optionTitle: {
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  optionDescription: {
-    marginTop: 8,
-    color: COLORS.subText,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  arrow: {
-    marginLeft: 8,
-    color: COLORS.navy,
-    fontSize: 30,
-    fontWeight: '300',
-  },
-  guideBox: {
-    marginTop: 28,
-    padding: 18,
-    borderRadius: 14,
-    backgroundColor: COLORS.selectedBackground,
-  },
-  guideTitle: {
-    color: COLORS.navy,
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  guideText: {
-    marginTop: 8,
-    color: COLORS.subText,
-    fontSize: 13,
-    lineHeight: 21,
+  pressed: {
+    opacity: 0.65,
   },
 });

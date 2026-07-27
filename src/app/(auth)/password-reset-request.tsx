@@ -1,279 +1,323 @@
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
-  Platform,
+  Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import FormField from '../../components/common/FormField';
-import PrimaryButton from '../../components/common/PrimaryButton';
-import { COLORS } from '../../constants/colors';
+import AuthButton from '../../components/auth/AuthButton';
+import AuthField from '../../components/auth/AuthField';
+import AuthFlowScreen from '../../components/auth/AuthFlowScreen';
+import {
+  AUTH_COLORS,
+  AUTH_FONTS,
+} from '../../constants/auth-theme';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { getAuthErrorMessage } from '../../services/auth';
+import { createPasswordResetRequest } from '../../services/password-reset-requests';
+
+const completeIcon = require('../../../assets/figma/auth/complete.png');
+const backIcon = require('../../../assets/figma/auth/back.png');
+
+const TOTAL_STEPS = 4;
 
 export default function PasswordResetRequestScreen() {
+  const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [studentNumber, setStudentNumber] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [requestReason, setRequestReason] = useState('');
+  const [reason, setReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isComplete = step > TOTAL_STEPS;
 
-  const formatPhoneNumber = (value: string) => {
-    const numbers = value.replace(/\D/g, '').slice(0, 11);
-
-    if (numbers.length <= 3) {
-      return numbers;
+  const handleBack = () => {
+    if (isComplete) {
+      router.replace('/login');
+      return;
     }
 
-    if (numbers.length <= 7) {
-      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    if (step === 1) {
+      router.back();
+      return;
     }
 
-    return `${numbers.slice(0, 3)}-${numbers.slice(
-      3,
-      7,
-    )}-${numbers.slice(7)}`;
+    setStep((previous) => previous - 1);
   };
 
-  const handleStudentNumberChange = (value: string) => {
-    setStudentNumber(value.replace(/\D/g, ''));
-  };
-
-  const handlePhoneNumberChange = (value: string) => {
-    setPhoneNumber(formatPhoneNumber(value));
-  };
-
-  const handleSubmit = () => {
-    const trimmedName = name.trim();
-    const trimmedStudentNumber = studentNumber.trim();
-    const phoneNumbersOnly = phoneNumber.replace(/\D/g, '');
-
-    if (!trimmedName) {
+  const handleNext = () => {
+    if (step === 1 && !name.trim()) {
       Alert.alert('입력 확인', '이름을 입력해 주세요.');
       return;
     }
 
-    if (!trimmedStudentNumber) {
-      Alert.alert('입력 확인', '학번을 입력해 주세요.');
+    if (step === 2 && !studentNumber.trim()) {
+      Alert.alert('입력 확인', '학번 또는 사번을 입력해 주세요.');
       return;
     }
 
-    if (phoneNumbersOnly.length !== 11) {
+    if (
+      step === 3 &&
+      phoneNumber.replace(/\D/g, '').length !== 11
+    ) {
       Alert.alert(
         '입력 확인',
-        '휴대전화번호 11자리를 입력해 주세요.',
+        '가입할 때 등록한 휴대전화번호 11자리를 입력해 주세요.',
       );
       return;
     }
 
-    Alert.alert(
-      '재설정 요청 완료',
-      '관리자에게 비밀번호 재설정 요청이 전달되었습니다.\n확인 후 임시 비밀번호가 발급될 수 있습니다.',
-      [
-        {
-          text: '확인',
-          onPress: () => router.replace('/login'),
-        },
-      ],
-    );
+    if (step < TOTAL_STEPS) {
+      setStep((previous) => previous + 1);
+    }
   };
 
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+
+      if (isSupabaseConfigured) {
+        await createPasswordResetRequest({
+          name,
+          studentNumber,
+          phoneNumber,
+          reason,
+        });
+      }
+
+      setStep(TOTAL_STEPS + 1);
+    } catch (error) {
+      Alert.alert('요청 실패', getAuthErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isComplete) {
+    return <RequestComplete />;
+  }
+
+  if (step === 1) {
+    return (
+      <AuthFlowScreen
+        buttonDisabled={!name.trim()}
+        buttonTitle="다음"
+        onBack={handleBack}
+        onButtonPress={handleNext}
+        title="이름을 입력해 주세요"
+      >
+        <AuthField
+          value={name}
+          onChangeText={setName}
+          placeholder="이름을 입력해 주세요"
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={50}
+          returnKeyType="next"
+          onSubmitEditing={handleNext}
+        />
+      </AuthFlowScreen>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <AuthFlowScreen
+        buttonDisabled={!studentNumber.trim()}
+        buttonTitle="다음"
+        onBack={handleBack}
+        onButtonPress={handleNext}
+        title="학번 또는 사번을 입력해 주세요"
+      >
+        <AuthField
+          value={studentNumber}
+          onChangeText={(value) =>
+            setStudentNumber(value.replace(/\D/g, ''))
+          }
+          placeholder="학번을 입력해 주세요"
+          keyboardType="number-pad"
+          maxLength={20}
+          returnKeyType="next"
+          onSubmitEditing={handleNext}
+        />
+      </AuthFlowScreen>
+    );
+  }
+
+  if (step === 3) {
+    return (
+      <AuthFlowScreen
+        buttonDisabled={
+          phoneNumber.replace(/\D/g, '').length !== 11
+        }
+        buttonTitle="다음"
+        onBack={handleBack}
+        onButtonPress={handleNext}
+        title="휴대전화번호를 입력해 주세요"
+      >
+        <AuthField
+          value={phoneNumber}
+          onChangeText={(value) =>
+            setPhoneNumber(formatPhoneNumber(value))
+          }
+          placeholder="010-0000-0000"
+          keyboardType="phone-pad"
+          maxLength={13}
+          returnKeyType="next"
+          onSubmitEditing={handleNext}
+        />
+      </AuthFlowScreen>
+    );
+  }
+
+  return (
+    <AuthFlowScreen
+      buttonLoading={isSubmitting}
+      buttonTitle="다음"
+      multiline
+      onBack={handleBack}
+      onButtonPress={() => void handleSubmit()}
+      title="요청 사유를 작성해 주세요"
+    >
+      <View>
+        <AuthField
+          value={reason}
+          onChangeText={setReason}
+          placeholder={
+            '휴대전화번호 변경 등 재설정이 필요한 사유를 입력해 주세요. 선택사항입니다.'
+          }
+          multiline
+          maxLength={500}
+        />
+        <Text style={styles.characterCount}>
+          {reason.length}/500
+        </Text>
+      </View>
+    </AuthFlowScreen>
+  );
+}
+
+function RequestComplete() {
   return (
     <SafeAreaView
-      style={styles.safeArea}
       edges={['top', 'bottom']}
+      style={styles.safeArea}
     >
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <StatusBar style="light" />
+
+      <Pressable
+        accessibilityLabel="로그인 화면으로 이동"
+        accessibilityRole="button"
+        hitSlop={12}
+        onPress={() => router.replace('/login')}
+        style={({ pressed }) => [
+          styles.backButton,
+          pressed && styles.pressed,
+        ]}
       >
-        <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="이전 화면으로 이동"
-          >
-            <Text style={styles.backText}>‹</Text>
-          </Pressable>
+        <Image source={backIcon} style={styles.backIcon} />
+      </Pressable>
 
-          <Text style={styles.headerTitle}>
-            관리자 재설정 요청
-          </Text>
-
-          <View style={styles.headerSpacer} />
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.titleArea}>
-            <Text style={styles.title}>
-              가입 정보를 입력해 주세요
-            </Text>
-
-            <Text style={styles.description}>
-              관리자가 가입 정보를 확인한 뒤 비밀번호 재설정을
-              처리합니다.
-            </Text>
-          </View>
-
-          <FormField
-            label="이름"
-            value={name}
-            onChangeText={setName}
-            placeholder="이름을 입력해 주세요"
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="next"
-          />
-
-          <FormField
-            label="학번"
-            value={studentNumber}
-            onChangeText={handleStudentNumberChange}
-            placeholder="학번을 입력해 주세요"
-            keyboardType="number-pad"
-            maxLength={20}
-          />
-
-          <FormField
-            label="휴대전화번호"
-            value={phoneNumber}
-            onChangeText={handlePhoneNumberChange}
-            placeholder="010-0000-0000"
-            keyboardType="phone-pad"
-            maxLength={13}
-          />
-
-          <View style={styles.reasonArea}>
-            <FormField
-              label="요청 사유"
-              value={requestReason}
-              onChangeText={setRequestReason}
-              placeholder="휴대전화번호 변경 등 재설정이 필요한 사유를 입력해 주세요. 선택사항입니다."
-              multiline
-              maxLength={500}
-              style={styles.reasonInput}
-            />
-
-            <Text style={styles.characterCount}>
-              {requestReason.length}/500
-            </Text>
-          </View>
-
-          <View style={styles.guideBox}>
-            <Text style={styles.guideTitle}>
-              임시 비밀번호 안내
-            </Text>
-
-            <Text style={styles.guideText}>
-              관리자가 요청을 확인하면 임시 비밀번호를 발급할 수
-              있습니다. 임시 비밀번호는 발급 후 1시간 동안 유효하며,
-              로그인 후 반드시 새 비밀번호로 변경해야 합니다.
-            </Text>
-          </View>
-
-          <PrimaryButton
-            title="재설정 요청"
-            onPress={handleSubmit}
-            style={styles.submitButton}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <Image
+        accessibilityLabel="재설정 요청 완료"
+        source={completeIcon}
+        style={styles.completeIcon}
+      />
+      <Text style={styles.completeTitle}>
+        비밀번호 재설정 요청이 완료되었습니다.
+      </Text>
+      <Text style={styles.completeDescription}>
+        관리자 확인 후 임시 비밀번호가 안내됩니다.{'\n'}
+        임시 비밀번호로 로그인한 뒤 비밀번호를 변경해 주세요.
+      </Text>
+      <AuthButton
+        title="완료"
+        onPress={() => router.replace('/login')}
+        style={styles.completeButton}
+      />
     </SafeAreaView>
   );
+}
+
+function formatPhoneNumber(value: string) {
+  const numbers = value.replace(/\D/g, '').slice(0, 11);
+
+  if (numbers.length <= 3) {
+    return numbers;
+  }
+
+  if (numbers.length <= 7) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+  }
+
+  return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`;
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  header: {
-    height: 58,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.white,
-  },
-  backText: {
-    width: 32,
-    color: COLORS.navy,
-    fontSize: 38,
-    lineHeight: 40,
-  },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  headerSpacer: {
-    width: 32,
-  },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 36,
-    paddingBottom: 40,
-  },
-  titleArea: {
-    marginBottom: 32,
-  },
-  title: {
-    color: COLORS.text,
-    fontSize: 27,
-    lineHeight: 38,
-    fontWeight: '800',
-  },
-  description: {
-    marginTop: 10,
-    color: COLORS.subText,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  reasonArea: {
-    position: 'relative',
-  },
-  reasonInput: {
-    paddingBottom: 38,
+    backgroundColor: AUTH_COLORS.background,
   },
   characterCount: {
     position: 'absolute',
-    right: 14,
-    bottom: 32,
-    color: COLORS.subText,
-    fontSize: 12,
-  },
-  guideBox: {
-    padding: 18,
-    borderRadius: 14,
-    backgroundColor: COLORS.softNavy,
-  },
-  guideTitle: {
-    color: COLORS.navy,
+    right: 15,
+    bottom: 12,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.regular,
     fontSize: 14,
-    fontWeight: '800',
+    lineHeight: 19,
   },
-  guideText: {
-    marginTop: 8,
-    color: COLORS.subText,
-    fontSize: 13,
-    lineHeight: 21,
+  backButton: {
+    position: 'absolute',
+    top: 15,
+    left: 16,
+    width: 30,
+    height: 30,
   },
-  submitButton: {
-    marginTop: 28,
+  backIcon: {
+    width: 30,
+    height: 30,
+  },
+  completeIcon: {
+    position: 'absolute',
+    top: 126,
+    left: '50%',
+    width: 100,
+    height: 100,
+    marginLeft: -50,
+  },
+  completeTitle: {
+    position: 'absolute',
+    top: 243,
+    right: 20,
+    left: 20,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.extraBold,
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  completeDescription: {
+    position: 'absolute',
+    top: 287,
+    right: 20,
+    left: 20,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.regular,
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  completeButton: {
+    position: 'absolute',
+    top: 392,
+    right: 20,
+    left: 20,
+  },
+  pressed: {
+    opacity: 0.65,
   },
 });
