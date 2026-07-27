@@ -1,8 +1,10 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -24,6 +26,11 @@ import {
   getAuthErrorMessage,
   signInStudent,
 } from '../../services/auth';
+
+const loginHero = require('../../../assets/figma/auth/login-hero.png');
+const logoMark = require('../../../assets/figma/auth/logo-mark.png');
+const backIcon = require('../../../assets/figma/auth/back.png');
+const eyeIcon = require('../../../assets/figma/auth/eye.png');
 
 type LoginStep = 'welcome' | 'identifier' | 'password';
 
@@ -127,169 +134,181 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={styles.safeArea}
+    >
       <StatusBar style="light" />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="이전 화면으로 이동"
-            hitSlop={12}
-            onPress={handleBack}
-          >
-            <Text style={styles.backText}>‹</Text>
-          </Pressable>
-
-          <Text style={styles.topBrand}>MEDIA ON</Text>
-          <View style={styles.topSpacer} />
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={
-            Platform.OS === 'ios' ? 'interactive' : 'on-drag'
-          }
-          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-          showsVerticalScrollIndicator={false}
+      {step === 'welcome' ? (
+        <WelcomeStep onLogin={() => setStep('identifier')} />
+      ) : (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.flex}
         >
-          {step === 'welcome' ? (
-            <View style={styles.welcomeContent}>
-              <View style={styles.brandMark}>
-                <Text style={styles.brandMarkText}>M</Text>
+          <ScrollView
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            contentContainerStyle={styles.formScrollContent}
+            keyboardDismissMode={
+              Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+            }
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Pressable
+              accessibilityLabel="이전 화면으로 이동"
+              accessibilityRole="button"
+              hitSlop={12}
+              onPress={handleBack}
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Image source={backIcon} style={styles.backIcon} />
+            </Pressable>
+
+            <View style={styles.formContent}>
+              <Text style={styles.formTitle}>
+                {step === 'identifier'
+                  ? '학번 또는 사번을 입력해 주세요'
+                  : '비밀번호를 입력해 주세요'}
+              </Text>
+
+              <View style={styles.fieldArea}>
+                {step === 'identifier' ? (
+                  <AuthField
+                    value={identifier}
+                    onChangeText={(value) =>
+                      setIdentifier(value.replace(/\D/g, ''))
+                    }
+                    placeholder="학번 또는 사번"
+                    keyboardType="number-pad"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={20}
+                    returnKeyType="next"
+                    onSubmitEditing={handleIdentifierNext}
+                  />
+                ) : (
+                  <AuthField
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="비밀번호"
+                    secureTextEntry={!isPasswordVisible}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    rightActionLabel={
+                      isPasswordVisible
+                        ? '비밀번호 숨기기'
+                        : '비밀번호 보기'
+                    }
+                    rightActionIcon={eyeIcon}
+                    onRightActionPress={() =>
+                      setIsPasswordVisible((previous) => !previous)
+                    }
+                    onSubmitEditing={() => void handleLogin()}
+                  />
+                )}
               </View>
 
-              <Text style={styles.welcomeTitle}>
-                미디어콘텐츠학부에{'\n'}오신 것을 환영합니다
-              </Text>
-              <Text style={styles.description}>
-                MEDIA ON에서 학부 소식과 신청 내역을{'\n'}
-                편리하게 확인해 보세요.
-              </Text>
-
               <AuthButton
-                title="로그인"
-                onPress={() => setStep('identifier')}
-                style={styles.mainButton}
+                title={step === 'identifier' ? '다음' : '로그인'}
+                disabled={
+                  step === 'identifier' ? !identifier.trim() : !password
+                }
+                loading={isSubmitting}
+                onPress={
+                  step === 'identifier'
+                    ? handleIdentifierNext
+                    : () => void handleLogin()
+                }
+                style={styles.formButton}
               />
 
               <Pressable
                 accessibilityRole="button"
-                onPress={() => router.push('/signup')}
+                onPress={() => router.push('/password-reset')}
                 style={({ pressed }) => [
-                  styles.textLinkButton,
+                  styles.findPasswordButton,
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.textLink}>
-                  처음 이용하시나요?{' '}
-                  <Text style={styles.textLinkAccent}>회원가입</Text>
+                <Text style={styles.findPasswordText}>
+                  비밀번호를 잊으셨나요?
                 </Text>
               </Pressable>
             </View>
-          ) : (
-            <View style={styles.formContent}>
-              <View style={styles.stepIndicator}>
-                <View style={styles.activeStepDot} />
-                <View
-                  style={[
-                    styles.stepDot,
-                    step === 'password' && styles.activeStepDot,
-                  ]}
-                />
-              </View>
-
-              {step === 'identifier' ? (
-                <>
-                  <Text style={styles.formTitle}>
-                    학번 또는 사번을{'\n'}입력해 주세요
-                  </Text>
-                  <Text style={styles.description}>
-                    가입할 때 등록한 번호를 입력해 주세요.
-                  </Text>
-
-                  <View style={styles.fieldArea}>
-                    <AuthField
-                      value={identifier}
-                      onChangeText={(value) =>
-                        setIdentifier(value.replace(/\D/g, ''))
-                      }
-                      placeholder="학번 또는 사번"
-                      keyboardType="number-pad"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={20}
-                      returnKeyType="next"
-                      onSubmitEditing={handleIdentifierNext}
-                    />
-                  </View>
-
-                  <AuthButton
-                    title="다음"
-                    disabled={!identifier.trim()}
-                    onPress={handleIdentifierNext}
-                  />
-                </>
-              ) : (
-                <>
-                  <Text style={styles.formTitle}>
-                    비밀번호를{'\n'}입력해 주세요
-                  </Text>
-                  <Text style={styles.description}>
-                    {identifier} 계정으로 로그인합니다.
-                  </Text>
-
-                  <View style={styles.fieldArea}>
-                    <AuthField
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder="비밀번호"
-                      secureTextEntry={!isPasswordVisible}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      returnKeyType="done"
-                      rightActionLabel={
-                        isPasswordVisible ? '숨기기' : '보기'
-                      }
-                      onRightActionPress={() =>
-                        setIsPasswordVisible((previous) => !previous)
-                      }
-                      onSubmitEditing={() => void handleLogin()}
-                    />
-                  </View>
-
-                  <AuthButton
-                    title="로그인"
-                    disabled={!password}
-                    loading={isSubmitting}
-                    onPress={() => void handleLogin()}
-                  />
-
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() =>
-                      router.push('/password-reset-request')
-                    }
-                    style={({ pressed }) => [
-                      styles.findPasswordButton,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={styles.findPasswordText}>
-                      비밀번호를 잊으셨나요?
-                    </Text>
-                  </Pressable>
-                </>
-              )}
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
+  );
+}
+
+type WelcomeStepProps = {
+  onLogin: () => void;
+};
+
+function WelcomeStep({ onLogin }: WelcomeStepProps) {
+  return (
+    <View style={styles.welcome}>
+      <Image
+        accessibilityLabel="미디어콘텐츠학부 소개"
+        resizeMode="cover"
+        source={loginHero}
+        style={styles.hero}
+      />
+      <LinearGradient
+        colors={['rgba(26,28,41,0)', AUTH_COLORS.background]}
+        locations={[0, 0.88]}
+        pointerEvents="none"
+        style={styles.heroGradient}
+      />
+
+      <View style={styles.logoArea}>
+        <View style={styles.logoTextArea}>
+          <Text style={styles.logoDepartment}>서원대학교</Text>
+          <Text style={styles.logoDepartment}>미디어콘텐츠학부</Text>
+          <Text style={styles.logoEnglish}>
+            Division of Media Contents
+          </Text>
+        </View>
+        <Image source={logoMark} style={styles.logoMark} />
+      </View>
+
+      <Text style={styles.welcomeTitle}>
+        서원대학교 미디어콘텐츠학부에{'\n'}오신 것을 환영합니다
+      </Text>
+
+      <View style={styles.accountArea}>
+        <View style={styles.signupArea}>
+          <AuthButton
+            title="회원가입하기"
+            onPress={() => router.push('/signup')}
+          />
+          <Text style={styles.signupGuide}>
+            로그인 안내{'\n'}
+            회원가입 후 관리자 승인이 완료되어야 로그인할 수 있습니다.
+          </Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={onLogin}
+          style={({ pressed }) => [
+            styles.loginLinkButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.loginLinkText}>로그인 하기</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -301,125 +320,142 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AUTH_COLORS.background,
   },
-  topBar: {
-    height: 56,
-    paddingHorizontal: 20,
+  welcome: {
+    flex: 1,
+  },
+  hero: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+    width: '100%',
+    height: 269,
+  },
+  heroGradient: {
+    position: 'absolute',
+    top: 103,
+    right: 0,
+    left: 0,
+    height: 166,
+  },
+  logoArea: {
+    position: 'absolute',
+    top: 267,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 4,
   },
-  backText: {
-    width: 34,
+  logoTextArea: {
+    alignItems: 'flex-end',
+  },
+  logoDepartment: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.extraBold,
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  logoEnglish: {
     color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.regular,
-    fontSize: 38,
-    lineHeight: 40,
+    fontSize: 8,
+    lineHeight: 10,
+    letterSpacing: 0.6,
   },
-  topBrand: {
-    color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.extraBold,
-    fontSize: 14,
-    letterSpacing: 1,
-  },
-  topSpacer: {
-    width: 34,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  welcomeContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandMark: {
-    width: 88,
-    height: 88,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 28,
-    backgroundColor: AUTH_COLORS.primary,
-  },
-  brandMarkText: {
-    color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.extraBold,
-    fontSize: 44,
+  logoMark: {
+    width: 43,
+    height: 43,
   },
   welcomeTitle: {
-    marginTop: 34,
+    position: 'absolute',
+    top: 393,
+    right: 20,
+    left: 20,
     color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.extraBold,
-    fontSize: 30,
-    lineHeight: 40,
+    fontSize: 24,
+    lineHeight: 28,
+    letterSpacing: 1,
     textAlign: 'center',
+  },
+  accountArea: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    left: 0,
+    gap: 20,
+  },
+  signupArea: {
+    marginHorizontal: 24,
+    gap: 8,
+  },
+  signupGuide: {
+    color: '#858585',
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#444650',
+  },
+  loginLinkButton: {
+    minHeight: 17,
+    marginBottom: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginLinkText: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 14,
+    lineHeight: 17,
+  },
+  formScrollContent: {
+    flexGrow: 1,
+  },
+  backButton: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 15,
+    left: 16,
+    width: 30,
+    height: 30,
+  },
+  backIcon: {
+    width: 30,
+    height: 30,
   },
   formContent: {
-    flex: 1,
-    paddingTop: 54,
-  },
-  stepIndicator: {
-    marginBottom: 42,
-    flexDirection: 'row',
-    gap: 7,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AUTH_COLORS.inputBorder,
-  },
-  activeStepDot: {
-    width: 24,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AUTH_COLORS.text,
+    paddingTop: 126,
+    paddingHorizontal: 20,
   },
   formTitle: {
+    width: 334,
     color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.extraBold,
-    fontSize: 31,
-    lineHeight: 41,
-  },
-  description: {
-    marginTop: 14,
-    color: AUTH_COLORS.subText,
-    fontFamily: AUTH_FONTS.regular,
-    fontSize: 15,
-    lineHeight: 23,
-    textAlign: 'center',
+    fontSize: 24,
+    lineHeight: 28,
   },
   fieldArea: {
-    marginTop: 44,
-    marginBottom: 20,
+    marginTop: 16,
   },
-  mainButton: {
-    width: '100%',
-    marginTop: 48,
-  },
-  textLinkButton: {
-    marginTop: 20,
-    padding: 8,
-  },
-  textLink: {
-    color: AUTH_COLORS.subText,
-    fontFamily: AUTH_FONTS.regular,
-    fontSize: 14,
-  },
-  textLinkAccent: {
-    color: AUTH_COLORS.link,
-    fontFamily: AUTH_FONTS.semiBold,
+  formButton: {
+    marginTop: 60,
   },
   findPasswordButton: {
-    alignSelf: 'center',
-    marginTop: 22,
-    padding: 8,
+    minHeight: 24,
+    marginTop: 16,
+    justifyContent: 'center',
   },
   findPasswordText: {
     color: AUTH_COLORS.link,
-    fontFamily: AUTH_FONTS.semiBold,
+    fontFamily: AUTH_FONTS.extraBold,
     fontSize: 14,
+    lineHeight: 24,
   },
   pressed: {
     opacity: 0.65,

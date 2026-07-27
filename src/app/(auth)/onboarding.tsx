@@ -5,8 +5,8 @@ import {
   FlatList,
   Image,
   type ImageSourcePropType,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   StyleSheet,
   Text,
@@ -34,33 +34,33 @@ type OnboardingItem = {
 const ONBOARDING_DATA: OnboardingItem[] = [
   {
     id: 'notice',
-    image: require('../../../assets/images/onboarding/onboarding-notice.png'),
-    imageLabel: '새로운 학부 소식을 알리는 종',
-    imageWidth: 180,
-    imageHeight: 180,
-    title: '학부 소식을\n한눈에 확인해요',
+    image: require('../../../assets/figma/auth/onboarding-notice.png'),
+    imageLabel: '학부 소식 알림',
+    imageWidth: 90,
+    imageHeight: 90,
+    title: '학부 소식을 한눈에 확인',
     description:
       '학부 공지와 학사일정을 빠르게 확인하고\n중요한 알림을 놓치지 마세요.',
   },
   {
     id: 'inquiry',
-    image: require('../../../assets/images/onboarding/onboarding-inquiry.png'),
-    imageLabel: '문의에 답하는 상담원',
-    imageWidth: 308,
-    imageHeight: 276,
-    title: '문의와 고장 신고를\n더 간편하게',
+    image: require('../../../assets/figma/auth/onboarding-inquiry.png'),
+    imageLabel: '문의와 고장 신고',
+    imageWidth: 90,
+    imageHeight: 90,
+    title: '문의와 고장 신고를 더 간편하게',
     description:
-      '행정·실습 문의부터 강의실 고장 신고까지\n앱에서 간편하게 접수할 수 있어요.',
+      '행정ㆍ실습 문의부터 강의실 고장 신고까지\n앱에서 간편하게 접수할 수 있습니다.',
   },
   {
-    id: 'equipment',
-    image: require('../../../assets/images/onboarding/onboarding-equipment.png'),
-    imageLabel: '신청서를 작성하는 문서와 연필',
-    imageWidth: 180,
-    imageHeight: 180,
-    title: '실습 관련 신청도\n한곳에서 관리해요',
+    id: 'assistant',
+    image: require('../../../assets/figma/auth/onboarding-assistant.png'),
+    imageLabel: '조교 문의 관리',
+    imageWidth: 154,
+    imageHeight: 138,
+    title: '조교님 문의도 한곳에서 관리',
     description:
-      '기자재 대여와 실습실 이용 신청의\n처리 상태를 한눈에 확인하세요.',
+      '조교님 문의 요청의 처리 상태를\n한눈에 확인하세요.',
   },
 ];
 
@@ -78,9 +78,11 @@ export default function OnboardingScreen() {
     );
   };
 
+  const finishOnboarding = () => router.replace('/login');
+
   const handleNext = () => {
     if (isLastPage) {
-      router.replace('/login');
+      finishOnboarding();
       return;
     }
 
@@ -93,24 +95,25 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={styles.safeArea}
+    >
       <StatusBar style="light" />
 
-      <View style={styles.topBar}>
-        <Text style={styles.brand}>MEDIA ON</Text>
-
-        {!isLastPage ? (
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={10}
-            onPress={() => router.replace('/login')}
-          >
-            <Text style={styles.skipText}>건너뛰기</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.topSpacer} />
-        )}
-      </View>
+      {!isLastPage ? (
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={12}
+          onPress={finishOnboarding}
+          style={({ pressed }) => [
+            styles.skipButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.skipText}>건너뛰기</Text>
+        </Pressable>
+      ) : null}
 
       <FlatList
         ref={listRef}
@@ -118,34 +121,29 @@ export default function OnboardingScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={[styles.page, { width }]}>
-            <View style={styles.visualArea}>
+            <View style={styles.illustrationArea}>
               <Image
                 accessibilityLabel={item.imageLabel}
                 resizeMode="contain"
                 source={item.image}
-                style={[
-                  styles.illustration,
-                  {
-                    aspectRatio: item.imageWidth / item.imageHeight,
-                    width: item.imageWidth,
-                  },
-                ]}
+                style={{
+                  width: item.imageWidth,
+                  height: item.imageHeight,
+                }}
               />
             </View>
 
-            <View style={styles.textArea}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.description}>
-                {item.description}
-              </Text>
-            </View>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.description}>
+              {item.description}
+            </Text>
           </View>
         )}
         horizontal
         pagingEnabled
-        showsHorizontalScrollIndicator={false}
         bounces={false}
         onMomentumScrollEnd={handleScrollEnd}
+        showsHorizontalScrollIndicator={false}
       />
 
       <View style={styles.bottomArea}>
@@ -175,75 +173,72 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AUTH_COLORS.background,
   },
-  topBar: {
-    height: 54,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  brand: {
-    color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.extraBold,
-    fontSize: 14,
-    letterSpacing: 1,
+  skipButton: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 16,
+    right: 16,
+    padding: 4,
   },
   skipText: {
-    color: AUTH_COLORS.subText,
+    color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.regular,
     fontSize: 14,
-  },
-  topSpacer: {
-    width: 56,
+    lineHeight: 18,
   },
   page: {
-    paddingHorizontal: 24,
+    alignItems: 'center',
+    paddingTop: 147,
   },
-  visualArea: {
-    flex: 1.15,
+  illustrationArea: {
+    width: '100%',
+    height: 138,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  illustration: {
-    maxWidth: '100%',
-  },
-  textArea: {
-    flex: 0.85,
-    alignItems: 'center',
-  },
   title: {
+    width: 250,
+    marginTop: 71,
     color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.extraBold,
-    fontSize: 29,
-    lineHeight: 39,
+    fontSize: 24,
+    lineHeight: 35,
     textAlign: 'center',
   },
   description: {
-    marginTop: 16,
-    color: AUTH_COLORS.subText,
+    width: 300,
+    marginTop: 35,
+    color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.regular,
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
   },
   bottomArea: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    position: 'absolute',
+    right: 16,
+    bottom: 15,
+    left: 16,
   },
   indicators: {
-    marginBottom: 22,
+    height: 8,
+    marginBottom: 23,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 11,
   },
   indicator: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: AUTH_COLORS.inputBorder,
+    backgroundColor: AUTH_COLORS.text,
   },
   activeIndicator: {
-    width: 23,
-    backgroundColor: AUTH_COLORS.text,
+    width: 20,
+    borderRadius: 4,
+  },
+  pressed: {
+    opacity: 0.65,
   },
 });

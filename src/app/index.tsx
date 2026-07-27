@@ -9,32 +9,36 @@ import {
   AUTH_FONTS,
 } from '../constants/auth-theme';
 
+const logoMark = require('../../assets/figma/auth/logo-mark.png');
+
 export default function StartScreen() {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={styles.safeArea}
+    >
       <StatusBar style="light" />
 
-      <View style={styles.content}>
-        <View style={styles.logoFrame}>
-          <Image
-            source={require('../../assets/images/media-on-logo.png')}
-            resizeMode="contain"
-            style={styles.logo}
-          />
+      <View style={styles.logoArea}>
+        <View style={styles.logoTextArea}>
+          <Text style={styles.department}>서원대학교</Text>
+          <Text style={styles.department}>미디어콘텐츠학부</Text>
+          <Text style={styles.departmentEnglish}>
+            Division of Media Contents
+          </Text>
         </View>
-
-        <Text style={styles.appName}>MEDIA ON</Text>
-        <Text style={styles.department}>
-          서원대학교 미디어콘텐츠학부
-        </Text>
-      </View>
-
-      <View style={styles.bottomArea}>
-        <AuthButton
-          title="시작하기"
-          onPress={() => router.push('/onboarding')}
+        <Image
+          accessibilityLabel="미디어콘텐츠학부 로고"
+          source={logoMark}
+          style={styles.logoMark}
         />
       </View>
+
+      <AuthButton
+        title="시작하기"
+        onPress={() => router.push('/onboarding')}
+        style={styles.startButton}
+      />
     </SafeAreaView>
   );
 }
@@ -44,38 +48,41 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AUTH_COLORS.background,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
+  logoArea: {
+    position: 'absolute',
+    top: '42%',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 14,
+    transform: [{ translateY: -38 }],
   },
-  logoFrame: {
-    width: 270,
-    height: 154,
-    overflow: 'hidden',
-    borderRadius: 24,
-    backgroundColor: AUTH_COLORS.primary,
-  },
-  logo: {
-    width: '100%',
-    height: '100%',
-  },
-  appName: {
-    marginTop: 32,
-    color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.extraBold,
-    fontSize: 36,
-    letterSpacing: 1.2,
+  logoTextArea: {
+    alignItems: 'flex-end',
   },
   department: {
-    marginTop: 10,
-    color: AUTH_COLORS.subText,
-    fontFamily: AUTH_FONTS.regular,
-    fontSize: 16,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 25,
+    lineHeight: 28,
   },
-  bottomArea: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+  departmentEnglish: {
+    marginTop: 1,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.regular,
+    fontSize: 13,
+    lineHeight: 15,
+  },
+  logoMark: {
+    width: 76,
+    height: 76,
+  },
+  startButton: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 15,
   },
 });

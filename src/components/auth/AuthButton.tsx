@@ -1,9 +1,10 @@
 import {
   ActivityIndicator,
   Pressable,
+  type StyleProp,
   StyleSheet,
   Text,
-  ViewStyle,
+  type ViewStyle,
 } from 'react-native';
 
 import {
@@ -17,7 +18,7 @@ type AuthButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   variant?: 'primary' | 'outline';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 export default function AuthButton({
@@ -63,10 +64,10 @@ export default function AuthButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 56,
+    minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
+    borderRadius: 4,
     backgroundColor: AUTH_COLORS.primary,
   },
   outlineButton: {
@@ -84,8 +85,8 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.semiBold,
-    fontSize: 17,
+    fontFamily: AUTH_FONTS.extraBold,
+    fontSize: 16,
   },
   outlineButtonText: {
     color: AUTH_COLORS.text,
