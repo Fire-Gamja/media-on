@@ -139,17 +139,23 @@ export async function createEquipmentRentalRequest(
   input: EquipmentRentalInput,
 ) {
   const client = requireSupabase();
-  const { error } = await client.from('equipment_rental_requests').insert({
-    equipment_id: input.equipmentId,
-    quantity: input.quantity,
-    pickup_date: input.pickupDate,
-    return_date: input.returnDate,
-    purpose: maskProfanity(input.purpose),
-  });
+  const { data, error } = await client
+    .from('equipment_rental_requests')
+    .insert({
+      equipment_id: input.equipmentId,
+      quantity: input.quantity,
+      pickup_date: input.pickupDate,
+      return_date: input.returnDate,
+      purpose: maskProfanity(input.purpose),
+    })
+    .select('id')
+    .single<{ id: string }>();
 
-  if (error) {
+  if (error || !data) {
     throw new Error('기자재 대여를 신청하지 못했습니다.');
   }
+
+  await sendPushNotificationEvent('equipment_request_submitted', data.id);
 }
 
 export async function getMyEquipmentRentalRequests(

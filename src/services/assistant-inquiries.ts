@@ -150,7 +150,9 @@ export async function createAssistantInquiry(
   });
   if (error) throw new Error('조교 문의를 접수하지 못했습니다.');
   if (!data) throw new Error('조교 문의방을 확인하지 못했습니다.');
-  return data as string;
+  const inquiryId = data as string;
+  await sendPushNotificationEvent('assistant_inquiry_submitted', inquiryId);
+  return inquiryId;
 }
 
 export async function getAssistantMessages(inquiryId: string): Promise<AssistantMessage[]> {
@@ -166,12 +168,17 @@ export async function sendAssistantMessage(inquiryId: string, content: string) {
   const client = requireSupabase();
   const { data: { user } } = await client.auth.getUser();
   if (!user) throw new Error('로그인이 필요합니다.');
-  const { error } = await client.from('assistant_messages').insert({
-    inquiry_id: inquiryId,
-    sender_id: user.id,
-    content: maskProfanity(content),
-  });
-  if (error) throw new Error('메시지를 보내지 못했습니다.');
+  const { data, error } = await client
+    .from('assistant_messages')
+    .insert({
+      inquiry_id: inquiryId,
+      sender_id: user.id,
+      content: maskProfanity(content),
+    })
+    .select('id')
+    .single<{ id: string }>();
+  if (error || !data) throw new Error('메시지를 보내지 못했습니다.');
+  await sendPushNotificationEvent('assistant_message_received', data.id);
 }
 
 export function subscribeToAssistantMessages(

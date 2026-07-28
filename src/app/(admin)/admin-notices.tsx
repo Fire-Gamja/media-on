@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,9 +18,12 @@ import { COLORS } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   deleteNotice,
+  formatNoticeTitle,
   getAdminNotices,
   type Notice,
 } from '../../services/notices';
+
+const sirenIcon = require('../../../assets/figma/student/siren.png');
 
 export default function AdminNoticesScreen() {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -125,19 +129,19 @@ export default function AdminNoticesScreen() {
                         {notice.is_published ? '게시 중' : '임시 저장'}
                       </Text>
                     </View>
-                    {notice.is_urgent ? (
-                      <View style={styles.urgentBadge}>
-                        <Text style={styles.urgentText}>긴급</Text>
-                      </View>
-                    ) : null}
                   </View>
                   <Text style={styles.dateText}>
                     {formatDate(notice.updated_at)}
                   </Text>
                 </View>
-                <Text style={styles.title} numberOfLines={2}>
-                  {notice.title}
-                </Text>
+                <View style={styles.titleRow}>
+                  {notice.is_urgent ? (
+                    <Image source={sirenIcon} style={styles.sirenIcon} />
+                  ) : null}
+                  <Text style={styles.title} numberOfLines={2}>
+                    {formatNoticeTitle(notice.title, notice.is_urgent)}
+                  </Text>
+                </View>
                 <Text style={styles.preview} numberOfLines={2}>
                   {notice.content}
                 </Text>
@@ -228,13 +232,13 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   badges: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   statusBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10, backgroundColor: '#EAF8F0' },
-  urgentBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10, backgroundColor: '#FDECEC' },
-  urgentText: { color: COLORS.error, fontSize: 11, fontWeight: '800' },
   draftBadge: { backgroundColor: '#F1F2F6' },
   statusText: { color: COLORS.success, fontSize: 11, fontWeight: '800' },
   draftText: { color: COLORS.subText },
   dateText: { color: COLORS.placeholder, fontSize: 11 },
-  title: { marginTop: 14, color: COLORS.text, fontSize: 17, lineHeight: 24, fontWeight: '800' },
+  titleRow: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  sirenIcon: { width: 20, height: 20, marginTop: 2, resizeMode: 'contain' },
+  title: { flex: 1, color: COLORS.text, fontSize: 17, lineHeight: 24, fontWeight: '800' },
   preview: { marginTop: 8, color: COLORS.subText, fontSize: 13, lineHeight: 20 },
   actions: { marginTop: 16, flexDirection: 'row', gap: 9 },
   deleteButton: { flex: 1, height: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 11 },

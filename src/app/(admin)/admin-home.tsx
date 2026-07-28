@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -38,6 +38,10 @@ import {
   type PendingActionCounts,
 } from '../../services/admin-dashboard';
 import { resendUrgentNotices } from '../../services/notices';
+import {
+  getUnreadNotificationCount,
+  subscribeToMyNotifications,
+} from '../../services/notifications';
 
 const bellIcon = require('../../../assets/figma/manager/bell.png');
 
@@ -48,6 +52,7 @@ type ManagementAction = {
     | 'room'
     | 'facility'
     | 'assistant'
+    | 'popup'
     | 'hours';
   title: string;
   route:
@@ -56,6 +61,7 @@ type ManagementAction = {
     | '/admin-room-requests'
     | '/admin-facility-reports'
     | '/admin-assistant-inquiries'
+    | '/admin-home-popups'
     | '/admin-operating-hours';
   icon: AppIconName;
 };
@@ -100,6 +106,12 @@ const MANAGEMENT_ACTIONS: ManagementAction[] = [
     icon: 'assistant',
   },
   {
+    id: 'popup',
+    title: '첫 팝업',
+    route: '/admin-home-popups',
+    icon: 'popup',
+  },
+  {
     id: 'hours',
     title: '운영시간',
     route: '/admin-operating-hours',
@@ -134,6 +146,7 @@ export default function AdminHomeScreen() {
   const [pendingCounts, setPendingCounts] = useState<PendingActionCounts | null>(null);
   const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [isResendingEmergency, setIsResendingEmergency] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const today = useMemo(() => new Date(), []);
   const dashboardInquiries = inquiries.slice(0, 6);
@@ -153,6 +166,7 @@ export default function AdminHomeScreen() {
         nextInquiries,
         nextCounts,
         nextActions,
+        nextUnreadCount,
       ] =
         await Promise.all([
           getCurrentProfile(),
@@ -160,12 +174,14 @@ export default function AdminHomeScreen() {
           getAdminAssistantInquiries(),
           getPendingActionCounts(),
           getPendingActions(),
+          getUnreadNotificationCount(),
         ]);
       setProfile(nextProfile);
       setStudents(pendingStudents);
       setInquiries(nextInquiries.map(toDashboardInquiry));
       setPendingCounts(nextCounts);
       setPendingActions(nextActions);
+      setUnreadNotificationCount(nextUnreadCount);
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
     } finally {
@@ -179,6 +195,40 @@ export default function AdminHomeScreen() {
       void loadDashboard();
     }, [loadDashboard]),
   );
+
+  const refreshUnreadNotificationCount = useCallback(() => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    void getUnreadNotificationCount()
+      .then(setUnreadNotificationCount)
+      .catch(() => setUnreadNotificationCount(0));
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isActive = true;
+
+    void subscribeToMyNotifications(refreshUnreadNotificationCount).then(
+      (nextUnsubscribe) => {
+        if (isActive) {
+          unsubscribe = nextUnsubscribe;
+        } else {
+          nextUnsubscribe();
+        }
+      },
+    );
+
+    return () => {
+      isActive = false;
+      unsubscribe?.();
+    };
+  }, [refreshUnreadNotificationCount]);
 
   useFocusEffect(useCallback(() => {
     if (Platform.OS !== 'android') return;
@@ -310,14 +360,17 @@ export default function AdminHomeScreen() {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="비밀번호 재설정 요청 알림"
-            onPress={() => router.push('/admin-password-reset-requests')}
+            accessibilityLabel="관리자 알림"
+            onPress={() => router.push('/notifications')}
             style={({ pressed }) => [
               styles.bellButton,
               pressed && styles.pressed,
             ]}
           >
             <Image source={bellIcon} style={styles.bellIcon} />
+            {unreadNotificationCount > 0 ? (
+              <View style={styles.notificationDot} />
+            ) : null}
           </Pressable>
         </View>
 
@@ -793,6 +846,17 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 2,
+    right: 1,
+    width: 7,
+    height: 7,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
   },
   bellIcon: {
     width: 20,

@@ -145,19 +145,25 @@ export async function createRoomReservationRequest(
   input: RoomReservationInput,
 ) {
   const client = requireSupabase();
-  const { error } = await client.from('room_reservation_requests').insert({
-    room_id: input.roomId,
-    reservation_date: input.reservationDate,
-    end_date: input.endDate,
-    start_time: input.startTime,
-    end_time: input.endTime,
-    attendee_count: 40,
-    purpose: maskProfanity(input.purpose),
-  });
+  const { data, error } = await client
+    .from('room_reservation_requests')
+    .insert({
+      room_id: input.roomId,
+      reservation_date: input.reservationDate,
+      end_date: input.endDate,
+      start_time: input.startTime,
+      end_time: input.endTime,
+      attendee_count: 40,
+      purpose: maskProfanity(input.purpose),
+    })
+    .select('id')
+    .single<{ id: string }>();
 
-  if (error) {
+  if (error || !data) {
     throw new Error('실습실 대여를 신청하지 못했습니다.');
   }
+
+  await sendPushNotificationEvent('room_request_submitted', data.id);
 }
 
 export async function getMyRoomReservationRequests(

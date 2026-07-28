@@ -16,12 +16,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../../constants/colors';
 import { getAuthErrorMessage } from '../../../services/auth';
 import {
+  formatNoticeTitle,
   getPublishedNotices,
   type Notice,
 } from '../../../services/notices';
 
 const backIcon = require('../../../../assets/figma/student/back.png');
 const homeIcon = require('../../../../assets/figma/student/home.png');
+const sirenIcon = require('../../../../assets/figma/student/siren.png');
 
 export default function NoticesScreen() {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -127,9 +129,17 @@ export default function NoticesScreen() {
                 ]}
               >
                 <View style={styles.noticeTextArea}>
-                  <Text numberOfLines={2} style={styles.title}>
-                    {notice.title}
-                  </Text>
+                  <View style={styles.titleRow}>
+                    {notice.is_urgent ? (
+                      <Image source={sirenIcon} style={styles.sirenIcon} />
+                    ) : null}
+                    <Text numberOfLines={2} style={styles.title}>
+                      {formatNoticeTitle(
+                        notice.title,
+                        notice.is_urgent,
+                      )}
+                    </Text>
+                  </View>
                   <Text style={styles.date}>
                     {formatDate(notice.published_at ?? notice.created_at)}
                   </Text>
@@ -212,7 +222,19 @@ const styles = StyleSheet.create({
   noticeTextArea: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 7,
+  },
+  sirenIcon: {
+    width: 18,
+    height: 18,
+    marginTop: 1,
+    resizeMode: 'contain',
+  },
   title: {
+    flex: 1,
     color: '#2D2D2D',
     fontFamily: 'FreesentationSemiBold',
     fontSize: 16,

@@ -16,7 +16,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import MonthCalendar, {
   fromDateKey,
@@ -36,7 +39,10 @@ import {
   signOutUser,
   type StudentProfile,
 } from '../../services/auth';
-import { getPublishedNotices } from '../../services/notices';
+import {
+  formatNoticeTitle,
+  getPublishedNotices,
+} from '../../services/notices';
 import {
   getUnreadNotificationCount,
   subscribeToMyNotifications,
@@ -48,6 +54,10 @@ import {
   type OperatingHoursSettings,
 } from '../../services/operating-hours';
 import {
+  getActiveHomePopups,
+  type HomePopup,
+} from '../../services/home-popups';
+import {
   getStudentSchedules,
   type StudentSchedule,
 } from '../../services/student-schedule';
@@ -58,7 +68,6 @@ const settingsIcon = require('../../../assets/figma/student/settings.png');
 const profileAvatar = require('../../../assets/figma/student/profile-avatar.png');
 const menuIcon = require('../../../assets/figma/student/menu.png');
 const sirenIcon = require('../../../assets/figma/student/siren.png');
-const assistantIcon = require('../../../assets/figma/student/quick-assistant.png');
 
 type QuickAction = {
   id: 'notice' | 'equipment' | 'room' | 'report' | 'assistant';
@@ -115,6 +124,7 @@ const FALLBACK_NOTICES: HomeNotice[] = [
 ];
 
 export default function StudentHomeScreen() {
+  const insets = useSafeAreaInsets();
   const { noticeCount } = useNoticeSettings();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [notices, setNotices] = useState<HomeNotice[]>(FALLBACK_NOTICES);
@@ -129,7 +139,8 @@ export default function StudentHomeScreen() {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [operatingHours, setOperatingHours] =
     useState<OperatingHoursSettings>(DEFAULT_OPERATING_HOURS);
-  const [showInstagram, setShowInstagram] = useState(false);
+  const [homePopups, setHomePopups] = useState<HomePopup[]>([]);
+  const [popupIndex, setPopupIndex] = useState(0);
 
   const visibleNotices = notices.slice(0, Math.max(1, noticeCount));
   const requestCounts = useMemo(
@@ -144,6 +155,7 @@ export default function StudentHomeScreen() {
     () => new Set(schedules.map((schedule) => schedule.startDate)),
     [schedules],
   );
+  const currentHomePopup = homePopups[popupIndex] ?? null;
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -155,7 +167,7 @@ export default function StudentHomeScreen() {
         setNotices(
           data.map((notice) => ({
             id: notice.id,
-            title: notice.title,
+            title: formatNoticeTitle(notice.title, notice.is_urgent),
             publishedAt: notice.published_at ?? notice.created_at,
             urgent: notice.is_urgent,
           })),
@@ -199,12 +211,30 @@ export default function StudentHomeScreen() {
   }, [refreshUnreadNotificationCount]);
 
   useEffect(() => {
-    const url = process.env.EXPO_PUBLIC_INSTAGRAM_URL;
-    if (!url) return;
-    const today = new Date().toISOString().slice(0, 10);
-    void AsyncStorage.getItem('instagram-popup-hidden-date').then((hidden) => {
-      if (hidden !== today) setShowInstagram(true);
-    });
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    void getActiveHomePopups()
+      .then(async (data) => {
+        const today = getLocalDateKey();
+        const visiblePopups = (
+          await Promise.all(
+            data.map(async (popup) => {
+              const hiddenValue = await AsyncStorage.getItem(
+                getHomePopupStorageKey(popup),
+              );
+              return hiddenValue === today ? null : popup;
+            }),
+          )
+        ).filter((popup): popup is HomePopup => popup !== null);
+
+        setPopupIndex(0);
+        setHomePopups(visiblePopups);
+      })
+      .catch(() => {
+        setHomePopups([]);
+      });
   }, []);
 
   useFocusEffect(useCallback(() => {
@@ -253,6 +283,41 @@ export default function StudentHomeScreen() {
     }
 
     void Linking.openURL(url);
+  };
+
+  const dismissHomePopup = async (hideToday: boolean) => {
+    if (!currentHomePopup) {
+      return;
+    }
+
+    if (hideToday) {
+      await AsyncStorage.setItem(
+        getHomePopupStorageKey(currentHomePopup),
+        getLocalDateKey(),
+      );
+    }
+
+    if (popupIndex < homePopups.length - 1) {
+      setPopupIndex((current) => current + 1);
+    } else {
+      setHomePopups([]);
+      setPopupIndex(0);
+    }
+  };
+
+  const openHomePopupLink = async () => {
+    const url = currentHomePopup?.action_url;
+    if (!url) {
+      return;
+    }
+
+    await dismissHomePopup(false);
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('링크 열기 실패', '등록된 이벤트 링크를 열 수 없습니다.');
+    }
   };
 
   const handleQuickAction = (action: QuickAction) => {
@@ -586,10 +651,11 @@ export default function StudentHomeScreen() {
         onPress={() => router.push('/assistant-inquiry')}
         style={({ pressed }) => [
           styles.floatingInquiry,
+          { bottom: Math.max(insets.bottom + 20, 46) },
           pressed && styles.pressed,
         ]}
       >
-        <Image source={assistantIcon} style={styles.floatingInquiryIcon} />
+        <AppIcon color="#FFFFFF" name="assistant" size={29} />
       </Pressable>
 
       <Modal
@@ -628,14 +694,48 @@ export default function StudentHomeScreen() {
           </View>
         </View>
       </Modal>
-      <Modal animationType="fade" transparent visible={showInstagram}>
-        <View style={styles.instagramBackdrop}><View style={styles.instagramCard}>
-          <Text style={styles.instagramTitle}>학부 인스타그램</Text>
-          <Text style={styles.instagramBody}>행사와 학부 소식을 인스타그램에서도 확인해 보세요.</Text>
-          <Pressable onPress={() => { setShowInstagram(false); openInstagram(); }} style={styles.instagramPrimary}><Text style={styles.instagramPrimaryText}>인스타그램 열기</Text></Pressable>
-          <Pressable onPress={() => setShowInstagram(false)} style={styles.instagramClose}><Text>닫기</Text></Pressable>
-          <Pressable onPress={() => { void AsyncStorage.setItem('instagram-popup-hidden-date', new Date().toISOString().slice(0, 10)); setShowInstagram(false); }}><Text style={styles.instagramToday}>오늘 하루 보지 않기</Text></Pressable>
-        </View></View>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => void dismissHomePopup(false)}
+        transparent
+        visible={currentHomePopup !== null}
+      >
+        <View style={styles.homePopupBackdrop}>
+          <View style={styles.homePopupCard}>
+            {homePopups.length > 1 ? (
+              <Text style={styles.homePopupCount}>
+                {popupIndex + 1} / {homePopups.length}
+              </Text>
+            ) : null}
+            <Text style={styles.homePopupTitle}>
+              {currentHomePopup?.title}
+            </Text>
+            <Text style={styles.homePopupBody}>
+              {currentHomePopup?.body}
+            </Text>
+            {currentHomePopup?.action_url ? (
+              <Pressable
+                onPress={() => void openHomePopupLink()}
+                style={styles.homePopupPrimary}
+              >
+                <Text style={styles.homePopupPrimaryText}>
+                  {currentHomePopup.action_label || '자세히 보기'}
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => void dismissHomePopup(false)}
+              style={styles.homePopupClose}
+            >
+              <Text style={styles.homePopupCloseText}>
+                {popupIndex < homePopups.length - 1 ? '다음' : '닫기'}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => void dismissHomePopup(true)}>
+              <Text style={styles.homePopupToday}>오늘 하루 보지 않기</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -725,6 +825,18 @@ function formatSelectedDate(dateKey: string) {
     weekday: 'long',
   }).format(date);
   return `${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday}`;
+}
+
+function getLocalDateKey() {
+  const date = new Date();
+  return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(
+    2,
+    '0',
+  )}-${`${date.getDate()}`.padStart(2, '0')}`;
+}
+
+function getHomePopupStorageKey(popup: HomePopup) {
+  return `media-on:home-popup:${popup.slot_number}:${popup.updated_at}`;
 }
 
 const styles = StyleSheet.create({
@@ -1056,14 +1168,53 @@ const styles = StyleSheet.create({
   },
   noticeMore: { height: 48, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#EEEEEE' },
   noticeMoreText: { color: '#182365', fontSize: 13, fontWeight: '800' },
-  instagramBackdrop: { flex: 1, padding: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  instagramCard: { width: '100%', maxWidth: 380, padding: 24, borderRadius: 22, backgroundColor: '#FFFFFF' },
-  instagramTitle: { color: '#2D2D2D', fontSize: 20, fontWeight: '900' },
-  instagramBody: { marginTop: 10, color: '#777777', lineHeight: 21 },
-  instagramPrimary: { height: 52, marginTop: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#182365' },
-  instagramPrimaryText: { color: '#FFFFFF', fontWeight: '800' },
-  instagramClose: { height: 44, alignItems: 'center', justifyContent: 'center' },
-  instagramToday: { textAlign: 'center', color: '#999999', fontSize: 11 },
+  homePopupBackdrop: {
+    flex: 1,
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  homePopupCard: {
+    width: '100%',
+    maxWidth: 380,
+    padding: 24,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+  },
+  homePopupCount: {
+    marginBottom: 9,
+    color: '#182365',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  homePopupTitle: { color: '#2D2D2D', fontSize: 20, fontWeight: '900' },
+  homePopupBody: {
+    marginTop: 10,
+    color: '#777777',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  homePopupPrimary: {
+    height: 52,
+    marginTop: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: '#182365',
+  },
+  homePopupPrimaryText: { color: '#FFFFFF', fontWeight: '800' },
+  homePopupClose: {
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homePopupCloseText: { color: '#2D2D2D', fontWeight: '700' },
+  homePopupToday: {
+    textAlign: 'center',
+    color: '#999999',
+    fontSize: 11,
+  },
   noticeRow: {
     minHeight: 35,
     flexDirection: 'row',
@@ -1174,7 +1325,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 10,
     right: 20,
-    bottom: 22,
     width: 54,
     height: 54,
     alignItems: 'center',
@@ -1186,12 +1336,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
-  },
-  floatingInquiryIcon: {
-    width: 27,
-    height: 27,
-    resizeMode: 'contain',
-    tintColor: '#FFFFFF',
   },
   logoutButton: {
     alignSelf: 'center',

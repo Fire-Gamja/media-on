@@ -102,16 +102,22 @@ export function getFacilityStatusLabel(status: FacilityReportStatus) {
 
 export async function createFacilityReport(input: FacilityReportInput) {
   const client = requireSupabase();
-  const { error } = await client.from('facility_reports').insert({
-    location: input.location.trim(),
-    category: input.category,
-    title: maskProfanity(input.title),
-    description: maskProfanity(input.description),
-  });
+  const { data, error } = await client
+    .from('facility_reports')
+    .insert({
+      location: input.location.trim(),
+      category: input.category,
+      title: maskProfanity(input.title),
+      description: maskProfanity(input.description),
+    })
+    .select('id')
+    .single<{ id: string }>();
 
-  if (error) {
+  if (error || !data) {
     throw new Error('시설 신고를 신청하지 못했습니다.');
   }
+
+  await sendPushNotificationEvent('facility_report_submitted', data.id);
 }
 
 export async function getMyFacilityReports(

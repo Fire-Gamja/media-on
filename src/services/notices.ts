@@ -32,6 +32,16 @@ const requireSupabase = () => {
 const noticeColumns =
   'id, title, content, is_published, is_urgent, urgent_resend_count, last_urgent_resent_at, published_at, created_at, updated_at';
 
+export function formatNoticeTitle(title: string, isUrgent: boolean) {
+  const titleWithoutUrgentLabel = title
+    .trim()
+    .replace(/^\[긴급\]\s*/u, '');
+
+  return isUrgent
+    ? `[긴급] ${titleWithoutUrgentLabel}`
+    : titleWithoutUrgentLabel;
+}
+
 export async function getPublishedNotices(limit?: number): Promise<Notice[]> {
   const client = requireSupabase();
   let query = client
@@ -103,7 +113,7 @@ export async function createNotice(input: NoticeInput) {
   const { data, error } = await client
     .from('notices')
     .insert({
-      title: input.title.trim(),
+      title: formatNoticeTitle(input.title, false),
       content: input.content.trim(),
       is_published: input.isPublished,
       is_urgent: input.isUrgent,
@@ -137,7 +147,7 @@ export async function updateNotice(id: string, input: NoticeInput) {
   const { error } = await client
     .from('notices')
     .update({
-      title: input.title.trim(),
+      title: formatNoticeTitle(input.title, false),
       content: input.content.trim(),
       is_published: input.isPublished,
       is_urgent: input.isUrgent,

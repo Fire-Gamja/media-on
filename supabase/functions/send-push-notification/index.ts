@@ -5,9 +5,14 @@ declare const Deno: {
 
 type PushNotificationEvent =
   | 'assistant_inquiry_answered'
+  | 'assistant_inquiry_submitted'
+  | 'assistant_message_received'
+  | 'equipment_request_submitted'
   | 'equipment_request_status'
+  | 'facility_report_submitted'
   | 'facility_report_status'
   | 'notice_published'
+  | 'room_request_submitted'
   | 'room_request_status';
 
 type PushTarget = {
@@ -39,6 +44,19 @@ const corsHeaders = {
 };
 
 const eventTypes: PushNotificationEvent[] = [
+  'assistant_inquiry_answered',
+  'assistant_inquiry_submitted',
+  'assistant_message_received',
+  'equipment_request_submitted',
+  'equipment_request_status',
+  'facility_report_submitted',
+  'facility_report_status',
+  'notice_published',
+  'room_request_submitted',
+  'room_request_status',
+];
+
+const adminOnlyEvents: PushNotificationEvent[] = [
   'assistant_inquiry_answered',
   'equipment_request_status',
   'facility_report_status',
@@ -110,13 +128,6 @@ Deno.serve(async (request) => {
       limit: '1',
     });
 
-    if (
-      callerProfile?.role !== 'admin' ||
-      callerProfile.approval_status !== 'approved'
-    ) {
-      return json({ error: '관리자 권한이 필요합니다.' }, 403);
-    }
-
     const payload = (await request.json()) as {
       event?: unknown;
       resourceId?: unknown;
@@ -131,11 +142,26 @@ Deno.serve(async (request) => {
       return json({ error: '알림 요청 형식이 올바르지 않습니다.' }, 400);
     }
 
+    const event = payload.event as PushNotificationEvent;
+
+    if (callerProfile?.approval_status !== 'approved') {
+      return json({ error: '승인된 계정이 필요합니다.' }, 403);
+    }
+
+    if (
+      adminOnlyEvents.includes(event) &&
+      callerProfile.role !== 'admin'
+    ) {
+      return json({ error: '관리자 권한이 필요합니다.' }, 403);
+    }
+
     const target = await resolvePushTarget(
       supabaseUrl,
       adminHeaders,
-      payload.event as PushNotificationEvent,
+      event,
       payload.resourceId,
+      callerId,
+      callerProfile.role,
     );
 
     if (target.recipientIds.length === 0) {
@@ -179,7 +205,149 @@ async function resolvePushTarget(
   adminHeaders: Record<string, string>,
   event: PushNotificationEvent,
   resourceId: string,
+  callerId: string,
+  callerRole: string,
 ): Promise<PushTarget> {
+  if (event === 'assistant_inquiry_submitted') {
+    const [inquiry] = await adminSelect<{
+      id: string;
+      requester_id: string;
+      title: string;
+    }>(supabaseUrl, adminHeaders, 'assistant_inquiries', {
+      select: 'id,requester_id,title',
+      id: `eq.${resourceId}`,
+      limit: '1',
+    });
+
+    if (!inquiry || inquiry.requester_id !== callerId) {
+      throw new Error('The assistant inquiry does not belong to the caller.');
+    }
+
+    return {
+      recipientIds: await getApprovedAdminIds(supabaseUrl, adminHeaders),
+      title: '새 조교 문의',
+      body: inquiry.title,
+      url: `/admin-assistant-inquiry?id=${inquiry.id}`,
+    };
+  }
+
+  if (event === 'equipment_request_submitted') {
+    const [rentalRequest] = await adminSelect<{
+      id: string;
+      requester_id: string;
+    }>(supabaseUrl, adminHeaders, 'equipment_rental_requests', {
+      select: 'id,requester_id',
+      id: `eq.${resourceId}`,
+      limit: '1',
+    });
+
+    if (!rentalRequest || rentalRequest.requester_id !== callerId) {
+      throw new Error('The equipment request does not belong to the caller.');
+    }
+
+    return {
+      recipientIds: await getApprovedAdminIds(supabaseUrl, adminHeaders),
+      title: '새 기자재 대여 신청',
+      body: '학생의 기자재 대여 신청이 접수되었습니다.',
+      url: `/admin-equipment-request?id=${rentalRequest.id}`,
+    };
+  }
+
+  if (event === 'facility_report_submitted') {
+    const [report] = await adminSelect<{
+      id: string;
+      reporter_id: string;
+      title: string;
+    }>(supabaseUrl, adminHeaders, 'facility_reports', {
+      select: 'id,reporter_id,title',
+      id: `eq.${resourceId}`,
+      limit: '1',
+    });
+
+    if (!report || report.reporter_id !== callerId) {
+      throw new Error('The facility report does not belong to the caller.');
+    }
+
+    return {
+      recipientIds: await getApprovedAdminIds(supabaseUrl, adminHeaders),
+      title: '새 시설 신고',
+      body: report.title,
+      url: `/admin-facility-report?id=${report.id}`,
+    };
+  }
+
+  if (event === 'room_request_submitted') {
+    const [roomRequest] = await adminSelect<{
+      id: string;
+      requester_id: string;
+    }>(supabaseUrl, adminHeaders, 'room_reservation_requests', {
+      select: 'id,requester_id',
+      id: `eq.${resourceId}`,
+      limit: '1',
+    });
+
+    if (!roomRequest || roomRequest.requester_id !== callerId) {
+      throw new Error('The room request does not belong to the caller.');
+    }
+
+    return {
+      recipientIds: await getApprovedAdminIds(supabaseUrl, adminHeaders),
+      title: '새 실습실 대여 신청',
+      body: '학생의 실습실 대여 신청이 접수되었습니다.',
+      url: `/admin-room-request?id=${roomRequest.id}`,
+    };
+  }
+
+  if (event === 'assistant_message_received') {
+    const [message] = await adminSelect<{
+      id: string;
+      inquiry_id: string;
+      sender_id: string;
+      content: string;
+    }>(supabaseUrl, adminHeaders, 'assistant_messages', {
+      select: 'id,inquiry_id,sender_id,content',
+      id: `eq.${resourceId}`,
+      limit: '1',
+    });
+
+    if (!message || message.sender_id !== callerId) {
+      throw new Error('The assistant message does not belong to the caller.');
+    }
+
+    const [inquiry] = await adminSelect<{
+      id: string;
+      requester_id: string;
+    }>(supabaseUrl, adminHeaders, 'assistant_inquiries', {
+      select: 'id,requester_id',
+      id: `eq.${message.inquiry_id}`,
+      limit: '1',
+    });
+
+    if (!inquiry) {
+      throw new Error('The assistant inquiry does not exist.');
+    }
+
+    if (message.sender_id === inquiry.requester_id) {
+      return {
+        recipientIds: await getApprovedAdminIds(supabaseUrl, adminHeaders),
+        title: '새 조교 문의 메시지',
+        body: message.content.slice(0, 120),
+        url: `/admin-assistant-inquiry?id=${inquiry.id}`,
+      };
+    }
+
+    if (callerRole !== 'admin') {
+      throw new Error('Only an administrator can reply to an inquiry.');
+    }
+
+    return {
+      recipientIds: [inquiry.requester_id],
+      title: '조교의 새 메시지',
+      body: message.content.slice(0, 120),
+      url: `/assistant-inquiries/${inquiry.id}`,
+    };
+  }
+
   if (event === 'notice_published') {
     const [notice] = await adminSelect<{
       id: string;
@@ -210,7 +378,7 @@ async function resolvePushTarget(
     return {
       recipientIds: students.map(({ id }) => id),
       title: notice.is_urgent ? '긴급 공지사항' : '새 공지사항',
-      body: notice.title,
+      body: formatNoticeTitle(notice.title, notice.is_urgent),
       url: `/notices/${notice.id}`,
     };
   }
@@ -315,6 +483,24 @@ async function resolvePushTarget(
     )}(으)로 변경되었습니다.`,
     url: `/room-requests/${roomRequest.id}`,
   };
+}
+
+async function getApprovedAdminIds(
+  supabaseUrl: string,
+  adminHeaders: Record<string, string>,
+) {
+  const admins = await adminSelect<{ id: string }>(
+    supabaseUrl,
+    adminHeaders,
+    'profiles',
+    {
+      select: 'id',
+      role: 'eq.admin',
+      approval_status: 'eq.approved',
+    },
+  );
+
+  return admins.map(({ id }) => id);
 }
 
 async function sendExpoPushNotifications(
@@ -494,6 +680,16 @@ function requireEnvironmentValue(name: string) {
 
 function getStatusLabel(labels: Record<string, string>, status: string) {
   return labels[status] ?? status;
+}
+
+function formatNoticeTitle(title: string, isUrgent: boolean) {
+  const titleWithoutUrgentLabel = title
+    .trim()
+    .replace(/^\[긴급\]\s*/u, '');
+
+  return isUrgent
+    ? `[긴급] ${titleWithoutUrgentLabel}`
+    : titleWithoutUrgentLabel;
 }
 
 function isUuid(value: string) {

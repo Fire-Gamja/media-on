@@ -88,6 +88,10 @@ function openNotification(notification: Notification) {
 
 function isAllowedNotificationRoute(value: string) {
   return [
+    '/admin-assistant-inquiry',
+    '/admin-equipment-request',
+    '/admin-facility-report',
+    '/admin-room-request',
     '/assistant-inquiries/',
     '/equipment-requests/',
     '/facility-reports/',

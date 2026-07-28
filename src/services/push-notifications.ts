@@ -6,9 +6,14 @@ import { supabase } from '../lib/supabase';
 
 export type PushNotificationEvent =
   | 'assistant_inquiry_answered'
+  | 'assistant_inquiry_submitted'
+  | 'assistant_message_received'
+  | 'equipment_request_submitted'
   | 'equipment_request_status'
+  | 'facility_report_submitted'
   | 'facility_report_status'
   | 'notice_published'
+  | 'room_request_submitted'
   | 'room_request_status';
 
 const STORED_PUSH_TOKEN_KEY = 'media-on:expo-push-token';

@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,9 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../../constants/colors';
 import { getAuthErrorMessage } from '../../../services/auth';
 import {
+  formatNoticeTitle,
   getPublishedNotice,
   type Notice,
 } from '../../../services/notices';
+
+const sirenIcon = require('../../../../assets/figma/student/siren.png');
 
 export default function NoticeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -56,7 +60,14 @@ export default function NoticeDetailScreen() {
         </View>
       ) : notice ? (
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-          <Text style={styles.title}>{notice.title}</Text>
+          <View style={styles.titleRow}>
+            {notice.is_urgent ? (
+              <Image source={sirenIcon} style={styles.sirenIcon} />
+            ) : null}
+            <Text style={styles.title}>
+              {formatNoticeTitle(notice.title, notice.is_urgent)}
+            </Text>
+          </View>
           <Text style={styles.date}>
             {formatDate(notice.published_at ?? notice.created_at)}
           </Text>
@@ -86,7 +97,9 @@ const styles = StyleSheet.create({
   errorTitle: { color: COLORS.error, fontSize: 14, textAlign: 'center' },
   scrollView: { flex: 1, backgroundColor: COLORS.surface },
   content: { padding: 24, paddingBottom: 48 },
-  title: { color: COLORS.text, fontSize: 23, lineHeight: 33, fontWeight: '800' },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
+  sirenIcon: { width: 23, height: 23, marginTop: 4, resizeMode: 'contain' },
+  title: { flex: 1, color: COLORS.text, fontSize: 23, lineHeight: 33, fontWeight: '800' },
   date: { marginTop: 14, color: COLORS.subText, fontSize: 12 },
   divider: { height: 1, marginVertical: 24, backgroundColor: COLORS.border },
   body: { color: COLORS.text, fontSize: 15, lineHeight: 26 },
