@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../../constants/colors';
 import { AssistantChatRoom } from '../../../components/assistant/AssistantChatRoom';
 import { getAuthErrorMessage } from '../../../services/auth';
-import { getAssistantCategoryLabel, getAssistantStatusLabel, getMyAssistantInquiry, type AssistantInquiry } from '../../../services/assistant-inquiries';
+import { getAssistantCategoryLabel, getAssistantStatusLabel, getMyAssistantInquiry, type AssistantInquiry, type AssistantInquiryStatus } from '../../../services/assistant-inquiries';
 
 export default function AssistantInquiryDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -23,13 +23,12 @@ export default function AssistantInquiryDetailScreen() {
     {isLoading ? <View style={styles.loadingBox}><ActivityIndicator size="large" color={COLORS.navy} /></View> : inquiry ? <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
       <View style={styles.statusCard}><Text style={styles.statusLabel}>{getAssistantCategoryLabel(inquiry.category)}</Text><Text style={styles.statusValue}>{getAssistantStatusLabel(inquiry.status)}</Text><Text style={styles.statusDescription}>{getStatusDescription(inquiry.status)}</Text></View>
       <View style={styles.card}><Text style={styles.title}>{inquiry.title}</Text><Text style={styles.date}>{formatDate(inquiry.created_at)} 문의</Text><View style={styles.contentSection}><Text style={styles.sectionLabel}>문의 내용</Text><Text style={styles.bodyText}>{inquiry.content}</Text></View></View>
-      <View style={styles.answerCard}><Text style={styles.answerTitle}>실시간 상담</Text><AssistantChatRoom inquiryId={inquiry.id} isClosed={inquiry.status === 'answered'} /></View>
+      <View style={styles.answerCard}><Text style={styles.answerTitle}>실시간 상담</Text><AssistantChatRoom inquiryId={inquiry.id} status={inquiry.status} onStatusChange={(status: AssistantInquiryStatus) => setInquiry((current) => current ? { ...current, status } : current)} /></View>
     </ScrollView> : null}
   </SafeAreaView>;
 }
 
-function getStatusDescription(status: AssistantInquiry['status']) { if (status === 'submitted') return '문의가 접수되어 확인을 기다리고 있습니다.'; if (status === 'in_progress') return '조교가 문의 내용을 확인하고 답변을 준비 중입니다.'; return '조교 답변이 등록되었습니다.'; }
-function getPendingMessage(status: AssistantInquiry['status']) { return status === 'submitted' ? '문의 확인 후 답변해 드리겠습니다.' : '답변을 작성하고 있습니다. 잠시만 기다려 주세요.'; }
+function getStatusDescription(status: AssistantInquiry['status']) { if (status === 'submitted') return '문의가 완료되어 조교의 채팅 시작을 기다리고 있습니다.'; if (status === 'in_progress') return '조교와 실시간 상담이 진행 중입니다.'; return '상담이 완료되었습니다.'; }
 function formatDate(value: string) { return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value)); }
 
 const styles = StyleSheet.create({

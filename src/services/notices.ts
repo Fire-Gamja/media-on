@@ -6,6 +6,9 @@ export type Notice = {
   title: string;
   content: string;
   is_published: boolean;
+  is_urgent: boolean;
+  urgent_resend_count: number;
+  last_urgent_resent_at: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -15,6 +18,7 @@ export type NoticeInput = {
   title: string;
   content: string;
   isPublished: boolean;
+  isUrgent: boolean;
 };
 
 const requireSupabase = () => {
@@ -26,7 +30,7 @@ const requireSupabase = () => {
 };
 
 const noticeColumns =
-  'id, title, content, is_published, published_at, created_at, updated_at';
+  'id, title, content, is_published, is_urgent, urgent_resend_count, last_urgent_resent_at, published_at, created_at, updated_at';
 
 export async function getPublishedNotices(limit?: number): Promise<Notice[]> {
   const client = requireSupabase();
@@ -102,6 +106,7 @@ export async function createNotice(input: NoticeInput) {
       title: input.title.trim(),
       content: input.content.trim(),
       is_published: input.isPublished,
+      is_urgent: input.isUrgent,
       published_at: input.isPublished ? new Date().toISOString() : null,
     })
     .select('id')
@@ -135,6 +140,7 @@ export async function updateNotice(id: string, input: NoticeInput) {
       title: input.title.trim(),
       content: input.content.trim(),
       is_published: input.isPublished,
+      is_urgent: input.isUrgent,
       published_at: input.isPublished
         ? (currentNotice.published_at ?? new Date().toISOString())
         : null,
@@ -157,4 +163,47 @@ export async function deleteNotice(id: string) {
   if (error) {
     throw new Error('공지사항을 삭제하지 못했습니다.');
   }
+}
+
+export async function resendUrgentNotices() {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('notices')
+    .select('id, urgent_resend_count')
+    .eq('is_published', true)
+    .eq('is_urgent', true)
+    .order('published_at', { ascending: false });
+
+  if (error) {
+    throw new Error('긴급 공지 목록을 불러오지 못했습니다.');
+  }
+
+  const notices =
+    (data ?? []) as Pick<Notice, 'id' | 'urgent_resend_count'>[];
+
+  if (notices.length === 0) {
+    return { total: 0, sent: 0 };
+  }
+
+  let sent = 0;
+
+  for (const notice of notices) {
+    const wasSent = await sendPushNotificationEvent(
+      'notice_published',
+      notice.id,
+    );
+
+    if (!wasSent) continue;
+
+    sent += 1;
+    await client
+      .from('notices')
+      .update({
+        urgent_resend_count: notice.urgent_resend_count + 1,
+        last_urgent_resent_at: new Date().toISOString(),
+      })
+      .eq('id', notice.id);
+  }
+
+  return { total: notices.length, sent };
 }

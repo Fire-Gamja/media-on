@@ -109,20 +109,27 @@ export default function AdminNoticesScreen() {
             {notices.map((notice) => (
               <View key={notice.id} style={styles.card}>
                 <View style={styles.cardTop}>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      !notice.is_published && styles.draftBadge,
-                    ]}
-                  >
-                    <Text
+                  <View style={styles.badges}>
+                    <View
                       style={[
-                        styles.statusText,
-                        !notice.is_published && styles.draftText,
+                        styles.statusBadge,
+                        !notice.is_published && styles.draftBadge,
                       ]}
                     >
-                      {notice.is_published ? '게시 중' : '임시 저장'}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.statusText,
+                          !notice.is_published && styles.draftText,
+                        ]}
+                      >
+                        {notice.is_published ? '게시 중' : '임시 저장'}
+                      </Text>
+                    </View>
+                    {notice.is_urgent ? (
+                      <View style={styles.urgentBadge}>
+                        <Text style={styles.urgentText}>긴급</Text>
+                      </View>
+                    ) : null}
                   </View>
                   <Text style={styles.dateText}>
                     {formatDate(notice.updated_at)}
@@ -219,7 +226,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  badges: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   statusBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10, backgroundColor: '#EAF8F0' },
+  urgentBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10, backgroundColor: '#FDECEC' },
+  urgentText: { color: COLORS.error, fontSize: 11, fontWeight: '800' },
   draftBadge: { backgroundColor: '#F1F2F6' },
   statusText: { color: COLORS.success, fontSize: 11, fontWeight: '800' },
   draftText: { color: COLORS.subText },

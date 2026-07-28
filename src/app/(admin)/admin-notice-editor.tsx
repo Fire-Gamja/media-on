@@ -30,6 +30,7 @@ export default function AdminNoticeEditorScreen() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isPublished, setIsPublished] = useState(true);
+  const [isUrgent, setIsUrgent] = useState(false);
   const [isLoading, setIsLoading] = useState(isEditing);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,6 +42,7 @@ export default function AdminNoticeEditorScreen() {
         setTitle(notice.title);
         setContent(notice.content);
         setIsPublished(notice.is_published);
+        setIsUrgent(notice.is_urgent);
       })
       .catch((error) => {
         Alert.alert('조회 실패', getAuthErrorMessage(error), [
@@ -58,7 +60,7 @@ export default function AdminNoticeEditorScreen() {
 
     try {
       setIsSaving(true);
-      const input = { title, content, isPublished };
+      const input = { title, content, isPublished, isUrgent };
 
       if (noticeId) {
         await updateNotice(noticeId, input);
@@ -129,6 +131,33 @@ export default function AdminNoticeEditorScreen() {
                 placeholderTextColor={COLORS.placeholder}
                 style={styles.contentInput}
               />
+
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityState={{ checked: isUrgent }}
+                onPress={() => setIsUrgent((current) => !current)}
+                style={[styles.publishRow, styles.urgentRow]}
+              >
+                <View>
+                  <Text style={styles.publishTitle}>긴급 공지로 분류</Text>
+                  <Text style={styles.publishDescription}>
+                    관리자 홈에서 긴급 공지만 다시 알림으로 발송할 수 있습니다.
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.switchTrack,
+                    isUrgent && styles.urgentSwitchTrack,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.switchThumb,
+                      isUrgent && styles.switchThumbActive,
+                    ]}
+                  />
+                </View>
+              </Pressable>
 
               <Pressable
                 accessibilityRole="switch"
@@ -232,10 +261,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: COLORS.surface,
   },
+  urgentRow: { marginTop: 24 },
   publishTitle: { color: COLORS.text, fontSize: 14, fontWeight: '800' },
   publishDescription: { maxWidth: 250, marginTop: 5, color: COLORS.subText, fontSize: 11, lineHeight: 17 },
   switchTrack: { width: 48, height: 28, padding: 3, justifyContent: 'center', borderRadius: 14, backgroundColor: COLORS.disabled },
   switchTrackActive: { backgroundColor: COLORS.navy },
+  urgentSwitchTrack: { backgroundColor: COLORS.error },
   switchThumb: { width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.white },
   switchThumbActive: { alignSelf: 'flex-end' },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface },

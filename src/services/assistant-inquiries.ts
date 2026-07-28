@@ -75,9 +75,9 @@ export const ASSISTANT_STATUS_OPTIONS: ReadonlyArray<{
   value: AssistantInquiryStatus;
   label: string;
 }> = [
-  { value: 'submitted', label: '접수 완료' },
-  { value: 'in_progress', label: '답변 준비 중' },
-  { value: 'answered', label: '답변 완료' },
+  { value: 'submitted', label: '문의 완료' },
+  { value: 'in_progress', label: '상담 중' },
+  { value: 'answered', label: '상담 완료' },
 ];
 
 const inquiryColumns =
@@ -102,7 +102,7 @@ export function getAssistantCategoryLabel(category: AssistantInquiryCategory) {
 export function getAssistantStatusLabel(status: AssistantInquiryStatus) {
   return (
     ASSISTANT_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
-    '접수 완료'
+    '문의 완료'
   );
 }
 
@@ -187,6 +187,36 @@ export function subscribeToAssistantMessages(
   return () => { void client.removeChannel(channel); };
 }
 
+export function subscribeToAssistantInquiryStatus(
+  inquiryId: string,
+  onStatusChange: (status: AssistantInquiryStatus) => void,
+) {
+  const client = requireSupabase();
+  const channel = client
+    .channel(`assistant-inquiry-status:${inquiryId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'assistant_inquiries',
+        filter: `id=eq.${inquiryId}`,
+      },
+      (payload) => {
+        const status = payload.new.status as AssistantInquiryStatus;
+
+        if (['submitted', 'in_progress', 'answered'].includes(status)) {
+          onStatusChange(status);
+        }
+      },
+    )
+    .subscribe();
+
+  return () => {
+    void client.removeChannel(channel);
+  };
+}
+
 export async function getMyAssistantInquiries(
   limit?: number,
 ): Promise<AssistantInquiry[]> {
@@ -242,18 +272,30 @@ export async function getAdminAssistantInquiry(
 export async function transitionAssistantInquiry(
   id: string,
   status: AssistantInquiryStatus,
-  answer = '',
 ) {
   const client = requireSupabase();
   const { error } = await client.rpc('transition_assistant_inquiry', {
     target_inquiry_id: id,
     new_status: status,
-    reply: answer.trim() || null,
+    reply: null,
   });
   if (error) throw new Error('조교 문의 상태를 변경하지 못했습니다.');
 
   if (status === 'answered') {
-    await sendPushNotificationEvent('assistant_inquiry_answered', id);
+    const {
+      data: { user },
+    } = await client.auth.getUser();
+    const { data: profile } = user
+      ? await client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single<{ role: string }>()
+      : { data: null };
+
+    if (profile?.role === 'admin') {
+      await sendPushNotificationEvent('assistant_inquiry_answered', id);
+    }
   }
 }
 

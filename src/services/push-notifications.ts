@@ -133,7 +133,7 @@ export async function sendPushNotificationEvent(
   resourceId: string,
 ) {
   if (!supabase) {
-    return;
+    return false;
   }
 
   try {
@@ -146,8 +146,12 @@ export async function sendPushNotificationEvent(
 
     if (error) {
       console.warn('푸시 알림 전송 요청에 실패했습니다.', error.message);
+      return false;
     }
+
+    return true;
   } catch (error) {
     console.warn('푸시 알림 전송 요청에 실패했습니다.', error);
+    return false;
   }
 }

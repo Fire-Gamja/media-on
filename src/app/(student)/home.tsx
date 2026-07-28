@@ -164,7 +164,7 @@ export default function StudentHomeScreen() {
             id: notice.id,
             title: notice.title,
             publishedAt: notice.published_at ?? notice.created_at,
-            urgent: /^\[긴급\]/.test(notice.title),
+            urgent: notice.is_urgent,
           })),
         ),
       )

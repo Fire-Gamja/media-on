@@ -24,7 +24,7 @@ export default function AdminAssistantInquiriesScreen() {
 
   return <SafeAreaView style={styles.safeArea} edges={['top']}><StatusBar style="dark" /><View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.headerTitle}>조교 문의 관리</Text><View style={styles.headerSide} /></View>
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadInquiries(true)} colors={[COLORS.navy]} />}>
-      <View style={styles.summaryCard}><View><Text style={styles.summaryTitle}>전체 조교 문의</Text><Text style={styles.summaryText}>학생 문의를 확인하고 답변을 작성해 주세요.</Text></View><Text style={styles.summaryCount}>{inquiries.length}건</Text></View>
+      <View style={styles.summaryCard}><View><Text style={styles.summaryTitle}>전체 조교 문의</Text><Text style={styles.summaryText}>학생 문의를 확인하고 실시간 상담을 시작해 주세요.</Text></View><Text style={styles.summaryCount}>{inquiries.length}건</Text></View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
         <CategoryFilter label="전체" selected={categoryFilter === 'all'} onPress={() => setCategoryFilter('all')} />
         {ASSISTANT_CATEGORY_OPTIONS.map((option) => <CategoryFilter key={option.value} label={option.label} selected={categoryFilter === option.value} onPress={() => setCategoryFilter(option.value)} />)}

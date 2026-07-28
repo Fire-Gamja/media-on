@@ -176,9 +176,12 @@ const styles = StyleSheet.create({
   skipButton: {
     position: 'absolute',
     zIndex: 2,
-    top: 28,
-    right: 16,
-    padding: 4,
+    top: 44,
+    right: 20,
+    minHeight: 44,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   skipText: {
     color: AUTH_COLORS.text,
@@ -217,7 +220,7 @@ const styles = StyleSheet.create({
   bottomArea: {
     position: 'absolute',
     right: 16,
-    bottom: 35,
+    bottom: 56,
     left: 16,
   },
   indicators: {

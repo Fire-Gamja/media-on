@@ -7,7 +7,6 @@ import {
   BackHandler,
   Image,
   Platform,
-  type ImageSourcePropType,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppIcon, type AppIconName } from '../../components/common/AppIcon';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
   type AdminAssistantInquiry,
@@ -24,7 +24,6 @@ import {
 } from '../../services/assistant-inquiries';
 import {
   type AdminStudentProfile,
-  getApprovedStudentCount,
   getAuthErrorMessage,
   getCurrentProfile,
   getPendingStudents,
@@ -32,7 +31,13 @@ import {
   signOutUser,
   type StudentProfile,
 } from '../../services/auth';
-import { getPendingActionCounts, type PendingActionCounts } from '../../services/admin-dashboard';
+import {
+  getPendingActionCounts,
+  getPendingActions,
+  type PendingAction,
+  type PendingActionCounts,
+} from '../../services/admin-dashboard';
+import { resendUrgentNotices } from '../../services/notices';
 
 const bellIcon = require('../../../assets/figma/manager/bell.png');
 
@@ -45,7 +50,7 @@ type ManagementAction = {
     | '/admin-room-requests'
     | '/admin-facility-reports'
     | '/admin-assistant-inquiries';
-  icon: ImageSourcePropType;
+  icon: AppIconName;
 };
 
 type DashboardInquiry = {
@@ -61,31 +66,31 @@ const MANAGEMENT_ACTIONS: ManagementAction[] = [
     id: 'notice',
     title: '공지사항',
     route: '/admin-notices',
-    icon: require('../../../assets/figma/student/quick-notice.png'),
+    icon: 'notice',
   },
   {
     id: 'equipment',
     title: '기자재 대여',
     route: '/admin-equipment-requests',
-    icon: require('../../../assets/figma/student/quick-equipment.png'),
+    icon: 'equipment',
   },
   {
     id: 'room',
     title: '실습실 대여',
     route: '/admin-room-requests',
-    icon: require('../../../assets/figma/student/quick-room.png'),
+    icon: 'room',
   },
   {
     id: 'facility',
     title: '시설 신고',
     route: '/admin-facility-reports',
-    icon: require('../../../assets/figma/student/quick-report.png'),
+    icon: 'report',
   },
   {
     id: 'assistant',
     title: '조교 문의',
     route: '/admin-assistant-inquiries',
-    icon: require('../../../assets/figma/student/quick-assistant.png'),
+    icon: 'assistant',
   },
 ];
 
@@ -107,7 +112,6 @@ const DEMO_INQUIRIES: DashboardInquiry[] = [
 export default function AdminHomeScreen() {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [students, setStudents] = useState<AdminStudentProfile[]>([]);
-  const [studentCount, setStudentCount] = useState(0);
   const [inquiries, setInquiries] =
     useState<DashboardInquiry[]>(DEMO_INQUIRIES);
   const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
@@ -115,6 +119,8 @@ export default function AdminHomeScreen() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingCounts, setPendingCounts] = useState<PendingActionCounts | null>(null);
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
+  const [isResendingEmergency, setIsResendingEmergency] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const dashboardInquiries = inquiries.slice(0, 6);
@@ -128,19 +134,25 @@ export default function AdminHomeScreen() {
 
     try {
       setErrorMessage(null);
-      const [nextProfile, pendingStudents, approvedCount, nextInquiries, nextCounts] =
+      const [
+        nextProfile,
+        pendingStudents,
+        nextInquiries,
+        nextCounts,
+        nextActions,
+      ] =
         await Promise.all([
           getCurrentProfile(),
           getPendingStudents(),
-          getApprovedStudentCount(),
           getAdminAssistantInquiries(),
           getPendingActionCounts(),
+          getPendingActions(),
         ]);
       setProfile(nextProfile);
       setStudents(pendingStudents);
-      setStudentCount(approvedCount);
       setInquiries(nextInquiries.map(toDashboardInquiry));
       setPendingCounts(nextCounts);
+      setPendingActions(nextActions);
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
     } finally {
@@ -187,9 +199,6 @@ export default function AdminHomeScreen() {
               setStudents((current) =>
                 current.filter((item) => item.id !== student.id),
               );
-              if (isApproval) {
-                setStudentCount((current) => current + 1);
-              }
             } catch (error) {
               Alert.alert('처리 실패', getAuthErrorMessage(error));
             } finally {
@@ -213,6 +222,42 @@ export default function AdminHomeScreen() {
         },
       },
     ]);
+  };
+
+  const handleEmergencyResend = () => {
+    Alert.alert(
+      '긴급 공지 재발송',
+      '긴급으로 분류된 게시 공지를 학생들에게 다시 알림으로 보내시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '재발송',
+          onPress: async () => {
+            try {
+              setIsResendingEmergency(true);
+              const result = await resendUrgentNotices();
+
+              if (result.total === 0) {
+                Alert.alert(
+                  '긴급 공지 없음',
+                  '현재 게시 중인 긴급 공지가 없습니다.',
+                );
+                return;
+              }
+
+              Alert.alert(
+                '재발송 완료',
+                `${result.sent}개의 긴급 공지 알림을 재발송했습니다.`,
+              );
+            } catch (error) {
+              Alert.alert('재발송 실패', getAuthErrorMessage(error));
+            } finally {
+              setIsResendingEmergency(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -270,19 +315,28 @@ export default function AdminHomeScreen() {
         ) : null}
 
         <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/admin-pending-actions')}
+            style={({ pressed }) => [
+              styles.summaryCard,
+              pressed && styles.pressed,
+            ]}
+          >
             <View style={styles.summaryHeadingRow}>
-              <Text style={styles.summaryTitle}>조치 대기 {pendingCounts?.total ?? students.length}건</Text>
-              <Text style={styles.summaryCount}>{students.length}건</Text>
+              <Text style={styles.summaryTitle}>조치 대기</Text>
+              <Text style={styles.summaryCount}>
+                {pendingCounts?.total ?? pendingActions.length}건
+              </Text>
             </View>
             <View style={styles.pendingPreview}>
-              {students[0] ? (
+              {pendingActions[0] ? (
                 <>
                   <Text numberOfLines={1} style={styles.pendingStudentName}>
-                    {students[0].name} 학생
+                    {pendingActions[0].category}
                   </Text>
-                  <Text style={styles.pendingDescription}>
-                    가입 승인 신청을 확인해 주세요.
+                  <Text numberOfLines={2} style={styles.pendingDescription}>
+                    {pendingActions[0].title}
                   </Text>
                 </>
               ) : (
@@ -291,18 +345,16 @@ export default function AdminHomeScreen() {
                     대기 중인 신청이 없습니다.
                   </Text>
                   <Text style={styles.pendingDescription}>
-                    새로운 가입 신청이 접수되면{'\n'}이곳에 표시 됩니다.
+                    처리가 필요한 신청과 문의가{'\n'}이곳에 표시됩니다.
                   </Text>
                 </>
               )}
             </View>
             <View style={styles.studentCountBar}>
-              <Text style={styles.studentCountLabel}>학생 수</Text>
-              <Text style={styles.studentCountValue}>
-                {`${studentCount}`.padStart(3, '0')}
-              </Text>
+              <Text style={styles.studentCountLabel}>대기 항목 상세 보기</Text>
+              <Text style={styles.studentCountValue}>›</Text>
             </View>
-          </View>
+          </Pressable>
 
           <View style={styles.summaryCard}>
             <View style={styles.dateRow}>
@@ -311,13 +363,18 @@ export default function AdminHomeScreen() {
                 {formatWeekday(today)}
               </Text>
             </View>
-            <DashboardStatusRow label="문의" value="상담 휴무" />
+            <DashboardStatusRow
+              label="문의"
+              value={`${pendingCounts?.inquiries ?? 0}건`}
+            />
             <DashboardStatusRow label="가입 대기" value={`${students.length} 명`} />
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.push('/admin-notices')}
+              disabled={isResendingEmergency}
+              onPress={handleEmergencyResend}
               style={({ pressed }) => [
                 styles.emergencyButton,
+                isResendingEmergency && styles.disabled,
                 pressed && styles.pressed,
               ]}
             >
@@ -325,6 +382,56 @@ export default function AdminHomeScreen() {
               <Text style={styles.emergencyText}>긴급 공지 재 발송</Text>
             </Pressable>
           </View>
+        </View>
+
+        <View style={styles.pendingActionSection}>
+          <View style={styles.inquiryHeader}>
+            <Text style={styles.sectionTitle}>조치 대기 목록</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/admin-pending-actions')}
+              style={({ pressed }) => [pressed && styles.pressed]}
+            >
+              <Text style={styles.viewAll}>모두 보기</Text>
+            </Pressable>
+          </View>
+          {pendingActions.length === 0 ? (
+            <View style={styles.pendingActionEmpty}>
+              <Text style={styles.pendingActionEmptyText}>
+                대기 중인 조치가 없습니다.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.pendingActionList}>
+              {pendingActions.slice(0, 3).map((action) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={`${action.kind}-${action.id}`}
+                  onPress={() => openPendingAction(action)}
+                  style={({ pressed }) => [
+                    styles.pendingActionCard,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View style={styles.pendingActionIcon}>
+                    <AppIcon
+                      name={getPendingActionIcon(action)}
+                      size={24}
+                    />
+                  </View>
+                  <View style={styles.pendingActionText}>
+                    <Text style={styles.pendingActionCategory}>
+                      {action.category} · {action.status}
+                    </Text>
+                    <Text numberOfLines={1} style={styles.pendingActionTitle}>
+                      {action.title}
+                    </Text>
+                  </View>
+                  <Text style={styles.pendingActionChevron}>›</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -341,7 +448,7 @@ export default function AdminHomeScreen() {
                 ]}
               >
                 <View style={styles.managementIconBox}>
-                  <Image source={action.icon} style={styles.managementIcon} />
+                  <AppIcon name={action.icon} size={34} />
                 </View>
                 <Text style={styles.managementLabel}>{action.title}</Text>
               </Pressable>
@@ -564,7 +671,44 @@ function getInquiryStatusStyle(status: DashboardInquiry['status']) {
     return { label: '상담 완료', color: '#000000' };
   }
 
-  return { label: '상담 대기', color: '#F19A49' };
+  return { label: '문의 완료', color: '#F19A49' };
+}
+
+function getPendingActionIcon(action: PendingAction): AppIconName {
+  if (action.kind === 'facility') return 'report';
+  if (action.kind === 'inquiry') return 'assistant';
+  return action.kind;
+}
+
+function openPendingAction(action: PendingAction) {
+  if (action.kind === 'equipment') {
+    router.push({
+      pathname: '/admin-equipment-request',
+      params: { id: action.id },
+    });
+    return;
+  }
+
+  if (action.kind === 'room') {
+    router.push({
+      pathname: '/admin-room-request',
+      params: { id: action.id },
+    });
+    return;
+  }
+
+  if (action.kind === 'facility') {
+    router.push({
+      pathname: '/admin-facility-report',
+      params: { id: action.id },
+    });
+    return;
+  }
+
+  router.push({
+    pathname: '/admin-assistant-inquiry',
+    params: { id: action.id },
+  });
 }
 
 function formatWeekday(date: Date) {
@@ -695,8 +839,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: '#000000',
     fontFamily: 'FreesentationRegular',
-    fontSize: 8,
-    lineHeight: 10,
+    fontSize: 10,
+    lineHeight: 13,
     textAlign: 'center',
   },
   studentCountBar: {
@@ -712,12 +856,12 @@ const styles = StyleSheet.create({
   studentCountLabel: {
     color: '#FFFFFF',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 8,
+    fontSize: 10,
   },
   studentCountValue: {
     color: '#FFFFFF',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 8,
+    fontSize: 10,
   },
   dateRow: {
     height: 43,
@@ -753,7 +897,7 @@ const styles = StyleSheet.create({
   dashboardStatusValue: {
     color: '#FFFFFF',
     fontFamily: 'FreesentationRegular',
-    fontSize: 9,
+    fontSize: 10,
   },
   emergencyButton: {
     height: 23,
@@ -779,6 +923,64 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 24,
   },
+  pendingActionSection: {
+    marginTop: 24,
+  },
+  pendingActionList: {
+    marginTop: 12,
+    gap: 10,
+  },
+  pendingActionCard: {
+    minHeight: 66,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  pendingActionIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9,
+    backgroundColor: '#F0F0F0',
+  },
+  pendingActionText: {
+    flex: 1,
+    marginLeft: 11,
+  },
+  pendingActionCategory: {
+    color: '#6F6F6F',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 10,
+  },
+  pendingActionTitle: {
+    marginTop: 4,
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 13,
+  },
+  pendingActionChevron: {
+    marginLeft: 8,
+    color: '#6F6F6F',
+    fontSize: 22,
+  },
+  pendingActionEmpty: {
+    height: 80,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#F8F8F8',
+  },
+  pendingActionEmptyText: {
+    color: '#8C8C8C',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 12,
+  },
   sectionTitle: {
     color: '#000000',
     fontFamily: 'FreesentationSemiBold',
@@ -801,11 +1003,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 8,
     backgroundColor: '#F0F0F0',
-  },
-  managementIcon: {
-    width: 24,
-    height: 24,
-    resizeMode: 'contain',
   },
   managementLabel: {
     color: '#2D2D2D',
@@ -869,7 +1066,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: '#39393E',
     fontFamily: 'FreesentationRegular',
-    fontSize: 8,
+    fontSize: 10,
   },
   inquiryStatus: {
     flexDirection: 'row',
@@ -1047,5 +1244,8 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.65,
+  },
+  disabled: {
+    opacity: 0.55,
   },
 });

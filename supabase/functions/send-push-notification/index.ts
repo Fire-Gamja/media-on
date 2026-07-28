@@ -185,8 +185,9 @@ async function resolvePushTarget(
       id: string;
       title: string;
       is_published: boolean;
+      is_urgent: boolean;
     }>(supabaseUrl, adminHeaders, 'notices', {
-      select: 'id,title,is_published',
+      select: 'id,title,is_published,is_urgent',
       id: `eq.${resourceId}`,
       limit: '1',
     });
@@ -208,7 +209,7 @@ async function resolvePushTarget(
 
     return {
       recipientIds: students.map(({ id }) => id),
-      title: '새 공지사항',
+      title: notice.is_urgent ? '긴급 공지사항' : '새 공지사항',
       body: notice.title,
       url: `/notices/${notice.id}`,
     };

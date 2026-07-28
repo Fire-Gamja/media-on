@@ -41,7 +41,7 @@ export default function AssistantInquiryScreen() {
     try {
       setIsSubmitting(true);
       const inquiryId = await createAssistantInquiry({ category, title, content }, requestId.current);
-      Alert.alert('접수 완료', '조교 문의가 정상적으로 접수되었습니다.', [
+      Alert.alert('문의 완료', '조교 문의가 정상적으로 등록되었습니다.', [
         { text: '채팅방 열기', onPress: () => router.replace(`/assistant-inquiries/${inquiryId}`) },
       ]);
     } catch (error) {

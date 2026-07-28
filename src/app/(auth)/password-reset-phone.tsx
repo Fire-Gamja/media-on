@@ -72,14 +72,14 @@ export default function PasswordResetPhoneScreen() {
         buttonTitle="인증번호 받기"
         onBack={handleBack}
         onButtonPress={() => moveTo('verification')}
-        title="학번 또는 사번을 입력해 주세요"
+        title="학번을 입력해 주세요"
       >
         <AuthField
           value={identifier}
           onChangeText={(value) =>
             setIdentifier(value.replace(/\D/g, ''))
           }
-          placeholder="학번 또는 사번"
+          placeholder="학번"
           keyboardType="number-pad"
           maxLength={20}
           returnKeyType="next"

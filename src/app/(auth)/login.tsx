@@ -58,7 +58,7 @@ export default function LoginScreen() {
 
   const handleIdentifierNext = () => {
     if (!identifier.trim()) {
-      Alert.alert('입력 확인', '학번 또는 사번을 입력해 주세요.');
+      Alert.alert('입력 확인', '학번을 입력해 주세요.');
       return;
     }
 
@@ -115,7 +115,7 @@ export default function LoginScreen() {
     if (Platform.OS === 'web') {
       Alert.alert(
         '로그인 테스트',
-        `학번/사번 ${identifier}의 입력이 확인되었습니다.`,
+        `학번 ${identifier}의 입력이 확인되었습니다.`,
       );
       router.replace('/home');
       return;
@@ -123,7 +123,7 @@ export default function LoginScreen() {
 
     Alert.alert(
       '로그인 테스트',
-      `학번/사번 ${identifier}의 입력이 확인되었습니다.`,
+      `학번 ${identifier}의 입력이 확인되었습니다.`,
       [
         {
           text: '학생 홈으로 이동',
@@ -172,7 +172,7 @@ export default function LoginScreen() {
             <View style={styles.formContent}>
               <Text style={styles.formTitle}>
                 {step === 'identifier'
-                  ? '학번 또는 사번을 입력해 주세요'
+                  ? '학번을 입력해 주세요'
                   : '비밀번호를 입력해 주세요'}
               </Text>
 
@@ -183,7 +183,7 @@ export default function LoginScreen() {
                     onChangeText={(value) =>
                       setIdentifier(value.replace(/\D/g, ''))
                     }
-                    placeholder="학번 또는 사번"
+                    placeholder="학번"
                     keyboardType="number-pad"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   logoEnglish: {
     color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.regular,
-    fontSize: 8,
+    fontSize: 10,
     lineHeight: 10,
     letterSpacing: 0.6,
   },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   accountArea: {
     position: 'absolute',
     right: 0,
-    bottom: 0,
+    bottom: 24,
     left: 0,
     gap: 20,
   },
@@ -403,8 +403,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#444650',
   },
   loginLinkButton: {
-    minHeight: 17,
-    marginBottom: 4,
+    minHeight: 44,
+    marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },

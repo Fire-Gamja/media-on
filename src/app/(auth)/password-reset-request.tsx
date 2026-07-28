@@ -57,7 +57,7 @@ export default function PasswordResetRequestScreen() {
     }
 
     if (step === 2 && !studentNumber.trim()) {
-      Alert.alert('입력 확인', '학번 또는 사번을 입력해 주세요.');
+      Alert.alert('입력 확인', '학번을 입력해 주세요.');
       return;
     }
 
@@ -132,7 +132,7 @@ export default function PasswordResetRequestScreen() {
         buttonTitle="다음"
         onBack={handleBack}
         onButtonPress={handleNext}
-        title="학번 또는 사번을 입력해 주세요"
+        title="학번을 입력해 주세요"
       >
         <AuthField
           value={studentNumber}
