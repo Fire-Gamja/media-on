@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { maskProfanity } from '../lib/content-filter';
 import { sendPushNotificationEvent } from './push-notifications';
 
 export type EquipmentRequestStatus =
@@ -143,7 +144,7 @@ export async function createEquipmentRentalRequest(
     quantity: input.quantity,
     pickup_date: input.pickupDate,
     return_date: input.returnDate,
-    purpose: input.purpose.trim(),
+    purpose: maskProfanity(input.purpose),
   });
 
   if (error) {

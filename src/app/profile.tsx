@@ -4,10 +4,12 @@ import {
   useLocalSearchParams,
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -21,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FormField from '../components/common/FormField';
 import PrimaryButton from '../components/common/PrimaryButton';
 import { COLORS } from '../constants/colors';
+import { supabase } from '../lib/supabase';
 import {
   changeCurrentPassword,
   getAuthErrorMessage,
@@ -55,6 +58,7 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const applyProfile = useCallback((nextProfile: StudentProfile) => {
     setProfile(nextProfile);
@@ -69,13 +73,39 @@ export default function ProfileScreen() {
     try {
       setIsLoading(true);
       setLoadError(null);
-      applyProfile(await getCurrentProfile());
+      const nextProfile = await getCurrentProfile();
+      applyProfile(nextProfile);
+      if (supabase) {
+        const { data } = await supabase.from('profiles').select('avatar_url').eq('id', nextProfile.id).single();
+        setAvatarUrl(data?.avatar_url ?? null);
+      }
     } catch (error) {
       setLoadError(getAuthErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   }, [applyProfile]);
+
+  const handleAvatarChange = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.75 });
+    if (result.canceled || !supabase || !profile) return;
+    try {
+      setIsSaving(true);
+      const bytes = await (await fetch(result.assets[0].uri)).arrayBuffer();
+      const path = `${profile.id}/avatar.jpg`;
+      const { error } = await supabase.storage.from('profile-images').upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from('profile-images').getPublicUrl(path);
+      const url = `${data.publicUrl}?v=${Date.now()}`;
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', profile.id);
+      if (updateError) throw updateError;
+      setAvatarUrl(url);
+    } catch {
+      Alert.alert('변경 실패', '프로필 사진을 변경하지 못했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -264,11 +294,10 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.profileCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {profile.name.slice(0, 1)}
-                </Text>
-              </View>
+              <Pressable onPress={() => void handleAvatarChange()}>
+                {avatarUrl ? <Image source={{ uri: avatarUrl }} style={styles.avatarImage} /> : <View style={styles.avatar}><Text style={styles.avatarText}>{profile.name.slice(0, 1)}</Text></View>}
+                <Text style={styles.avatarChange}>사진 변경</Text>
+              </Pressable>
               <Text style={styles.profileName}>{profile.name}</Text>
               <Text style={styles.profileNumber}>
                 {profile.student_number}
@@ -554,6 +583,8 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '800',
   },
+  avatarImage: { width: 82, height: 82, alignSelf: 'center', borderRadius: 41 },
+  avatarChange: { marginTop: 7, color: COLORS.navy, fontSize: 11, fontWeight: '800', textAlign: 'center' },
   profileName: {
     marginTop: 14,
     color: COLORS.white,

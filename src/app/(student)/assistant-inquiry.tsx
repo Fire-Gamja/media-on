@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,6 +14,7 @@ export default function AssistantInquiryScreen() {
   const [content, setContent] = useState('');
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const requestId = useRef(createRequestId());
 
   const handleSuggestion = async () => {
     if (content.trim().length < 10) {
@@ -39,9 +40,9 @@ export default function AssistantInquiryScreen() {
     }
     try {
       setIsSubmitting(true);
-      await createAssistantInquiry({ category, title, content });
+      const inquiryId = await createAssistantInquiry({ category, title, content }, requestId.current);
       Alert.alert('접수 완료', '조교 문의가 정상적으로 접수되었습니다.', [
-        { text: '내 문의 확인', onPress: () => router.replace('/assistant-inquiries') },
+        { text: '채팅방 열기', onPress: () => router.replace(`/assistant-inquiries/${inquiryId}`) },
       ]);
     } catch (error) {
       Alert.alert('접수 실패', getAuthErrorMessage(error));
@@ -61,6 +62,13 @@ export default function AssistantInquiryScreen() {
     </ScrollView>
     <View style={styles.footer}><Pressable disabled={isSubmitting} onPress={() => void handleSubmit()} style={[styles.submitButton, isSubmitting && styles.disabled]}>{isSubmitting ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.submitText}>문의 접수</Text>}</Pressable></View>
   </KeyboardAvoidingView></SafeAreaView>;
+}
+
+function createRequestId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (value) => {
+    const random = Math.floor(Math.random() * 16);
+    return (value === 'x' ? random : (random & 0x3) | 0x8).toString(16);
+  });
 }
 
 const styles = StyleSheet.create({

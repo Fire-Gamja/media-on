@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../../constants/colors';
+import { AssistantChatRoom } from '../../../components/assistant/AssistantChatRoom';
 import { getAuthErrorMessage } from '../../../services/auth';
 import { getAssistantCategoryLabel, getAssistantStatusLabel, getMyAssistantInquiry, type AssistantInquiry } from '../../../services/assistant-inquiries';
 
@@ -22,7 +23,7 @@ export default function AssistantInquiryDetailScreen() {
     {isLoading ? <View style={styles.loadingBox}><ActivityIndicator size="large" color={COLORS.navy} /></View> : inquiry ? <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
       <View style={styles.statusCard}><Text style={styles.statusLabel}>{getAssistantCategoryLabel(inquiry.category)}</Text><Text style={styles.statusValue}>{getAssistantStatusLabel(inquiry.status)}</Text><Text style={styles.statusDescription}>{getStatusDescription(inquiry.status)}</Text></View>
       <View style={styles.card}><Text style={styles.title}>{inquiry.title}</Text><Text style={styles.date}>{formatDate(inquiry.created_at)} 문의</Text><View style={styles.contentSection}><Text style={styles.sectionLabel}>문의 내용</Text><Text style={styles.bodyText}>{inquiry.content}</Text></View></View>
-      <View style={[styles.answerCard, inquiry.status !== 'answered' && styles.pendingCard]}><Text style={styles.answerTitle}>{inquiry.status === 'answered' ? '조교 답변' : '답변 안내'}</Text><Text style={styles.answerText}>{inquiry.answer?.trim() || getPendingMessage(inquiry.status)}</Text>{inquiry.answered_at ? <Text style={styles.answerDate}>{formatDate(inquiry.answered_at)} 답변</Text> : null}</View>
+      <View style={styles.answerCard}><Text style={styles.answerTitle}>실시간 상담</Text><AssistantChatRoom inquiryId={inquiry.id} isClosed={inquiry.status === 'answered'} /></View>
     </ScrollView> : null}
   </SafeAreaView>;
 }

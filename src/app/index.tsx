@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AuthButton from '../components/auth/AuthButton';
@@ -8,10 +9,41 @@ import {
   AUTH_COLORS,
   AUTH_FONTS,
 } from '../constants/auth-theme';
+import { supabase } from '../lib/supabase';
 
 const logoMark = require('../../assets/figma/auth/logo-mark.png');
 
 export default function StartScreen() {
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    if (!supabase) {
+      setCheckingSession(false);
+      return;
+    }
+    void supabase.auth.getSession().then(async ({ data }) => {
+      const user = data.session?.user;
+      if (!user) {
+        setCheckingSession(false);
+        return;
+      }
+      const { data: profile } = await supabase!
+        .from('profiles')
+        .select('role, approval_status')
+        .eq('id', user.id)
+        .single();
+      if (profile?.approval_status === 'approved') {
+        router.replace(profile.role === 'admin' ? '/admin-home' : '/home');
+      } else {
+        await supabase!.auth.signOut();
+        setCheckingSession(false);
+      }
+    });
+  }, []);
+
+  if (checkingSession) {
+    return <SafeAreaView style={styles.safeArea}><ActivityIndicator style={styles.loader} color={AUTH_COLORS.text} /></SafeAreaView>;
+  }
   return (
     <SafeAreaView
       edges={['top', 'bottom']}
@@ -85,4 +117,5 @@ const styles = StyleSheet.create({
     right: 16,
     bottom: 15,
   },
+  loader: { flex: 1 },
 });

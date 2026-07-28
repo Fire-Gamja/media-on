@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { maskProfanity } from '../lib/content-filter';
 import { sendPushNotificationEvent } from './push-notifications';
 
 export type RoomReservationStatus =
@@ -39,6 +40,7 @@ export type RoomReservationRequest = {
   requester_id: string;
   room_id: string;
   reservation_date: string;
+  end_date: string;
   start_time: string;
   end_time: string;
   attendee_count: number;
@@ -59,6 +61,7 @@ export type AdminRoomReservationRequest = RoomReservationRequest & {
 export type RoomReservationInput = {
   roomId: string;
   reservationDate: string;
+  endDate: string;
   startTime: string;
   endTime: string;
   purpose: string;
@@ -86,7 +89,7 @@ export const ROOM_STATUS_OPTIONS: ReadonlyArray<{
 const roomColumns =
   'id, name, location, capacity, open_time, close_time, description, is_active, created_at, updated_at';
 const requestColumns =
-  'id, requester_id, room_id, reservation_date, start_time, end_time, attendee_count, purpose, status, admin_note, reviewed_by, reviewed_at, created_at, updated_at';
+  'id, requester_id, room_id, reservation_date, end_date, start_time, end_time, attendee_count, purpose, status, admin_note, reviewed_by, reviewed_at, created_at, updated_at';
 const roomJoin =
   'room:practice_rooms!room_reservation_requests_room_id_fkey(name, location, capacity, open_time, close_time)';
 const requesterJoin =
@@ -145,10 +148,11 @@ export async function createRoomReservationRequest(
   const { error } = await client.from('room_reservation_requests').insert({
     room_id: input.roomId,
     reservation_date: input.reservationDate,
+    end_date: input.endDate,
     start_time: input.startTime,
     end_time: input.endTime,
     attendee_count: 40,
-    purpose: input.purpose.trim(),
+    purpose: maskProfanity(input.purpose),
   });
 
   if (error) {

@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   skipButton: {
     position: 'absolute',
     zIndex: 2,
-    top: 16,
+    top: 28,
     right: 16,
     padding: 4,
   },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   bottomArea: {
     position: 'absolute',
     right: 16,
-    bottom: 15,
+    bottom: 35,
     left: 16,
   },
   indicators: {

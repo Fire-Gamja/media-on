@@ -4,7 +4,9 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Image,
+  Platform,
   type ImageSourcePropType,
   Pressable,
   RefreshControl,
@@ -30,6 +32,7 @@ import {
   signOutUser,
   type StudentProfile,
 } from '../../services/auth';
+import { getPendingActionCounts, type PendingActionCounts } from '../../services/admin-dashboard';
 
 const bellIcon = require('../../../assets/figma/manager/bell.png');
 
@@ -111,6 +114,7 @@ export default function AdminHomeScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pendingCounts, setPendingCounts] = useState<PendingActionCounts | null>(null);
 
   const today = useMemo(() => new Date(), []);
   const dashboardInquiries = inquiries.slice(0, 6);
@@ -124,17 +128,19 @@ export default function AdminHomeScreen() {
 
     try {
       setErrorMessage(null);
-      const [nextProfile, pendingStudents, approvedCount, nextInquiries] =
+      const [nextProfile, pendingStudents, approvedCount, nextInquiries, nextCounts] =
         await Promise.all([
           getCurrentProfile(),
           getPendingStudents(),
           getApprovedStudentCount(),
           getAdminAssistantInquiries(),
+          getPendingActionCounts(),
         ]);
       setProfile(nextProfile);
       setStudents(pendingStudents);
       setStudentCount(approvedCount);
       setInquiries(nextInquiries.map(toDashboardInquiry));
+      setPendingCounts(nextCounts);
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
     } finally {
@@ -148,6 +154,15 @@ export default function AdminHomeScreen() {
       void loadDashboard();
     }, [loadDashboard]),
   );
+
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      BackHandler.exitApp();
+      return true;
+    });
+    return () => subscription.remove();
+  }, []));
 
   const handleReview = (
     student: AdminStudentProfile,
@@ -257,7 +272,7 @@ export default function AdminHomeScreen() {
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <View style={styles.summaryHeadingRow}>
-              <Text style={styles.summaryTitle}>조치 대기</Text>
+              <Text style={styles.summaryTitle}>조치 대기 {pendingCounts?.total ?? students.length}건</Text>
               <Text style={styles.summaryCount}>{students.length}건</Text>
             </View>
             <View style={styles.pendingPreview}>

@@ -14,33 +14,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { isSupabaseConfigured } from '../../lib/supabase';
-import {
-  getEquipmentStatusLabel,
-  getMyEquipmentRentalRequests,
-} from '../../services/equipment-rentals';
+import { getMyNotifications, markNotificationRead, type AppNotification } from '../../services/notifications';
 
 const backIcon = require('../../../assets/figma/student/back.png');
 
-type NotificationItem = {
-  id: string;
-  title: string;
-  description: string;
-  time: string;
-};
-
-const DEMO_NOTIFICATIONS: NotificationItem[] = Array.from(
-  { length: 5 },
-  (_, index) => ({
-    id: `demo-notification-${index}`,
-    title: '기자재 대여 상태 변경',
-    description: '신청 상태가 대여 중(으)로 변경되었습니다.',
-    time: '16:38',
-  }),
-);
-
 export default function StudentNotificationsScreen() {
   const [notifications, setNotifications] =
-    useState<NotificationItem[]>(DEMO_NOTIFICATIONS);
+    useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -52,21 +32,9 @@ export default function StudentNotificationsScreen() {
     refreshing ? setIsRefreshing(true) : setIsLoading(true);
 
     try {
-      const requests = await getMyEquipmentRentalRequests(10);
-      setNotifications(
-        requests.length > 0
-          ? requests.map((request) => ({
-              id: request.id,
-              title: '기자재 대여 상태 변경',
-              description: `신청 상태가 ${getEquipmentStatusLabel(
-                request.status,
-              )}(으)로 변경되었습니다.`,
-              time: formatTime(request.updated_at),
-            }))
-          : [],
-      );
+      setNotifications(await getMyNotifications());
     } catch {
-      setNotifications(DEMO_NOTIFICATIONS);
+      setNotifications([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -123,19 +91,19 @@ export default function StudentNotificationsScreen() {
         ) : (
           <View style={styles.list}>
             {notifications.map((notification) => (
-              <View key={notification.id} style={styles.notificationCard}>
+              <Pressable key={notification.id} onPress={async () => { await markNotificationRead(notification.id); if (notification.route) router.push(notification.route); }} style={styles.notificationCard}>
                 <View style={styles.notificationTitleRow}>
                   <Text style={styles.notificationTitle}>
                     {notification.title}
                   </Text>
                   <Text style={styles.notificationTime}>
-                    {notification.time}
+                    {formatTime(notification.created_at)}
                   </Text>
                 </View>
                 <Text style={styles.notificationDescription}>
-                  {notification.description}
+                  {notification.body}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}

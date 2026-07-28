@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { maskProfanity } from '../lib/content-filter';
 import { sendPushNotificationEvent } from './push-notifications';
 
 export type AssistantInquiryCategory =
@@ -30,6 +31,14 @@ export type AssistantInquiry = {
   answered_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type AssistantMessage = {
+  id: string;
+  inquiry_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
 };
 
 export type AdminAssistantInquiry = AssistantInquiry & {
@@ -128,14 +137,54 @@ export async function suggestAssistantInquiry(
   };
 }
 
-export async function createAssistantInquiry(input: AssistantInquiryInput) {
+export async function createAssistantInquiry(
+  input: AssistantInquiryInput,
+  clientRequestId: string,
+) {
   const client = requireSupabase();
-  const { error } = await client.from('assistant_inquiries').insert({
-    category: input.category,
-    title: input.title.trim(),
-    content: input.content.trim(),
+  const { data, error } = await client.rpc('create_assistant_inquiry_once', {
+    request_key: clientRequestId,
+    inquiry_category: input.category,
+    inquiry_title: maskProfanity(input.title),
+    inquiry_content: maskProfanity(input.content),
   });
   if (error) throw new Error('조교 문의를 접수하지 못했습니다.');
+  if (!data) throw new Error('조교 문의방을 확인하지 못했습니다.');
+  return data as string;
+}
+
+export async function getAssistantMessages(inquiryId: string): Promise<AssistantMessage[]> {
+  const client = requireSupabase();
+  const { data, error } = await client.from('assistant_messages')
+    .select('id, inquiry_id, sender_id, content, created_at')
+    .eq('inquiry_id', inquiryId).order('created_at', { ascending: true });
+  if (error) throw new Error('채팅 메시지를 불러오지 못했습니다.');
+  return (data ?? []) as AssistantMessage[];
+}
+
+export async function sendAssistantMessage(inquiryId: string, content: string) {
+  const client = requireSupabase();
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) throw new Error('로그인이 필요합니다.');
+  const { error } = await client.from('assistant_messages').insert({
+    inquiry_id: inquiryId,
+    sender_id: user.id,
+    content: maskProfanity(content),
+  });
+  if (error) throw new Error('메시지를 보내지 못했습니다.');
+}
+
+export function subscribeToAssistantMessages(
+  inquiryId: string,
+  onMessage: (message: AssistantMessage) => void,
+) {
+  const client = requireSupabase();
+  const channel = client.channel(`assistant-messages:${inquiryId}`).on(
+    'postgres_changes',
+    { event: 'INSERT', schema: 'public', table: 'assistant_messages', filter: `inquiry_id=eq.${inquiryId}` },
+    (payload) => onMessage(payload.new as AssistantMessage),
+  ).subscribe();
+  return () => { void client.removeChannel(channel); };
 }
 
 export async function getMyAssistantInquiries(

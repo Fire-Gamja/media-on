@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { maskProfanity } from '../lib/content-filter';
 import { sendPushNotificationEvent } from './push-notifications';
 
 export type FacilityIssueCategory =
@@ -104,8 +105,8 @@ export async function createFacilityReport(input: FacilityReportInput) {
   const { error } = await client.from('facility_reports').insert({
     location: input.location.trim(),
     category: input.category,
-    title: input.title.trim(),
-    description: input.description.trim(),
+    title: maskProfanity(input.title),
+    description: maskProfanity(input.description),
   });
 
   if (error) {

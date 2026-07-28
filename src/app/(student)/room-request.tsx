@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { DateField, inclusiveDays, parseDate } from '../../components/common/DateField';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   createRoomReservationRequest,
@@ -28,6 +29,7 @@ export default function RoomRequestScreen() {
   const roomId = Array.isArray(rawRoomId) ? rawRoomId[0] : rawRoomId;
   const [room, setRoom] = useState<PracticeRoom | null>(null);
   const [reservationDate, setReservationDate] = useState(() => getLocalDate(1));
+  const [endDate, setEndDate] = useState(() => getLocalDate(1));
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('11:00');
   const [purpose, setPurpose] = useState('');
@@ -55,6 +57,10 @@ export default function RoomRequestScreen() {
       Alert.alert('날짜 확인', '이용일은 오늘 이후의 정확한 날짜를 입력해 주세요.');
       return;
     }
+    if (!isValidDate(endDate) || endDate < reservationDate) {
+      Alert.alert('날짜 확인', '종료일은 시작일과 같거나 이후여야 합니다.');
+      return;
+    }
     if (!isValidTime(startTime) || !isValidTime(endTime) || endTime <= startTime) {
       Alert.alert('시간 확인', '시작 시간보다 늦은 종료 시간을 입력해 주세요.');
       return;
@@ -75,6 +81,7 @@ export default function RoomRequestScreen() {
       await createRoomReservationRequest({
         roomId,
         reservationDate,
+        endDate,
         startTime,
         endTime,
         purpose,
@@ -119,8 +126,11 @@ export default function RoomRequestScreen() {
                 <Text style={styles.roomMeta}>{room.open_time.slice(0, 5)}~{room.close_time.slice(0, 5)} · 최대 {room.capacity}명</Text>
               </View>
 
-              <Text style={styles.label}>이용일</Text>
-              <TextInput value={reservationDate} onChangeText={(value) => setReservationDate(formatDateInput(value))} maxLength={10} keyboardType="number-pad" placeholder="YYYY-MM-DD" placeholderTextColor={COLORS.placeholder} style={styles.input} />
+              <View style={styles.dateRange}>
+                <DateField label="시작일" value={reservationDate} minimumDate={new Date()} onChange={(value) => { setReservationDate(value); if (endDate < value) setEndDate(value); }} />
+                <DateField label="종료일" value={endDate} minimumDate={parseDate(reservationDate)} onChange={setEndDate} />
+              </View>
+              <Text style={styles.dayCount}>{reservationDate} ~ {endDate} · 총 {inclusiveDays(reservationDate, endDate)}일</Text>
 
               <View style={styles.row}>
                 <View style={styles.halfField}>
@@ -202,6 +212,7 @@ const styles = StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' }, scrollView: { flex: 1, backgroundColor: COLORS.background }, content: { padding: 22, paddingBottom: 120 },
   roomCard: { marginBottom: 26, padding: 19, borderRadius: 17, backgroundColor: COLORS.navy }, location: { color: '#D9DDEF', fontSize: 11, fontWeight: '700' }, roomName: { marginTop: 7, color: COLORS.white, fontSize: 21, fontWeight: '900' }, roomDescription: { marginTop: 8, color: '#D9DDEF', fontSize: 12, lineHeight: 19 }, roomMeta: { marginTop: 12, color: COLORS.white, fontSize: 12, fontWeight: '800' },
   label: { marginBottom: 9, color: COLORS.text, fontSize: 14, fontWeight: '800' }, input: { height: 56, paddingHorizontal: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 15 }, row: { marginTop: 23, flexDirection: 'row', gap: 10 }, halfField: { flex: 1 }, spacedLabel: { marginTop: 23 }, purposeInput: { minHeight: 150, padding: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 22 },
+  dateRange: { flexDirection: 'row', gap: 10 }, dayCount: { marginTop: 10, color: COLORS.navy, fontSize: 12, fontWeight: '800' },
   fixedCapacityBox: { height: 56, paddingHorizontal: 15, justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.softNavy }, fixedCapacityText: { color: COLORS.navy, fontSize: 15, fontWeight: '800' }, purposeGuide: { marginBottom: 10, padding: 14, gap: 5, borderRadius: 13, backgroundColor: COLORS.softNavy }, purposeGuideText: { color: COLORS.navy, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface }, submitButton: { height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: COLORS.navy }, submitText: { color: COLORS.white, fontSize: 16, fontWeight: '800' }, disabled: { opacity: 0.55 }, pressed: { opacity: 0.7 },
 });

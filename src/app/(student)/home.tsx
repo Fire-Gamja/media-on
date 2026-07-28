@@ -1,11 +1,15 @@
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Alert,
+  BackHandler,
   Image,
   type ImageSourcePropType,
   Modal,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +22,7 @@ import MonthCalendar, {
   fromDateKey,
   toDateKey,
 } from '../../components/student/MonthCalendar';
+import { AppIcon } from '../../components/common/AppIcon';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
@@ -58,7 +63,6 @@ const assistantIcon = require('../../../assets/figma/student/quick-assistant.png
 type QuickAction = {
   id: 'notice' | 'equipment' | 'room' | 'report' | 'assistant';
   title: string;
-  icon: ImageSourcePropType;
 };
 
 type HomeNotice = {
@@ -74,27 +78,22 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'notice',
     title: '공지사항',
-    icon: require('../../../assets/figma/student/quick-notice.png'),
   },
   {
     id: 'equipment',
     title: '기자재 대여',
-    icon: require('../../../assets/figma/student/quick-equipment.png'),
   },
   {
     id: 'room',
     title: '실습실 대여',
-    icon: require('../../../assets/figma/student/quick-room.png'),
   },
   {
     id: 'report',
     title: '시설 신고',
-    icon: require('../../../assets/figma/student/quick-report.png'),
   },
   {
     id: 'assistant',
     title: '조교 문의',
-    icon: assistantIcon,
   },
 ];
 
@@ -135,6 +134,7 @@ export default function StudentHomeScreen() {
     useState<RoomReservationRequest | null>(null);
   const [assistantInquiry, setAssistantInquiry] =
     useState<AssistantInquiry | null>(null);
+  const [showInstagram, setShowInstagram] = useState(false);
 
   const visibleNotices = notices.slice(0, Math.max(1, noticeCount));
   const requestCounts = useMemo(
@@ -170,6 +170,24 @@ export default function StudentHomeScreen() {
       )
       .catch(() => setNotices(FALLBACK_NOTICES));
   }, []);
+
+  useEffect(() => {
+    const url = process.env.EXPO_PUBLIC_INSTAGRAM_URL;
+    if (!url) return;
+    const today = new Date().toISOString().slice(0, 10);
+    void AsyncStorage.getItem('instagram-popup-hidden-date').then((hidden) => {
+      if (hidden !== today) setShowInstagram(true);
+    });
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      BackHandler.exitApp();
+      return true;
+    });
+    return () => subscription.remove();
+  }, []));
 
   useFocusEffect(
     useCallback(() => {
@@ -344,7 +362,7 @@ export default function StudentHomeScreen() {
                 ]}
               >
                 <View style={styles.quickIconBox}>
-                  <Image source={action.icon} style={styles.quickIcon} />
+                  <AppIcon name={action.id} size={34} />
                 </View>
                 <Text style={styles.quickLabel}>{action.title}</Text>
               </Pressable>
@@ -392,6 +410,9 @@ export default function StudentHomeScreen() {
               </Pressable>
             ))}
           </View>
+          <Pressable onPress={() => router.push('/notices')} style={styles.noticeMore}>
+            <Text style={styles.noticeMoreText}>공지사항 더보기</Text>
+          </Pressable>
         </View>
 
         <View style={styles.calendarCard}>
@@ -513,6 +534,15 @@ export default function StudentHomeScreen() {
             </Pressable>
           </View>
         </View>
+      </Modal>
+      <Modal animationType="fade" transparent visible={showInstagram}>
+        <View style={styles.instagramBackdrop}><View style={styles.instagramCard}>
+          <Text style={styles.instagramTitle}>학부 인스타그램</Text>
+          <Text style={styles.instagramBody}>행사와 학부 소식을 인스타그램에서도 확인해 보세요.</Text>
+          <Pressable onPress={() => { setShowInstagram(false); void Linking.openURL(process.env.EXPO_PUBLIC_INSTAGRAM_URL!); }} style={styles.instagramPrimary}><Text style={styles.instagramPrimaryText}>인스타그램 열기</Text></Pressable>
+          <Pressable onPress={() => setShowInstagram(false)} style={styles.instagramClose}><Text>닫기</Text></Pressable>
+          <Pressable onPress={() => { void AsyncStorage.setItem('instagram-popup-hidden-date', new Date().toISOString().slice(0, 10)); setShowInstagram(false); }}><Text style={styles.instagramToday}>오늘 하루 보지 않기</Text></Pressable>
+        </View></View>
       </Modal>
     </SafeAreaView>
   );
@@ -911,6 +941,16 @@ const styles = StyleSheet.create({
   noticeList: {
     marginTop: 24,
   },
+  noticeMore: { height: 48, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#EEEEEE' },
+  noticeMoreText: { color: '#182365', fontSize: 13, fontWeight: '800' },
+  instagramBackdrop: { flex: 1, padding: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  instagramCard: { width: '100%', maxWidth: 380, padding: 24, borderRadius: 22, backgroundColor: '#FFFFFF' },
+  instagramTitle: { color: '#2D2D2D', fontSize: 20, fontWeight: '900' },
+  instagramBody: { marginTop: 10, color: '#777777', lineHeight: 21 },
+  instagramPrimary: { height: 52, marginTop: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#182365' },
+  instagramPrimaryText: { color: '#FFFFFF', fontWeight: '800' },
+  instagramClose: { height: 44, alignItems: 'center', justifyContent: 'center' },
+  instagramToday: { textAlign: 'center', color: '#999999', fontSize: 11 },
   noticeRow: {
     minHeight: 35,
     flexDirection: 'row',

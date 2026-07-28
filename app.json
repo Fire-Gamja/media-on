@@ -10,7 +10,8 @@
     "backgroundColor": "#1A1C29",
     "primaryColor": "#182366",
     "ios": {
-      "icon": "./assets/images/media-on-app-icon.png"
+      "icon": "./assets/images/media-on-app-icon.png",
+      "bundleIdentifier": "com.leeinjun.mediaon"
     },
     "android": {
       "icon": "./assets/images/media-on-app-icon.png",
@@ -38,6 +39,13 @@
         }
       ],
       "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "프로필 사진을 변경하기 위해 사진 보관함에 접근합니다.",
+          "microphonePermission": false
+        }
+      ],
       "expo-status-bar",
       "expo-web-browser",
       [

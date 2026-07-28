@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { DateField, parseDate } from '../../components/common/DateField';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   createEquipmentRentalRequest,
@@ -164,32 +165,10 @@ export default function EquipmentRequestScreen() {
 
               <View style={styles.dateRow}>
                 <View style={styles.dateField}>
-                  <Text style={styles.label}>대여일</Text>
-                  <TextInput
-                    value={pickupDate}
-                    onChangeText={(value) =>
-                      setPickupDate(formatDateInput(value))
-                    }
-                    maxLength={10}
-                    keyboardType="number-pad"
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={COLORS.placeholder}
-                    style={styles.input}
-                  />
+                  <DateField label="대여일" value={pickupDate} minimumDate={new Date()} onChange={(value) => { setPickupDate(value); if (returnDate < value) setReturnDate(value); }} />
                 </View>
                 <View style={styles.dateField}>
-                  <Text style={styles.label}>반납일</Text>
-                  <TextInput
-                    value={returnDate}
-                    onChangeText={(value) =>
-                      setReturnDate(formatDateInput(value))
-                    }
-                    maxLength={10}
-                    keyboardType="number-pad"
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={COLORS.placeholder}
-                    style={styles.input}
-                  />
+                  <DateField label="반납일" value={returnDate} minimumDate={parseDate(pickupDate)} onChange={setReturnDate} />
                 </View>
               </View>
 

@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { AssistantChatRoom } from '../../components/assistant/AssistantChatRoom';
 import { getAuthErrorMessage } from '../../services/auth';
 import { getAdminAssistantInquiry, getAssistantCategoryLabel, getAssistantStatusLabel, transitionAssistantInquiry, type AdminAssistantInquiry } from '../../services/assistant-inquiries';
 
@@ -40,6 +41,7 @@ export default function AdminAssistantInquiryScreen() {
     {isLoading ? <View style={styles.loadingBox}><ActivityIndicator size="large" color={COLORS.navy} /></View> : inquiry ? <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}>
       <View style={styles.studentCard}><View style={styles.studentArea}><Text style={styles.studentName}>{inquiry.requester?.name ?? '학생'}</Text><Text style={styles.studentNumber}>{inquiry.requester?.student_number ?? '학번 미확인'}</Text></View><View style={styles.statusBadge}><Text style={styles.statusText}>{getAssistantStatusLabel(inquiry.status)}</Text></View></View>
       <View style={styles.inquiryCard}><Text style={styles.category}>{getAssistantCategoryLabel(inquiry.category)}</Text><Text style={styles.title}>{inquiry.title}</Text><Text style={styles.date}>{formatDate(inquiry.created_at)} 문의</Text><View style={styles.contentSection}><Text style={styles.sectionLabel}>문의 내용</Text><Text style={styles.bodyText}>{inquiry.content}</Text></View></View>
+      <View style={styles.actionCard}><Text style={styles.actionTitle}>실시간 상담</Text><AssistantChatRoom inquiryId={inquiry.id} isClosed={inquiry.status === 'answered'} /></View>
       <View style={styles.actionCard}><Text style={styles.actionTitle}>답변 처리</Text><Text style={styles.actionDescription}>{getActionDescription(inquiry.status)}</Text>
         {inquiry.status === 'submitted' ? <Pressable disabled={isSaving} onPress={handleConfirm} style={[styles.primaryButton, isSaving && styles.disabled]}><Text style={styles.primaryText}>문의 확인하기</Text></Pressable> : null}
         {inquiry.status === 'in_progress' ? <><Text style={styles.answerLabel}>답변 내용</Text><TextInput value={answer} onChangeText={setAnswer} maxLength={5000} multiline textAlignVertical="top" placeholder="학생에게 전송할 답변을 입력해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.answerInput} /><Pressable disabled={isSaving} onPress={() => void handleAnswer()} style={[styles.primaryButton, isSaving && styles.disabled]}>{isSaving ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.primaryText}>답변 전송</Text>}</Pressable></> : null}
