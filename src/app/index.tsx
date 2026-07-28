@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 15,
+    bottom: 56,
   },
   loader: { flex: 1 },
 });
