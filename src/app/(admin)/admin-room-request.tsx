@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   type AdminRoomReservationRequest,
@@ -179,7 +180,9 @@ export default function AdminRoomRequestScreen() {
                     <Text style={styles.noteLabel}>반려 사유</Text>
                     <TextInput
                       value={adminNote}
-                      onChangeText={setAdminNote}
+                      onChangeText={(value) =>
+                        setAdminNote(maskProfanityInput(value))
+                      }
                       maxLength={2000}
                       multiline
                       textAlignVertical="top"

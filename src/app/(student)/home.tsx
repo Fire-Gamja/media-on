@@ -26,17 +26,11 @@ import { AppIcon } from '../../components/common/AppIcon';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
-  type AssistantInquiry,
-  getMyAssistantInquiries,
-} from '../../services/assistant-inquiries';
-import {
-  type EquipmentRentalRequest,
-  getMyEquipmentRentalRequests,
-} from '../../services/equipment-rentals';
-import {
-  type FacilityReport,
-  getMyFacilityReports,
-} from '../../services/facility-reports';
+  type ApplicationStage,
+  type ApplicationStatusItem,
+  getApplicationStageCounts,
+  getMyApplicationStatusItems,
+} from '../../services/application-status';
 import {
   getCurrentProfile,
   signOutUser,
@@ -44,9 +38,15 @@ import {
 } from '../../services/auth';
 import { getPublishedNotices } from '../../services/notices';
 import {
-  getMyRoomReservationRequests,
-  type RoomReservationRequest,
-} from '../../services/room-reservations';
+  getUnreadNotificationCount,
+  subscribeToMyNotifications,
+} from '../../services/notifications';
+import {
+  DEFAULT_OPERATING_HOURS,
+  formatOperatingHours,
+  getOperatingHoursSettings,
+  type OperatingHoursSettings,
+} from '../../services/operating-hours';
 import {
   getStudentSchedules,
   type StudentSchedule,
@@ -71,8 +71,6 @@ type HomeNotice = {
   publishedAt: string;
   urgent?: boolean;
 };
-
-type RequestStage = 'pending' | 'processing' | 'completed';
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
@@ -125,27 +123,22 @@ export default function StudentHomeScreen() {
     new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [equipmentRequest, setEquipmentRequest] =
-    useState<EquipmentRentalRequest | null>(null);
-  const [facilityReport, setFacilityReport] = useState<FacilityReport | null>(
-    null,
-  );
-  const [roomRequest, setRoomRequest] =
-    useState<RoomReservationRequest | null>(null);
-  const [assistantInquiry, setAssistantInquiry] =
-    useState<AssistantInquiry | null>(null);
+  const [applicationItems, setApplicationItems] = useState<
+    ApplicationStatusItem[]
+  >([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [operatingHours, setOperatingHours] =
+    useState<OperatingHoursSettings>(DEFAULT_OPERATING_HOURS);
   const [showInstagram, setShowInstagram] = useState(false);
 
   const visibleNotices = notices.slice(0, Math.max(1, noticeCount));
   const requestCounts = useMemo(
-    () =>
-      calculateRequestCounts(
-        equipmentRequest,
-        facilityReport,
-        roomRequest,
-        assistantInquiry,
-      ),
-    [assistantInquiry, equipmentRequest, facilityReport, roomRequest],
+    () => getApplicationStageCounts(applicationItems),
+    [applicationItems],
+  );
+  const operatingHoursDisplay = useMemo(
+    () => formatOperatingHours(operatingHours),
+    [operatingHours],
   );
   const eventDates = useMemo(
     () => new Set(schedules.map((schedule) => schedule.startDate)),
@@ -171,6 +164,40 @@ export default function StudentHomeScreen() {
       .catch(() => setNotices(FALLBACK_NOTICES));
   }, []);
 
+  const refreshUnreadNotificationCount = useCallback(() => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    void getUnreadNotificationCount()
+      .then(setUnreadNotificationCount)
+      .catch(() => setUnreadNotificationCount(0));
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isActive = true;
+
+    void subscribeToMyNotifications(refreshUnreadNotificationCount).then(
+      (nextUnsubscribe) => {
+        if (isActive) {
+          unsubscribe = nextUnsubscribe;
+        } else {
+          nextUnsubscribe();
+        }
+      },
+    );
+
+    return () => {
+      isActive = false;
+      unsubscribe?.();
+    };
+  }, [refreshUnreadNotificationCount]);
+
   useEffect(() => {
     const url = process.env.EXPO_PUBLIC_INSTAGRAM_URL;
     if (!url) return;
@@ -192,6 +219,7 @@ export default function StudentHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void getStudentSchedules().then(setSchedules);
+      void getOperatingHoursSettings().then(setOperatingHours);
 
       if (!isSupabaseConfigured) {
         return;
@@ -199,23 +227,33 @@ export default function StudentHomeScreen() {
 
       void Promise.all([
         getCurrentProfile(),
-        getMyEquipmentRentalRequests(1),
-        getMyFacilityReports(1),
-        getMyRoomReservationRequests(1),
-        getMyAssistantInquiries(1),
+        getMyApplicationStatusItems(),
+        getUnreadNotificationCount(),
       ])
-        .then(([nextProfile, equipment, facility, room, inquiry]) => {
+        .then(([nextProfile, nextApplicationItems, nextUnreadCount]) => {
           setProfile(nextProfile);
-          setEquipmentRequest(equipment[0] ?? null);
-          setFacilityReport(facility[0] ?? null);
-          setRoomRequest(room[0] ?? null);
-          setAssistantInquiry(inquiry[0] ?? null);
+          setApplicationItems(nextApplicationItems);
+          setUnreadNotificationCount(nextUnreadCount);
         })
         .catch(() => {
           setProfile(null);
         });
     }, []),
   );
+
+  const openInstagram = () => {
+    const url = process.env.EXPO_PUBLIC_INSTAGRAM_URL;
+
+    if (!url) {
+      Alert.alert(
+        '인스타그램 주소 확인',
+        '학부 인스타그램 주소가 아직 설정되지 않았습니다.',
+      );
+      return;
+    }
+
+    void Linking.openURL(url);
+  };
 
   const handleQuickAction = (action: QuickAction) => {
     const routes = {
@@ -261,13 +299,15 @@ export default function StudentHomeScreen() {
             ]}
           >
             <Image source={bellIcon} style={styles.bellIcon} />
-            <View style={styles.notificationDot} />
+            {unreadNotificationCount > 0 ? (
+              <View style={styles.notificationDot} />
+            ) : null}
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="공지사항 검색"
+            accessibilityLabel="기능 검색"
             hitSlop={6}
-            onPress={() => router.push('/notices')}
+            onPress={() => router.push('/feature-search')}
             style={({ pressed }) => [
               styles.headerButton,
               pressed && styles.pressed,
@@ -301,7 +341,14 @@ export default function StudentHomeScreen() {
         />
 
         <View style={styles.profileCard}>
-          <Image source={profileAvatar} style={styles.profileAvatar} />
+          <Image
+            source={
+              profile?.avatar_url
+                ? { uri: profile.avatar_url }
+                : profileAvatar
+            }
+            style={styles.profileAvatar}
+          />
           <View style={styles.profileTextArea}>
             <View style={styles.profileBadge}>
               <Text style={styles.profileBadgeText}>
@@ -331,18 +378,36 @@ export default function StudentHomeScreen() {
             <RequestCount
               count={requestCounts.pending}
               label="신청 대기"
+              onPress={() =>
+                router.push({
+                  pathname: '/application-status',
+                  params: { stage: 'pending' },
+                })
+              }
               tone="pending"
             />
             <View style={styles.requestDivider} />
             <RequestCount
               count={requestCounts.processing}
               label="처리 중"
+              onPress={() =>
+                router.push({
+                  pathname: '/application-status',
+                  params: { stage: 'processing' },
+                })
+              }
               tone="processing"
             />
             <View style={styles.requestDivider} />
             <RequestCount
               count={requestCounts.completed}
               label="진행 완료"
+              onPress={() =>
+                router.push({
+                  pathname: '/application-status',
+                  params: { stage: 'completed' },
+                })
+              }
               tone="completed"
             />
           </View>
@@ -369,6 +434,31 @@ export default function StudentHomeScreen() {
             ))}
           </View>
         </View>
+
+        <Pressable
+          accessibilityRole="link"
+          onPress={openInstagram}
+          style={({ pressed }) => [
+            styles.instagramBanner,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.instagramLogo}>
+            <View style={styles.instagramCamera}>
+              <View style={styles.instagramLens} />
+              <View style={styles.instagramDot} />
+            </View>
+          </View>
+          <View style={styles.instagramBannerText}>
+            <Text style={styles.instagramBannerTitle}>
+              미디어콘텐츠학부 Instagram
+            </Text>
+            <Text style={styles.instagramBannerDescription}>
+              행사와 학부 소식을 빠르게 확인해 보세요.
+            </Text>
+          </View>
+          <Text style={styles.instagramChevron}>›</Text>
+        </Pressable>
 
         <View style={styles.cardSection}>
           <View style={styles.cardHeader}>
@@ -468,23 +558,14 @@ export default function StudentHomeScreen() {
               <Text style={styles.operationIconText}>i</Text>
             </View>
             <View style={styles.operationTextArea}>
-              <Text style={styles.operationTitle}>방학 중 운영시간</Text>
+              <Text style={styles.operationTitle}>
+                {operatingHoursDisplay.title}
+              </Text>
               <Text style={styles.operationText}>
-                평일 09:00 ~ 17:00ㆍ주말 및 공휴일 휴무
+                {operatingHoursDisplay.description}
               </Text>
             </View>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="조교 문의"
-            onPress={() => router.push('/assistant-inquiry')}
-            style={({ pressed }) => [
-              styles.floatingInquiry,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Image source={assistantIcon} style={styles.floatingInquiryIcon} />
-          </Pressable>
         </View>
 
         <Pressable
@@ -498,6 +579,18 @@ export default function StudentHomeScreen() {
           <Text style={styles.logoutText}>로그아웃</Text>
         </Pressable>
       </ScrollView>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="조교 문의하기"
+        onPress={() => router.push('/assistant-inquiry')}
+        style={({ pressed }) => [
+          styles.floatingInquiry,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Image source={assistantIcon} style={styles.floatingInquiryIcon} />
+      </Pressable>
 
       <Modal
         animationType="fade"
@@ -539,7 +632,7 @@ export default function StudentHomeScreen() {
         <View style={styles.instagramBackdrop}><View style={styles.instagramCard}>
           <Text style={styles.instagramTitle}>학부 인스타그램</Text>
           <Text style={styles.instagramBody}>행사와 학부 소식을 인스타그램에서도 확인해 보세요.</Text>
-          <Pressable onPress={() => { setShowInstagram(false); void Linking.openURL(process.env.EXPO_PUBLIC_INSTAGRAM_URL!); }} style={styles.instagramPrimary}><Text style={styles.instagramPrimaryText}>인스타그램 열기</Text></Pressable>
+          <Pressable onPress={() => { setShowInstagram(false); openInstagram(); }} style={styles.instagramPrimary}><Text style={styles.instagramPrimaryText}>인스타그램 열기</Text></Pressable>
           <Pressable onPress={() => setShowInstagram(false)} style={styles.instagramClose}><Text>닫기</Text></Pressable>
           <Pressable onPress={() => { void AsyncStorage.setItem('instagram-popup-hidden-date', new Date().toISOString().slice(0, 10)); setShowInstagram(false); }}><Text style={styles.instagramToday}>오늘 하루 보지 않기</Text></Pressable>
         </View></View>
@@ -566,14 +659,23 @@ function SectionTitle({
 function RequestCount({
   count,
   label,
+  onPress,
   tone,
 }: {
   count: number;
   label: string;
-  tone: RequestStage;
+  onPress: () => void;
+  tone: ApplicationStage;
 }) {
   return (
-    <View style={styles.requestCount}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.requestCount,
+        pressed && styles.pressed,
+      ]}
+    >
       <View style={styles.requestNumberRow}>
         <Text style={styles.requestNumber}>{count}</Text>
         <Text style={styles.requestUnit}>건</Text>
@@ -597,63 +699,8 @@ function RequestCount({
           {label}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
-}
-
-function calculateRequestCounts(
-  equipment: EquipmentRentalRequest | null,
-  facility: FacilityReport | null,
-  room: RoomReservationRequest | null,
-  inquiry: AssistantInquiry | null,
-) {
-  const stages: RequestStage[] = [];
-
-  if (equipment) {
-    stages.push(
-      equipment.status === 'submitted'
-        ? 'pending'
-        : equipment.status === 'returned' || equipment.status === 'rejected'
-          ? 'completed'
-          : 'processing',
-    );
-  }
-
-  if (facility) {
-    stages.push(
-      facility.status === 'submitted'
-        ? 'pending'
-        : facility.status === 'resolved' || facility.status === 'rejected'
-          ? 'completed'
-          : 'processing',
-    );
-  }
-
-  if (room) {
-    stages.push(
-      room.status === 'submitted'
-        ? 'pending'
-        : room.status === 'approved' || room.status === 'rejected'
-          ? 'completed'
-          : 'processing',
-    );
-  }
-
-  if (inquiry) {
-    stages.push(
-      inquiry.status === 'submitted'
-        ? 'pending'
-        : inquiry.status === 'answered'
-          ? 'completed'
-          : 'processing',
-    );
-  }
-
-  return {
-    pending: stages.filter((stage) => stage === 'pending').length,
-    processing: stages.filter((stage) => stage === 'processing').length,
-    completed: stages.filter((stage) => stage === 'completed').length,
-  };
 }
 
 function formatEnrollmentStatus(status: string) {
@@ -736,7 +783,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 20,
+    paddingBottom: 100,
   },
   sectionTitleRow: {
     height: 23,
@@ -780,7 +827,9 @@ const styles = StyleSheet.create({
   profileAvatar: {
     width: 70,
     height: 70,
-    resizeMode: 'contain',
+    borderRadius: 35,
+    resizeMode: 'cover',
+    backgroundColor: '#F0F0F0',
   },
   profileTextArea: {
     flex: 1,
@@ -915,6 +964,70 @@ const styles = StyleSheet.create({
     fontFamily: 'FreesentationRegular',
     fontSize: 12,
     textAlign: 'center',
+  },
+  instagramBanner: {
+    minHeight: 78,
+    marginTop: 20,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F2F2F2',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  instagramLogo: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: '#F6EAF4',
+  },
+  instagramCamera: {
+    width: 25,
+    height: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#A6388B',
+    borderRadius: 7,
+  },
+  instagramLens: {
+    width: 9,
+    height: 9,
+    borderWidth: 2,
+    borderColor: '#A6388B',
+    borderRadius: 5,
+  },
+  instagramDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#A6388B',
+  },
+  instagramBannerText: {
+    flex: 1,
+    marginLeft: 13,
+  },
+  instagramBannerTitle: {
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 15,
+  },
+  instagramBannerDescription: {
+    marginTop: 5,
+    color: '#777777',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 11,
+  },
+  instagramChevron: {
+    marginLeft: 8,
+    color: '#8C8C8C',
+    fontSize: 24,
   },
   cardSection: {
     marginTop: 20,
@@ -1059,18 +1172,24 @@ const styles = StyleSheet.create({
   },
   floatingInquiry: {
     position: 'absolute',
-    top: -15,
-    right: 0,
-    width: 30,
-    height: 30,
+    zIndex: 10,
+    right: 20,
+    bottom: 22,
+    width: 54,
+    height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
+    borderRadius: 27,
     backgroundColor: '#182365',
+    elevation: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   floatingInquiryIcon: {
-    width: 16,
-    height: 16,
+    width: 27,
+    height: 27,
     resizeMode: 'contain',
     tintColor: '#FFFFFF',
   },

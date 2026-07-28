@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { DateField, parseDate } from '../../components/common/DateField';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
@@ -175,7 +176,9 @@ export default function EquipmentRequestScreen() {
               <Text style={[styles.label, styles.purposeLabel]}>사용 목적</Text>
               <TextInput
                 value={purpose}
-                onChangeText={setPurpose}
+                onChangeText={(value) =>
+                  setPurpose(maskProfanityInput(value))
+                }
                 maxLength={1000}
                 multiline
                 textAlignVertical="top"

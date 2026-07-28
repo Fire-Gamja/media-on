@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   createFacilityReport,
@@ -92,7 +93,7 @@ export default function FacilityReportScreen() {
           <Text style={styles.label}>장소</Text>
           <TextInput
             value={location}
-            onChangeText={setLocation}
+            onChangeText={(value) => setLocation(maskProfanityInput(value))}
             maxLength={100}
             placeholder="예: 미디어관 301호"
             placeholderTextColor={COLORS.placeholder}
@@ -132,7 +133,7 @@ export default function FacilityReportScreen() {
           <Text style={[styles.label, styles.spacedLabel]}>제목</Text>
           <TextInput
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(value) => setTitle(maskProfanityInput(value))}
             maxLength={200}
             placeholder="불편 사항을 간단히 입력해 주세요"
             placeholderTextColor={COLORS.placeholder}
@@ -142,7 +143,9 @@ export default function FacilityReportScreen() {
           <Text style={[styles.label, styles.spacedLabel]}>상세 내용</Text>
           <TextInput
             value={description}
-            onChangeText={setDescription}
+            onChangeText={(value) =>
+              setDescription(maskProfanityInput(value))
+            }
             maxLength={5000}
             multiline
             textAlignVertical="top"

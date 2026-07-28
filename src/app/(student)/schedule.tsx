@@ -19,6 +19,7 @@ import MonthCalendar, {
   fromDateKey,
   toDateKey,
 } from '../../components/student/MonthCalendar';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { createStudentSchedule } from '../../services/student-schedule';
 
 const backIcon = require('../../../assets/figma/student/back.png');
@@ -142,7 +143,7 @@ export default function StudentScheduleScreen() {
           <TextInput
             accessibilityLabel="일정 제목"
             maxLength={40}
-            onChangeText={setTitle}
+            onChangeText={(value) => setTitle(maskProfanityInput(value))}
             placeholder="일정을 입력하세요."
             placeholderTextColor="#9A9A9A"
             style={styles.titleInput}
@@ -204,7 +205,7 @@ export default function StudentScheduleScreen() {
           <TextInput
             accessibilityLabel="일정 메모"
             multiline
-            onChangeText={setMemo}
+            onChangeText={(value) => setMemo(maskProfanityInput(value))}
             placeholder="내용을 입력해주세요."
             placeholderTextColor="#9A9A9A"
             style={styles.memoInput}

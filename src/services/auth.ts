@@ -11,6 +11,7 @@ export type StudentProfile = {
   major: string;
   enrollment_status: string;
   phone_number: string;
+  avatar_url: string | null;
   role: 'student' | 'admin';
   approval_status: ApprovalStatus;
 };
@@ -77,7 +78,7 @@ export async function signInStudent(
   const { data: profile, error: profileError } = await client
     .from('profiles')
     .select(
-      'id, student_number, name, grade, major, enrollment_status, phone_number, role, approval_status',
+      'id, student_number, name, grade, major, enrollment_status, phone_number, avatar_url, role, approval_status',
     )
     .eq('id', data.user.id)
     .single<StudentProfile>();
@@ -139,7 +140,7 @@ export async function getPendingStudents(): Promise<AdminStudentProfile[]> {
   const { data, error } = await client
     .from('profiles')
     .select(
-      'id, student_number, name, grade, major, enrollment_status, phone_number, role, approval_status, created_at',
+      'id, student_number, name, grade, major, enrollment_status, phone_number, avatar_url, role, approval_status, created_at',
     )
     .eq('role', 'student')
     .eq('approval_status', 'pending')
@@ -200,7 +201,7 @@ export async function getCurrentProfile(): Promise<StudentProfile> {
   const { data, error } = await client
     .from('profiles')
     .select(
-      'id, student_number, name, grade, major, enrollment_status, phone_number, role, approval_status',
+      'id, student_number, name, grade, major, enrollment_status, phone_number, avatar_url, role, approval_status',
     )
     .eq('id', user.id)
     .single<StudentProfile>();
@@ -256,6 +257,19 @@ export async function changeCurrentPassword(
       '비밀번호는 변경되었지만 계정 상태를 갱신하지 못했습니다. 다시 로그인해 주세요.',
     );
   }
+}
+
+export async function updateCurrentAvatarUrl(avatarUrl: string) {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('update_my_avatar', {
+    next_avatar_url: avatarUrl,
+  });
+
+  if (error || !data) {
+    throw new Error('프로필 사진 정보를 저장하지 못했습니다.');
+  }
+
+  return data as StudentProfile;
 }
 
 export async function signOutUser() {

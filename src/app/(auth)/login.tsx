@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -21,7 +21,11 @@ import {
   AUTH_COLORS,
   AUTH_FONTS,
 } from '../../constants/auth-theme';
-import { isSupabaseConfigured } from '../../lib/supabase';
+import {
+  getAutoLoginEnabled,
+  isSupabaseConfigured,
+  setAutoLoginEnabled,
+} from '../../lib/supabase';
 import {
   getAuthErrorMessage,
   signInStudent,
@@ -40,6 +44,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoLogin, setAutoLogin] = useState(false);
+
+  useEffect(() => {
+    void getAutoLoginEnabled().then(setAutoLogin);
+  }, []);
 
   const handleBack = () => {
     if (step === 'password') {
@@ -74,6 +83,7 @@ export default function LoginScreen() {
     if (isSupabaseConfigured) {
       try {
         setIsSubmitting(true);
+        await setAutoLoginEnabled(autoLogin);
         const result = await signInStudent(identifier, password);
 
         if (result.status === 'pending') {
@@ -214,6 +224,31 @@ export default function LoginScreen() {
                 )}
               </View>
 
+              {step === 'password' ? (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: autoLogin }}
+                  hitSlop={8}
+                  onPress={() => setAutoLogin((current) => !current)}
+                  style={({ pressed }) => [
+                    styles.autoLoginRow,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      autoLogin && styles.checkboxSelected,
+                    ]}
+                  >
+                    {autoLogin ? (
+                      <Text style={styles.checkmark}>✓</Text>
+                    ) : null}
+                  </View>
+                  <Text style={styles.autoLoginText}>자동 로그인</Text>
+                </Pressable>
+              ) : null}
+
               <AuthButton
                 title={step === 'identifier' ? '다음' : '로그인'}
                 disabled={
@@ -225,7 +260,11 @@ export default function LoginScreen() {
                     ? handleIdentifierNext
                     : () => void handleLogin()
                 }
-                style={styles.formButton}
+                style={
+                  step === 'password'
+                    ? styles.passwordButton
+                    : styles.formButton
+                }
               />
 
               <Pressable
@@ -445,6 +484,40 @@ const styles = StyleSheet.create({
   },
   formButton: {
     marginTop: 60,
+  },
+  passwordButton: {
+    marginTop: 24,
+  },
+  autoLoginRow: {
+    minHeight: 44,
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 9,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#858585',
+    borderRadius: 5,
+  },
+  checkboxSelected: {
+    borderColor: AUTH_COLORS.text,
+    backgroundColor: AUTH_COLORS.text,
+  },
+  checkmark: {
+    color: AUTH_COLORS.background,
+    fontFamily: AUTH_FONTS.extraBold,
+    fontSize: 13,
+  },
+  autoLoginText: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 14,
   },
   findPasswordButton: {
     minHeight: 24,

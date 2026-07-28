@@ -29,6 +29,7 @@ import {
   getAuthErrorMessage,
   getCurrentProfile,
   type StudentProfile,
+  updateCurrentAvatarUrl,
   updateCurrentProfile,
 } from '../services/auth';
 
@@ -67,6 +68,7 @@ export default function ProfileScreen() {
     setMajor(nextProfile.major);
     setEnrollmentStatus(nextProfile.enrollment_status);
     setPhoneNumber(formatPhoneNumber(nextProfile.phone_number));
+    setAvatarUrl(nextProfile.avatar_url);
   }, []);
 
   const loadProfile = useCallback(async () => {
@@ -75,10 +77,6 @@ export default function ProfileScreen() {
       setLoadError(null);
       const nextProfile = await getCurrentProfile();
       applyProfile(nextProfile);
-      if (supabase) {
-        const { data } = await supabase.from('profiles').select('avatar_url').eq('id', nextProfile.id).single();
-        setAvatarUrl(data?.avatar_url ?? null);
-      }
     } catch (error) {
       setLoadError(getAuthErrorMessage(error));
     } finally {
@@ -97,9 +95,8 @@ export default function ProfileScreen() {
       if (error) throw error;
       const { data } = supabase.storage.from('profile-images').getPublicUrl(path);
       const url = `${data.publicUrl}?v=${Date.now()}`;
-      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', profile.id);
-      if (updateError) throw updateError;
-      setAvatarUrl(url);
+      const updatedProfile = await updateCurrentAvatarUrl(url);
+      applyProfile(updatedProfile);
     } catch {
       Alert.alert('변경 실패', '프로필 사진을 변경하지 못했습니다.');
     } finally {

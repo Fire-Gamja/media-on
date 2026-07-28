@@ -26,6 +26,7 @@ export default function MonthCalendar({
   showMonthControls = false,
 }: MonthCalendarProps) {
   const cells = createCalendarCells(month);
+  const todayKey = toDateKey(new Date());
 
   return (
     <View style={styles.container}>
@@ -88,6 +89,7 @@ export default function MonthCalendar({
         {cells.map((cell, index) => {
           const weekday = index % 7;
           const isSelected = selectedDate === cell.dateKey;
+          const isToday = todayKey === cell.dateKey;
           const hasEvent = eventDates?.has(cell.dateKey) === true;
 
           return (
@@ -104,6 +106,7 @@ export default function MonthCalendar({
               <View
                 style={[
                   styles.dateCircle,
+                  isToday && styles.dateCircleToday,
                   isSelected && styles.dateCircleSelected,
                 ]}
               >
@@ -113,6 +116,7 @@ export default function MonthCalendar({
                     !cell.isCurrentMonth && styles.otherMonth,
                     weekday === 0 && styles.sunday,
                     weekday === 6 && styles.saturday,
+                    isToday && styles.dateTextToday,
                     isSelected && styles.dateTextSelected,
                   ]}
                 >
@@ -226,6 +230,9 @@ const styles = StyleSheet.create({
   dateCircleSelected: {
     backgroundColor: '#182365',
   },
+  dateCircleToday: {
+    backgroundColor: '#E8EBF8',
+  },
   dateText: {
     color: '#2D2D2D',
     fontFamily: 'FreesentationRegular',
@@ -233,6 +240,10 @@ const styles = StyleSheet.create({
   },
   dateTextSelected: {
     color: '#FFFFFF',
+    fontFamily: 'FreesentationSemiBold',
+  },
+  dateTextToday: {
+    color: '#182365',
     fontFamily: 'FreesentationSemiBold',
   },
   otherMonth: {

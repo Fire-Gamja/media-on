@@ -30,3 +30,45 @@ export async function markNotificationRead(id: string) {
     .eq('id', id);
   if (error) throw new Error('알림을 읽음 처리하지 못했습니다.');
 }
+
+export async function getUnreadNotificationCount() {
+  const { count, error } = await requireClient()
+    .from('app_notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_read', false);
+
+  if (error) {
+    throw new Error('미확인 알림 수를 불러오지 못했습니다.');
+  }
+
+  return count ?? 0;
+}
+
+export async function subscribeToMyNotifications(onChange: () => void) {
+  const client = requireClient();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user) {
+    return () => undefined;
+  }
+
+  const channel = client
+    .channel(`my-notifications:${user.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'app_notifications',
+        filter: `user_id=eq.${user.id}`,
+      },
+      onChange,
+    )
+    .subscribe();
+
+  return () => {
+    void client.removeChannel(channel);
+  };
+}

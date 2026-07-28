@@ -42,14 +42,21 @@ import { resendUrgentNotices } from '../../services/notices';
 const bellIcon = require('../../../assets/figma/manager/bell.png');
 
 type ManagementAction = {
-  id: 'notice' | 'equipment' | 'room' | 'facility' | 'assistant';
+  id:
+    | 'notice'
+    | 'equipment'
+    | 'room'
+    | 'facility'
+    | 'assistant'
+    | 'hours';
   title: string;
   route:
     | '/admin-notices'
     | '/admin-equipment-requests'
     | '/admin-room-requests'
     | '/admin-facility-reports'
-    | '/admin-assistant-inquiries';
+    | '/admin-assistant-inquiries'
+    | '/admin-operating-hours';
   icon: AppIconName;
 };
 
@@ -91,6 +98,12 @@ const MANAGEMENT_ACTIONS: ManagementAction[] = [
     title: '조교 문의',
     route: '/admin-assistant-inquiries',
     icon: 'assistant',
+  },
+  {
+    id: 'hours',
+    title: '운영시간',
+    route: '/admin-operating-hours',
+    icon: 'hours',
   },
 ];
 
@@ -989,10 +1002,12 @@ const styles = StyleSheet.create({
   managementMenu: {
     marginTop: 16,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   managementAction: {
-    flex: 1,
+    minWidth: '30%',
+    flexGrow: 1,
     alignItems: 'center',
     gap: 10,
   },

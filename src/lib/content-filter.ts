@@ -14,16 +14,26 @@ const BLOCKED_WORDS = [
 ] as const;
 
 export function maskProfanity(value: string) {
+  return maskProfanityInput(value).trim();
+}
+
+export function maskProfanityInput(value: string) {
   return BLOCKED_WORDS.reduce(
     (result, word) =>
       result.replace(
-        new RegExp(escapeRegExp(word), 'gi'),
-        '*'.repeat(Array.from(word).length),
+        new RegExp(createFlexiblePattern(word), 'gi'),
+        (match) => '*'.repeat(Array.from(match).length),
       ),
-    value.trim(),
+    value,
   );
 }
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function createFlexiblePattern(value: string) {
+  return Array.from(value)
+    .map(escapeRegExp)
+    .join('[\\s._\\-!@#$%^&*()~`\'"/\\\\|]*');
 }

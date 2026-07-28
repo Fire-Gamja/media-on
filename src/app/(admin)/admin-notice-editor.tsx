@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   createNotice,
@@ -113,7 +114,9 @@ export default function AdminNoticeEditorScreen() {
               <Text style={styles.label}>제목</Text>
               <TextInput
                 value={title}
-                onChangeText={setTitle}
+                onChangeText={(value) =>
+                  setTitle(maskProfanityInput(value))
+                }
                 maxLength={200}
                 placeholder="공지 제목을 입력해 주세요"
                 placeholderTextColor={COLORS.placeholder}
@@ -123,7 +126,9 @@ export default function AdminNoticeEditorScreen() {
               <Text style={[styles.label, styles.contentLabel]}>내용</Text>
               <TextInput
                 value={content}
-                onChangeText={setContent}
+                onChangeText={(value) =>
+                  setContent(maskProfanityInput(value))
+                }
                 maxLength={20000}
                 multiline
                 textAlignVertical="top"

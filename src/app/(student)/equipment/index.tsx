@@ -111,9 +111,6 @@ export default function EquipmentScreen() {
                   pressed && styles.pressed,
                 ]}
               >
-                <View style={styles.cardIcon}>
-                  <Text style={styles.cardIconText}>장</Text>
-                </View>
                 <View style={styles.cardTextArea}>
                   <Text style={styles.category}>{item.category}</Text>
                   <Text style={styles.name}>{item.name}</Text>
@@ -151,9 +148,7 @@ const styles = StyleSheet.create({
   retryText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
   list: { gap: 12 },
   card: { minHeight: 132, padding: 17, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 17, backgroundColor: COLORS.surface },
-  cardIcon: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#FFF3E7' },
-  cardIconText: { color: '#A85D11', fontSize: 16, fontWeight: '900' },
-  cardTextArea: { flex: 1, marginLeft: 14, paddingRight: 12 },
+  cardTextArea: { flex: 1, paddingRight: 12 },
   category: { color: COLORS.subText, fontSize: 11, fontWeight: '700' },
   name: { marginTop: 5, color: COLORS.text, fontSize: 16, fontWeight: '800' },
   description: { marginTop: 6, color: COLORS.subText, fontSize: 11, lineHeight: 17 },

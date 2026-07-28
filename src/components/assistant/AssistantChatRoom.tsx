@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { COLORS } from '../../constants/colors';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { supabase } from '../../lib/supabase';
 import {
   getAssistantMessages,
@@ -239,7 +240,9 @@ export function AssistantChatRoom({
           <View style={styles.composer}>
             <TextInput
               value={draft}
-              onChangeText={setDraft}
+              onChangeText={(value) =>
+                setDraft(maskProfanityInput(value))
+              }
               multiline
               maxLength={5000}
               placeholder="메시지를 입력하세요"

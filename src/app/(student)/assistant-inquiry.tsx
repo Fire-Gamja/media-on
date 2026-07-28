@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Sc
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
 import { ASSISTANT_CATEGORY_OPTIONS, createAssistantInquiry, suggestAssistantInquiry, type AssistantInquiryCategory } from '../../services/assistant-inquiries';
 
@@ -55,10 +56,10 @@ export default function AssistantInquiryScreen() {
     <View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.headerTitle}>조교 문의</Text><Pressable onPress={() => router.push('/assistant-inquiries')}><Text style={styles.historyText}>내 문의</Text></Pressable></View>
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}>
       <View style={styles.guideCard}><Text style={styles.guideTitle}>궁금한 내용을 남겨 주세요.</Text><Text style={styles.guideText}>내용을 먼저 작성하면 AI가 문의 유형과 제목을 추천합니다. 추천 결과는 접수 전에 직접 수정할 수 있습니다.</Text></View>
-      <Text style={styles.label}>문의 내용</Text><TextInput value={content} onChangeText={setContent} maxLength={5000} multiline textAlignVertical="top" placeholder="조교에게 문의할 내용을 자세히 입력해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.contentInput} />
+      <Text style={styles.label}>문의 내용</Text><TextInput value={content} onChangeText={(value) => setContent(maskProfanityInput(value))} maxLength={5000} multiline textAlignVertical="top" placeholder="조교에게 문의할 내용을 자세히 입력해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.contentInput} />
       <Pressable disabled={isSuggesting || isSubmitting} onPress={() => void handleSuggestion()} style={[styles.aiButton, (isSuggesting || isSubmitting) && styles.disabled]}>{isSuggesting ? <ActivityIndicator color={COLORS.navy} /> : <Text style={styles.aiButtonText}>AI로 유형·제목 정리하기</Text>}</Pressable>
       <Text style={styles.label}>문의 유형</Text><View style={styles.categoryGrid}>{ASSISTANT_CATEGORY_OPTIONS.map((option) => { const selected = category === option.value; return <Pressable key={option.value} onPress={() => setCategory(option.value)} style={[styles.categoryButton, selected && styles.categorySelected]}><Text style={[styles.categoryText, selected && styles.categoryTextSelected]}>{option.label}</Text></Pressable>; })}</View>
-      <Text style={[styles.label, styles.spacedLabel]}>제목</Text><TextInput value={title} onChangeText={setTitle} maxLength={30} placeholder="문의 제목을 입력해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.input} />
+      <Text style={[styles.label, styles.spacedLabel]}>제목</Text><TextInput value={title} onChangeText={(value) => setTitle(maskProfanityInput(value))} maxLength={30} placeholder="문의 제목을 입력해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.input} />
     </ScrollView>
     <View style={styles.footer}><Pressable disabled={isSubmitting} onPress={() => void handleSubmit()} style={[styles.submitButton, isSubmitting && styles.disabled]}>{isSubmitting ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.submitText}>문의 접수</Text>}</Pressable></View>
   </KeyboardAvoidingView></SafeAreaView>;

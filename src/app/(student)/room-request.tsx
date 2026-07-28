@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
 import { DateField, inclusiveDays, parseDate } from '../../components/common/DateField';
+import { TimeSelectField } from '../../components/common/TimeSelectField';
+import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   createRoomReservationRequest,
@@ -35,6 +37,15 @@ export default function RoomRequestScreen() {
   const [purpose, setPurpose] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const timeOptions = useMemo(
+    () =>
+      room
+        ? createTimeOptions(room.open_time, room.close_time)
+        : ['10:00', '10:30', '11:00'],
+    [room],
+  );
+  const startTimeOptions = timeOptions.slice(0, -1);
+  const endTimeOptions = timeOptions.filter((value) => value > startTime);
 
   useEffect(() => {
     if (!roomId) {
@@ -42,7 +53,22 @@ export default function RoomRequestScreen() {
       return;
     }
     void getPracticeRoom(roomId)
-      .then(setRoom)
+      .then((nextRoom) => {
+        setRoom(nextRoom);
+        const options = createTimeOptions(
+          nextRoom.open_time,
+          nextRoom.close_time,
+        );
+        const nextStart = options.includes('10:00')
+          ? '10:00'
+          : options[0];
+        const laterOptions = options.filter((value) => value > nextStart);
+        const nextEnd = laterOptions.includes('11:00')
+          ? '11:00'
+          : laterOptions[0];
+        setStartTime(nextStart);
+        setEndTime(nextEnd);
+      })
       .catch((error) => {
         Alert.alert('조회 실패', getAuthErrorMessage(error), [
           { text: '확인', onPress: () => router.back() },
@@ -61,8 +87,11 @@ export default function RoomRequestScreen() {
       Alert.alert('날짜 확인', '종료일은 시작일과 같거나 이후여야 합니다.');
       return;
     }
-    if (!isValidTime(startTime) || !isValidTime(endTime) || endTime <= startTime) {
-      Alert.alert('시간 확인', '시작 시간보다 늦은 종료 시간을 입력해 주세요.');
+    if (endTime <= startTime) {
+      Alert.alert(
+        '시간 확인',
+        '시작 시간보다 늦은 종료 시간을 선택해 주세요.',
+      );
       return;
     }
     const openTime = room.open_time.slice(0, 5);
@@ -133,14 +162,25 @@ export default function RoomRequestScreen() {
               <Text style={styles.dayCount}>{reservationDate} ~ {endDate} · 총 {inclusiveDays(reservationDate, endDate)}일</Text>
 
               <View style={styles.row}>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>시작 시간</Text>
-                  <TextInput value={startTime} onChangeText={(value) => setStartTime(formatTimeInput(value))} maxLength={5} keyboardType="number-pad" placeholder="HH:MM" placeholderTextColor={COLORS.placeholder} style={styles.input} />
-                </View>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>종료 시간</Text>
-                  <TextInput value={endTime} onChangeText={(value) => setEndTime(formatTimeInput(value))} maxLength={5} keyboardType="number-pad" placeholder="HH:MM" placeholderTextColor={COLORS.placeholder} style={styles.input} />
-                </View>
+                <TimeSelectField
+                  label="시작 시간"
+                  onChange={(value) => {
+                    setStartTime(value);
+                    if (endTime <= value) {
+                      setEndTime(
+                        timeOptions.find((option) => option > value) ?? value,
+                      );
+                    }
+                  }}
+                  options={startTimeOptions}
+                  value={startTime}
+                />
+                <TimeSelectField
+                  label="종료 시간"
+                  onChange={setEndTime}
+                  options={endTimeOptions}
+                  value={endTime}
+                />
               </View>
 
               <Text style={[styles.label, styles.spacedLabel]}>이용 인원</Text>
@@ -157,7 +197,7 @@ export default function RoomRequestScreen() {
                   24시간 대여하신 경우에는 실습조교에게 상담 요청해 주세요.
                 </Text>
               </View>
-              <TextInput value={purpose} onChangeText={setPurpose} maxLength={1000} multiline textAlignVertical="top" placeholder="통합정보시스템에 입력한 사용 목적을 작성해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.purposeInput} />
+              <TextInput value={purpose} onChangeText={(value) => setPurpose(maskProfanityInput(value))} maxLength={1000} multiline textAlignVertical="top" placeholder="통합정보시스템에 입력한 사용 목적을 작성해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.purposeInput} />
             </ScrollView>
             <View style={styles.footer}>
               <Pressable disabled={isSubmitting} onPress={() => void handleSubmit()} style={({ pressed }) => [styles.submitButton, isSubmitting && styles.disabled, pressed && !isSubmitting && styles.pressed]}>
@@ -184,11 +224,6 @@ function formatDateInput(value: string) {
   return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 }
 
-function formatTimeInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 4);
-  return digits.length <= 2 ? digits : `${digits.slice(0, 2)}:${digits.slice(2)}`;
-}
-
 function isValidDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00`);
@@ -199,10 +234,29 @@ function getLocalDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function isValidTime(value: string) {
-  if (!/^\d{2}:\d{2}$/.test(value)) return false;
-  const [hour, minute] = value.split(':').map(Number);
-  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+function createTimeOptions(openTime: string, closeTime: string) {
+  const startMinutes = toMinutes(openTime);
+  const endMinutes = toMinutes(closeTime);
+  const options: string[] = [];
+
+  for (
+    let current = startMinutes;
+    current <= endMinutes;
+    current += 30
+  ) {
+    const hour = Math.floor(current / 60);
+    const minute = current % 60;
+    options.push(
+      `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+    );
+  }
+
+  return options;
+}
+
+function toMinutes(value: string) {
+  const [hour, minute] = value.slice(0, 5).split(':').map(Number);
+  return hour * 60 + minute;
 }
 
 const styles = StyleSheet.create({
@@ -211,7 +265,7 @@ const styles = StyleSheet.create({
   backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 }, headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' }, headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' }, scrollView: { flex: 1, backgroundColor: COLORS.background }, content: { padding: 22, paddingBottom: 120 },
   roomCard: { marginBottom: 26, padding: 19, borderRadius: 17, backgroundColor: COLORS.navy }, location: { color: '#D9DDEF', fontSize: 11, fontWeight: '700' }, roomName: { marginTop: 7, color: COLORS.white, fontSize: 21, fontWeight: '900' }, roomDescription: { marginTop: 8, color: '#D9DDEF', fontSize: 12, lineHeight: 19 }, roomMeta: { marginTop: 12, color: COLORS.white, fontSize: 12, fontWeight: '800' },
-  label: { marginBottom: 9, color: COLORS.text, fontSize: 14, fontWeight: '800' }, input: { height: 56, paddingHorizontal: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 15 }, row: { marginTop: 23, flexDirection: 'row', gap: 10 }, halfField: { flex: 1 }, spacedLabel: { marginTop: 23 }, purposeInput: { minHeight: 150, padding: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 22 },
+  label: { marginBottom: 9, color: COLORS.text, fontSize: 14, fontWeight: '800' }, row: { marginTop: 23, flexDirection: 'row', gap: 10 }, spacedLabel: { marginTop: 23 }, purposeInput: { minHeight: 150, padding: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 22 },
   dateRange: { flexDirection: 'row', gap: 10 }, dayCount: { marginTop: 10, color: COLORS.navy, fontSize: 12, fontWeight: '800' },
   fixedCapacityBox: { height: 56, paddingHorizontal: 15, justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.softNavy }, fixedCapacityText: { color: COLORS.navy, fontSize: 15, fontWeight: '800' }, purposeGuide: { marginBottom: 10, padding: 14, gap: 5, borderRadius: 13, backgroundColor: COLORS.softNavy }, purposeGuideText: { color: COLORS.navy, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   footer: { padding: 20, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface }, submitButton: { height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: COLORS.navy }, submitText: { color: COLORS.white, fontSize: 16, fontWeight: '800' }, disabled: { opacity: 0.55 }, pressed: { opacity: 0.7 },
