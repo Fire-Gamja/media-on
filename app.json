@@ -11,7 +11,10 @@
     "primaryColor": "#182366",
     "ios": {
       "icon": "./assets/images/media-on-app-icon.png",
-      "bundleIdentifier": "com.leeinjun.mediaon"
+      "bundleIdentifier": "com.leeinjun.mediaon",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "icon": "./assets/images/media-on-app-icon.png",
