@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +11,7 @@ import {
   Linking,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,6 +27,7 @@ import MonthCalendar, {
   toDateKey,
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
+import { useAppSettings } from '../../context/app-settings-context';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
@@ -62,15 +64,13 @@ import {
   type StudentSchedule,
 } from '../../services/student-schedule';
 
-const bellIcon = require('../../../assets/figma/student/bell.png');
-const searchIcon = require('../../../assets/figma/student/search.png');
 const settingsIcon = require('../../../assets/figma/student/settings.png');
 const profileAvatar = require('../../../assets/figma/student/profile-avatar.png');
 const menuIcon = require('../../../assets/figma/student/menu.png');
 const sirenIcon = require('../../../assets/figma/student/siren.png');
 
 type QuickAction = {
-  id: 'notice' | 'equipment' | 'room' | 'report' | 'assistant';
+  id: 'notice' | 'rental' | 'report' | 'assistant' | 'administration';
   title: string;
 };
 
@@ -87,12 +87,8 @@ const QUICK_ACTIONS: QuickAction[] = [
     title: '공지사항',
   },
   {
-    id: 'equipment',
-    title: '기자재 대여',
-  },
-  {
-    id: 'room',
-    title: '실습실 대여',
+    id: 'rental',
+    title: '대여',
   },
   {
     id: 'report',
@@ -101,6 +97,10 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'assistant',
     title: '조교 문의',
+  },
+  {
+    id: 'administration',
+    title: '행정 업무',
   },
 ];
 
@@ -125,7 +125,9 @@ const FALLBACK_NOTICES: HomeNotice[] = [
 
 export default function StudentHomeScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const { noticeCount } = useNoticeSettings();
+  const { isDarkMode } = useAppSettings();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [notices, setNotices] = useState<HomeNotice[]>(FALLBACK_NOTICES);
   const [schedules, setSchedules] = useState<StudentSchedule[]>([]);
@@ -141,6 +143,8 @@ export default function StudentHomeScreen() {
     useState<OperatingHoursSettings>(DEFAULT_OPERATING_HOURS);
   const [homePopups, setHomePopups] = useState<HomePopup[]>([]);
   const [popupIndex, setPopupIndex] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showStudentId, setShowStudentId] = useState(false);
 
   const visibleNotices = notices.slice(0, Math.max(1, noticeCount));
   const requestCounts = useMemo(
@@ -237,14 +241,52 @@ export default function StudentHomeScreen() {
       });
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    if (Platform.OS !== 'android') return;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      BackHandler.exitApp();
-      return true;
-    });
-    return () => subscription.remove();
-  }, []));
+  const confirmAppExit = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      Alert.alert(
+        '앱 종료',
+        'iOS에서는 앱을 직접 종료할 수 없습니다. 홈 화면으로 이동한 뒤 앱 전환기에서 MEDIA ON을 닫아 주세요.',
+        [{ text: '확인' }],
+      );
+      return;
+    }
+
+    Alert.alert('앱 종료', 'MEDIA ON을 종료하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '종료',
+        style: 'destructive',
+        onPress: () => BackHandler.exitApp(),
+      },
+    ]);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const hardwareSubscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        () => {
+          confirmAppExit();
+          return true;
+        },
+      );
+      const navigationSubscription = navigation.addListener(
+        'beforeRemove',
+        (event) => {
+          if (event.data.action.type !== 'GO_BACK') {
+            return;
+          }
+          event.preventDefault();
+          confirmAppExit();
+        },
+      );
+
+      return () => {
+        hardwareSubscription.remove();
+        navigationSubscription();
+      };
+    }, [confirmAppExit, navigation]),
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -271,18 +313,19 @@ export default function StudentHomeScreen() {
     }, []),
   );
 
-  const openInstagram = () => {
-    const url = process.env.EXPO_PUBLIC_INSTAGRAM_URL;
+  const openInstagram = async () => {
+    const url =
+      process.env.EXPO_PUBLIC_INSTAGRAM_URL?.trim() ||
+      'https://www.instagram.com/swu_mediacontents/';
 
-    if (!url) {
+    try {
+      await Linking.openURL(url);
+    } catch {
       Alert.alert(
-        '인스타그램 주소 확인',
-        '학부 인스타그램 주소가 아직 설정되지 않았습니다.',
+        '인스타그램 열기 실패',
+        '브라우저에서 학부 인스타그램을 열지 못했습니다.',
       );
-      return;
     }
-
-    void Linking.openURL(url);
   };
 
   const dismissHomePopup = async (hideToday: boolean) => {
@@ -323,13 +366,53 @@ export default function StudentHomeScreen() {
   const handleQuickAction = (action: QuickAction) => {
     const routes = {
       notice: '/notices',
-      equipment: '/equipment',
-      room: '/rooms',
+      rental: '/rentals',
       report: '/facility-report',
       assistant: '/assistant-inquiry',
+      administration: '/administration',
     } as const;
 
     router.push(routes[action.id]);
+  };
+
+  const refreshHome = async () => {
+    setIsRefreshing(true);
+
+    try {
+      const [nextSchedules, nextHours] = await Promise.all([
+        getStudentSchedules(),
+        getOperatingHoursSettings(),
+      ]);
+      setSchedules(nextSchedules);
+      setOperatingHours(nextHours);
+
+      if (isSupabaseConfigured) {
+        const [
+          nextProfile,
+          nextApplicationItems,
+          nextUnreadCount,
+          nextNotices,
+        ] = await Promise.all([
+          getCurrentProfile(),
+          getMyApplicationStatusItems(),
+          getUnreadNotificationCount(),
+          getPublishedNotices(7),
+        ]);
+        setProfile(nextProfile);
+        setApplicationItems(nextApplicationItems);
+        setUnreadNotificationCount(nextUnreadCount);
+        setNotices(
+          nextNotices.map((notice) => ({
+            id: notice.id,
+            title: formatNoticeTitle(notice.title, notice.is_urgent),
+            publishedAt: notice.published_at ?? notice.created_at,
+            urgent: notice.is_urgent,
+          })),
+        );
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleLogout = () => {
@@ -347,11 +430,16 @@ export default function StudentHomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar style="dark" />
+    <SafeAreaView
+      style={[styles.safeArea, isDarkMode && styles.darkSafeArea]}
+      edges={['top']}
+    >
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>홈</Text>
+      <View style={[styles.header, isDarkMode && styles.darkSurface]}>
+        <Text style={[styles.headerTitle, isDarkMode && styles.darkText]}>
+          홈
+        </Text>
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
@@ -363,7 +451,11 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Image source={bellIcon} style={styles.bellIcon} />
+            <AppIcon
+              color={isDarkMode ? '#FFFFFF' : '#2D2D2D'}
+              name="bell"
+              size={20}
+            />
             {unreadNotificationCount > 0 ? (
               <View style={styles.notificationDot} />
             ) : null}
@@ -378,14 +470,42 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Image source={searchIcon} style={styles.searchIcon} />
+            <AppIcon
+              color={isDarkMode ? '#FFFFFF' : '#2D2D2D'}
+              name="search"
+              size={20}
+            />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="설정"
+            hitSlop={6}
+            onPress={() => router.push('/settings')}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <AppIcon
+              color={isDarkMode ? '#FFFFFF' : '#2D2D2D'}
+              name="settings"
+              size={20}
+            />
           </Pressable>
         </View>
       </View>
 
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, isDarkMode && styles.darkBackground]}
         contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            colors={['#182365']}
+            onRefresh={() => void refreshHome()}
+            refreshing={isRefreshing}
+            tintColor={isDarkMode ? '#FFFFFF' : '#182365'}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         <SectionTitle
@@ -402,10 +522,19 @@ export default function StudentHomeScreen() {
               <Text style={styles.profileEditText}>정보 변경</Text>
             </Pressable>
           }
+          dark={isDarkMode}
           title="내 정보"
         />
 
-        <View style={styles.profileCard}>
+        <Pressable
+          accessibilityLabel="모바일 학생증 보기"
+          onPress={() => setShowStudentId(true)}
+          style={({ pressed }) => [
+            styles.profileCard,
+            isDarkMode && styles.darkSurface,
+            pressed && styles.pressed,
+          ]}
+        >
           <Image
             source={
               profile?.avatar_url
@@ -425,21 +554,30 @@ export default function StudentHomeScreen() {
               </Text>
             </View>
             <View style={styles.profileNameRow}>
-              <Text style={styles.profileName}>{profile?.name ?? '홍길동'}</Text>
-              <Text style={styles.studentNumber}>
+              <Text style={[styles.profileName, isDarkMode && styles.darkText]}>
+                {profile?.name ?? '홍길동'}
+              </Text>
+              <Text style={[styles.studentNumber, isDarkMode && styles.darkText]}>
                 ({profile?.student_number ?? '2022112736'})
               </Text>
             </View>
-            <Text style={styles.profileDepartment}>
+            <Text
+              style={[
+                styles.profileDepartment,
+                isDarkMode && styles.darkSubText,
+              ]}
+            >
               미디어콘텐츠학부ㆍ
               {formatMajor(profile?.major ?? '영상미디어전공')}
             </Text>
           </View>
-        </View>
+        </Pressable>
 
         <View style={styles.sectionGap}>
-          <SectionTitle title="내 신청 현황" />
-          <View style={styles.requestSummary}>
+          <SectionTitle dark={isDarkMode} title="내 신청 현황" />
+          <View
+            style={[styles.requestSummary, isDarkMode && styles.darkSurface]}
+          >
             <RequestCount
               count={requestCounts.pending}
               label="신청 대기"
@@ -479,7 +617,7 @@ export default function StudentHomeScreen() {
         </View>
 
         <View style={styles.sectionGap}>
-          <SectionTitle title="빠른 메뉴" />
+          <SectionTitle dark={isDarkMode} title="빠른 메뉴" />
           <View style={styles.quickMenu}>
             {QUICK_ACTIONS.map((action) => (
               <Pressable
@@ -492,9 +630,17 @@ export default function StudentHomeScreen() {
                 ]}
               >
                 <View style={styles.quickIconBox}>
-                  <AppIcon name={action.id} size={34} />
+                  <AppIcon
+                    color={isDarkMode ? '#CAD1F2' : '#182366'}
+                    name={action.id}
+                    size={34}
+                  />
                 </View>
-                <Text style={styles.quickLabel}>{action.title}</Text>
+                <Text
+                  style={[styles.quickLabel, isDarkMode && styles.darkText]}
+                >
+                  {action.title}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -505,6 +651,7 @@ export default function StudentHomeScreen() {
           onPress={openInstagram}
           style={({ pressed }) => [
             styles.instagramBanner,
+            isDarkMode && styles.darkSurface,
             pressed && styles.pressed,
           ]}
         >
@@ -515,19 +662,31 @@ export default function StudentHomeScreen() {
             </View>
           </View>
           <View style={styles.instagramBannerText}>
-            <Text style={styles.instagramBannerTitle}>
+            <Text
+              style={[
+                styles.instagramBannerTitle,
+                isDarkMode && styles.darkText,
+              ]}
+            >
               미디어콘텐츠학부 Instagram
             </Text>
-            <Text style={styles.instagramBannerDescription}>
+            <Text
+              style={[
+                styles.instagramBannerDescription,
+                isDarkMode && styles.darkSubText,
+              ]}
+            >
               행사와 학부 소식을 빠르게 확인해 보세요.
             </Text>
           </View>
           <Text style={styles.instagramChevron}>›</Text>
         </Pressable>
 
-        <View style={styles.cardSection}>
+        <View style={[styles.cardSection, isDarkMode && styles.darkSurface]}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>학과 공지사항</Text>
+            <Text style={[styles.cardTitle, isDarkMode && styles.darkText]}>
+              학과 공지사항
+            </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="공지사항 표시 설정"
@@ -555,7 +714,10 @@ export default function StudentHomeScreen() {
                   {notice.urgent ? (
                     <Image source={sirenIcon} style={styles.sirenIcon} />
                   ) : null}
-                  <Text numberOfLines={1} style={styles.noticeTitle}>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.noticeTitle, isDarkMode && styles.darkText]}
+                  >
                     {notice.title}
                   </Text>
                 </View>
@@ -570,9 +732,11 @@ export default function StudentHomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.calendarCard}>
+        <View style={[styles.calendarCard, isDarkMode && styles.darkSurface]}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>일정</Text>
+            <Text style={[styles.cardTitle, isDarkMode && styles.darkText]}>
+              일정
+            </Text>
             <View style={styles.calendarHeaderActions}>
               <Pressable
                 accessibilityRole="button"
@@ -607,6 +771,7 @@ export default function StudentHomeScreen() {
 
           <View style={styles.calendarBody}>
             <MonthCalendar
+              dark={isDarkMode}
               eventDates={eventDates}
               month={visibleMonth}
               onChangeMonth={setVisibleMonth}
@@ -623,10 +788,12 @@ export default function StudentHomeScreen() {
               <Text style={styles.operationIconText}>i</Text>
             </View>
             <View style={styles.operationTextArea}>
-              <Text style={styles.operationTitle}>
+              <Text style={[styles.operationTitle, isDarkMode && styles.darkText]}>
                 {operatingHoursDisplay.title}
               </Text>
-              <Text style={styles.operationText}>
+              <Text
+                style={[styles.operationText, isDarkMode && styles.darkSubText]}
+              >
                 {operatingHoursDisplay.description}
               </Text>
             </View>
@@ -707,6 +874,12 @@ export default function StudentHomeScreen() {
                 {popupIndex + 1} / {homePopups.length}
               </Text>
             ) : null}
+            {currentHomePopup?.image_url ? (
+              <Image
+                source={{ uri: currentHomePopup.image_url }}
+                style={styles.homePopupImage}
+              />
+            ) : null}
             <Text style={styles.homePopupTitle}>
               {currentHomePopup?.title}
             </Text>
@@ -737,6 +910,49 @@ export default function StudentHomeScreen() {
           </View>
         </View>
       </Modal>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setShowStudentId(false)}
+        transparent
+        visible={showStudentId}
+      >
+        <View style={styles.studentIdBackdrop}>
+          <Pressable
+            accessibilityLabel="학생증 닫기"
+            onPress={() => setShowStudentId(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.studentIdCard}>
+            <View style={styles.studentIdHeader}>
+              <Text style={styles.studentIdBrand}>SEO WON UNIVERSITY</Text>
+              <Text style={styles.studentIdType}>STUDENT ID</Text>
+            </View>
+            <Image
+              source={
+                profile?.avatar_url ? { uri: profile.avatar_url } : profileAvatar
+              }
+              style={styles.studentIdPhoto}
+            />
+            <Text style={styles.studentIdName}>{profile?.name ?? '학생'}</Text>
+            <Text style={styles.studentIdNumber}>
+              {profile?.student_number ?? '학번 미확인'}
+            </Text>
+            <View style={styles.studentIdDivider} />
+            <Text style={styles.studentIdDepartment}>미디어콘텐츠학부</Text>
+            <Text style={styles.studentIdMeta}>
+              {profile
+                ? `${profile.grade}학년 · ${formatMajor(profile.major)} · ${formatEnrollmentStatus(profile.enrollment_status)}`
+                : '학생 정보 확인 중'}
+            </Text>
+            <Pressable
+              onPress={() => setShowStudentId(false)}
+              style={styles.studentIdClose}
+            >
+              <Text style={styles.studentIdCloseText}>닫기</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -744,13 +960,15 @@ export default function StudentHomeScreen() {
 function SectionTitle({
   title,
   action,
+  dark = false,
 }: {
   title: string;
   action?: React.ReactNode;
+  dark?: boolean;
 }) {
   return (
     <View style={styles.sectionTitleRow}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={[styles.sectionTitle, dark && styles.darkText]}>{title}</Text>
       {action}
     </View>
   );
@@ -922,7 +1140,7 @@ const styles = StyleSheet.create({
   profileEditText: {
     color: '#9C9C9C',
     fontFamily: 'FreesentationRegular',
-    fontSize: 12,
+    fontSize: 14,
   },
   profileCard: {
     minHeight: 102,
@@ -967,7 +1185,7 @@ const styles = StyleSheet.create({
   profileName: {
     color: '#000000',
     fontFamily: 'FreesentationSemiBold',
-    fontSize: 16,
+    fontSize: 18,
   },
   studentNumber: {
     color: '#000000',
@@ -1188,6 +1406,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
+  homePopupImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    marginBottom: 18,
+    borderRadius: 14,
+    resizeMode: 'cover',
+    backgroundColor: '#F0F0F0',
+  },
   homePopupTitle: { color: '#2D2D2D', fontSize: 20, fontWeight: '900' },
   homePopupBody: {
     marginTop: 10,
@@ -1214,6 +1440,91 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#999999',
     fontSize: 11,
+  },
+  studentIdBackdrop: {
+    flex: 1,
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  studentIdCard: {
+    width: '100%',
+    maxWidth: 350,
+    padding: 25,
+    alignItems: 'center',
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+  },
+  studentIdHeader: {
+    width: '100%',
+    marginBottom: 22,
+    alignItems: 'center',
+  },
+  studentIdBrand: {
+    color: '#182365',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 15,
+    letterSpacing: 1.2,
+  },
+  studentIdType: {
+    marginTop: 4,
+    color: '#858A9A',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  studentIdPhoto: {
+    width: 104,
+    height: 104,
+    borderWidth: 4,
+    borderColor: '#E9EBF8',
+    borderRadius: 52,
+    resizeMode: 'cover',
+    backgroundColor: '#F0F0F0',
+  },
+  studentIdName: {
+    marginTop: 18,
+    color: '#111827',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 25,
+  },
+  studentIdNumber: {
+    marginTop: 5,
+    color: '#5C6375',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 15,
+  },
+  studentIdDivider: {
+    width: '100%',
+    height: 1,
+    marginVertical: 20,
+    backgroundColor: '#E5E7EB',
+  },
+  studentIdDepartment: {
+    color: '#182365',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 17,
+  },
+  studentIdMeta: {
+    marginTop: 7,
+    color: '#6B7280',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 13,
+  },
+  studentIdClose: {
+    width: '100%',
+    height: 48,
+    marginTop: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+    backgroundColor: '#182365',
+  },
+  studentIdCloseText: {
+    color: '#FFFFFF',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 15,
   },
   noticeRow: {
     minHeight: 35,
@@ -1351,6 +1662,14 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.65,
   },
+  darkSafeArea: { backgroundColor: '#101424' },
+  darkBackground: { backgroundColor: '#101424' },
+  darkSurface: {
+    borderColor: '#2D3553',
+    backgroundColor: '#171C2E',
+  },
+  darkText: { color: '#F7F8FC' },
+  darkSubText: { color: '#AAB2CD' },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',

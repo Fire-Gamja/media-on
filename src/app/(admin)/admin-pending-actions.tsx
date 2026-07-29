@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { AppIcon, type AppIconName } from '../../components/common/AppIcon';
 import { COLORS } from '../../constants/colors';
 import {
@@ -56,7 +57,7 @@ export default function AdminPendingActionsScreen() {
           hitSlop={10}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>‹</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>조치 대기</Text>
         <View style={styles.headerSide} />

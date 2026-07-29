@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../../constants/colors';
 import { getAuthErrorMessage } from '../../../services/auth';
 import { getMyRoomReservationRequests, getRoomStatusLabel, type RoomReservationRequest, type RoomReservationStatus } from '../../../services/room-reservations';
@@ -25,7 +26,7 @@ export default function RoomRequestsScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.backText}>‹</Text></Pressable>
+        <Pressable onPress={() => router.back()} hitSlop={10}><PlatformHeaderIcon name="back" /></Pressable>
         <Text style={styles.headerTitle}>내 실습실 신청</Text>
         <Pressable onPress={() => router.push('/rooms')} style={styles.addButton}><Text style={styles.addText}>신청</Text></Pressable>
       </View>

@@ -21,6 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormField from '../components/common/FormField';
+import { PlatformHeaderIcon } from '../components/common/PlatformHeaderIcon';
 import PrimaryButton from '../components/common/PrimaryButton';
 import { COLORS } from '../constants/colors';
 import { supabase } from '../lib/supabase';
@@ -251,7 +252,7 @@ export default function ProfileScreen() {
             onPress={handleBack}
             style={({ pressed }) => [pressed && styles.pressed]}
           >
-            <Text style={styles.backText}>‹</Text>
+            <PlatformHeaderIcon name="back" />
           </Pressable>
           <Text style={styles.headerTitle}>
             {isPasswordChangeRequired ? '새 비밀번호 설정' : '내 정보'}
@@ -291,9 +292,28 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.profileCard}>
-              <Pressable onPress={() => void handleAvatarChange()}>
-                {avatarUrl ? <Image source={{ uri: avatarUrl }} style={styles.avatarImage} /> : <View style={styles.avatar}><Text style={styles.avatarText}>{profile.name.slice(0, 1)}</Text></View>}
-                <Text style={styles.avatarChange}>사진 변경</Text>
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {profile.name.slice(0, 1)}
+                  </Text>
+                </View>
+              )}
+              <Pressable
+                disabled={isSaving}
+                onPress={() => void handleAvatarChange()}
+                style={({ pressed }) => [
+                  styles.avatarChangeButton,
+                  isSaving && styles.disabled,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.avatarChange}>프로필 사진 변경</Text>
               </Pressable>
               <Text style={styles.profileName}>{profile.name}</Text>
               <Text style={styles.profileNumber}>
@@ -581,7 +601,23 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   avatarImage: { width: 82, height: 82, alignSelf: 'center', borderRadius: 41 },
-  avatarChange: { marginTop: 7, color: COLORS.navy, fontSize: 11, fontWeight: '800', textAlign: 'center' },
+  avatarChangeButton: {
+    minHeight: 36,
+    marginTop: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.38)',
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  avatarChange: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
   profileName: {
     marginTop: 14,
     color: COLORS.white,
@@ -736,5 +772,8 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import AuthButton from '../../components/auth/AuthButton';
 import AuthField from '../../components/auth/AuthField';
 import AuthFlowScreen from '../../components/auth/AuthFlowScreen';
@@ -23,7 +24,6 @@ import { getAuthErrorMessage } from '../../services/auth';
 import { createPasswordResetRequest } from '../../services/password-reset-requests';
 
 const completeIcon = require('../../../assets/figma/auth/complete.png');
-const backIcon = require('../../../assets/figma/auth/back.png');
 
 const TOTAL_STEPS = 4;
 
@@ -220,7 +220,7 @@ function RequestComplete() {
           pressed && styles.pressed,
         ]}
       >
-        <Image source={backIcon} style={styles.backIcon} />
+        <PlatformHeaderIcon color="#FFFFFF" name="back" />
       </Pressable>
 
       <Image

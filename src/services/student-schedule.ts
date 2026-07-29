@@ -6,6 +6,8 @@ export type StudentSchedule = {
   startDate: string;
   endDate: string;
   allDay: boolean;
+  startTime: string;
+  endTime: string;
   memo: string;
   createdAt: string;
 };
@@ -25,10 +27,20 @@ export async function getStudentSchedules(): Promise<StudentSchedule[]> {
   }
 
   try {
-    const schedules = JSON.parse(storedValue) as StudentSchedule[];
-    return schedules.sort((left, right) =>
-      left.startDate.localeCompare(right.startDate),
-    );
+    const schedules = JSON.parse(storedValue) as Array<
+      StudentSchedule & { startTime?: string; endTime?: string }
+    >;
+    return schedules
+      .map((schedule) => ({
+        ...schedule,
+        startTime: schedule.startTime ?? '00:00',
+        endTime: schedule.endTime ?? '23:59',
+      }))
+      .sort((left, right) =>
+        `${left.startDate}-${left.startTime}`.localeCompare(
+          `${right.startDate}-${right.startTime}`,
+        ),
+      );
   } catch {
     await AsyncStorage.removeItem(STORAGE_KEY);
     return [];

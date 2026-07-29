@@ -306,6 +306,17 @@ export async function transitionAssistantInquiry(
   }
 }
 
+export async function adminDeleteAssistantInquiry(id: string) {
+  const { error } = await requireSupabase().rpc(
+    'admin_delete_assistant_inquiry',
+    { target_inquiry_id: id },
+  );
+
+  if (error) {
+    throw new Error('조교 문의를 삭제하지 못했습니다.');
+  }
+}
+
 function normalizeAdminInquiry(
   inquiry: AdminAssistantInquiryRow,
 ): AdminAssistantInquiry {

@@ -14,6 +14,7 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
   getAuthErrorMessage,
@@ -267,7 +268,7 @@ export default function SignUpScreen() {
             accessibilityRole="button"
             accessibilityLabel="이전 화면으로 이동"
           >
-            <Text style={styles.backText}>‹</Text>
+            <PlatformHeaderIcon name="back" />
           </Pressable>
 
           <Text style={styles.headerTitle}>회원가입</Text>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../../constants/colors';
 import { getAuthErrorMessage } from '../../../services/auth';
 import { getMyRoomReservationRequest, getRoomStatusLabel, type RoomReservationRequest } from '../../../services/room-reservations';
@@ -19,7 +20,7 @@ export default function RoomRequestDetailScreen() {
   }, [requestId]);
 
   return <SafeAreaView style={styles.safeArea} edges={['top']}>
-    <StatusBar style="dark" /><View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.headerTitle}>실습실 신청 상세</Text><View style={styles.headerSide} /></View>
+    <StatusBar style="dark" /><View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><PlatformHeaderIcon name="back" /></Pressable><Text style={styles.headerTitle}>실습실 신청 상세</Text><View style={styles.headerSide} /></View>
     {isLoading ? <View style={styles.loadingBox}><ActivityIndicator size="large" color={COLORS.navy} /></View> : request ? <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
       <View style={styles.statusCard}><Text style={styles.statusLabel}>현재 상태</Text><Text style={styles.statusValue}>{getRoomStatusLabel(request.status)}</Text><Text style={styles.statusDescription}>{getStatusDescription(request)}</Text></View>
       <View style={styles.card}><DetailRow label="실습실" value={request.room?.name ?? '실습실'} /><DetailRow label="이용일" value={request.reservation_date} /><DetailRow label="이용 시간" value={`${request.start_time.slice(0, 5)}~${request.end_time.slice(0, 5)}`} /><DetailRow label="이용 인원" value="40명 고정" /><View style={styles.purposeSection}><Text style={styles.detailLabel}>사용 목적</Text><Text style={styles.purpose}>{request.purpose}</Text></View></View>

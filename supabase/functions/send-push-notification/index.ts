@@ -20,6 +20,7 @@ type PushTarget = {
   title: string;
   body: string;
   url: string;
+  isUrgent?: boolean;
 };
 
 type PushDevice = {
@@ -177,7 +178,14 @@ Deno.serve(async (request) => {
         is_active: 'eq.true',
       },
     );
-    const recipientSet = new Set(target.recipientIds);
+    const allowedRecipientIds = target.isUrgent
+      ? target.recipientIds
+      : await getGeneralNotificationRecipientIds(
+          supabaseUrl,
+          adminHeaders,
+          target.recipientIds,
+        );
+    const recipientSet = new Set(allowedRecipientIds);
     const devices = activeDevices.filter((device) =>
       recipientSet.has(device.user_id),
     );
@@ -380,6 +388,7 @@ async function resolvePushTarget(
       title: notice.is_urgent ? '긴급 공지사항' : '새 공지사항',
       body: formatNoticeTitle(notice.title, notice.is_urgent),
       url: `/notices/${notice.id}`,
+      isUrgent: notice.is_urgent,
     };
   }
 
@@ -501,6 +510,27 @@ async function getApprovedAdminIds(
   );
 
   return admins.map(({ id }) => id);
+}
+
+async function getGeneralNotificationRecipientIds(
+  supabaseUrl: string,
+  adminHeaders: Record<string, string>,
+  recipientIds: string[],
+) {
+  const profiles = await adminSelect<{
+    id: string;
+    general_notifications_enabled: boolean;
+  }>(supabaseUrl, adminHeaders, 'profiles', {
+    select: 'id,general_notifications_enabled',
+    approval_status: 'eq.approved',
+  });
+  const enabledUsers = new Set(
+    profiles
+      .filter((profile) => profile.general_notifications_enabled !== false)
+      .map((profile) => profile.id),
+  );
+
+  return recipientIds.filter((id) => enabledUsers.has(id));
 }
 
 async function sendExpoPushNotifications(

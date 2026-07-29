@@ -3,7 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,12 +11,18 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppIcon } from '../../components/common/AppIcon';
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { isSupabaseConfigured } from '../../lib/supabase';
-import { getMyNotifications, markNotificationRead, type AppNotification } from '../../services/notifications';
-
-const backIcon = require('../../../assets/figma/student/back.png');
+import {
+  deleteNotification,
+  getMyNotifications,
+  markNotificationRead,
+  type AppNotification,
+} from '../../services/notifications';
 
 export default function StudentNotificationsScreen() {
   const [notifications, setNotifications] =
@@ -47,6 +53,32 @@ export default function StudentNotificationsScreen() {
     }, [loadNotifications]),
   );
 
+  const openNotification = async (notification: AppNotification) => {
+    if (!notification.is_read) {
+      await markNotificationRead(notification.id);
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, is_read: true } : item,
+        ),
+      );
+    }
+
+    if (notification.route) {
+      router.push(notification.route);
+    }
+  };
+
+  const removeNotification = async (notification: AppNotification) => {
+    try {
+      await deleteNotification(notification.id);
+      setNotifications((current) =>
+        current.filter((item) => item.id !== notification.id),
+      );
+    } catch {
+      Alert.alert('삭제 실패', '알림을 삭제하지 못했습니다.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
@@ -62,7 +94,7 @@ export default function StudentNotificationsScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Image source={backIcon} style={styles.headerIcon} />
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>알림</Text>
         <View style={styles.headerIconButton} />
@@ -91,19 +123,50 @@ export default function StudentNotificationsScreen() {
         ) : (
           <View style={styles.list}>
             {notifications.map((notification) => (
-              <Pressable key={notification.id} onPress={async () => { await markNotificationRead(notification.id); if (notification.route) router.push(notification.route); }} style={styles.notificationCard}>
-                <View style={styles.notificationTitleRow}>
-                  <Text style={styles.notificationTitle}>
-                    {notification.title}
+              <Swipeable
+                key={notification.id}
+                overshootRight={false}
+                renderRightActions={() => (
+                  <Pressable
+                    accessibilityLabel="알림 삭제"
+                    onPress={() => void removeNotification(notification)}
+                    style={styles.deleteAction}
+                  >
+                    <AppIcon color="#FFFFFF" name="trash" size={22} />
+                    <Text style={styles.deleteText}>삭제</Text>
+                  </Pressable>
+                )}
+              >
+                <Pressable
+                  onPress={() => void openNotification(notification)}
+                  style={[
+                    styles.notificationCard,
+                    !notification.is_read && styles.unreadCard,
+                  ]}
+                >
+                  <View style={styles.notificationTitleRow}>
+                    <View style={styles.titleArea}>
+                      {!notification.is_read ? (
+                        <View style={styles.unreadDot} />
+                      ) : null}
+                      <Text
+                        style={[
+                          styles.notificationTitle,
+                          !notification.is_read && styles.unreadTitle,
+                        ]}
+                      >
+                        {notification.title}
+                      </Text>
+                    </View>
+                    <Text style={styles.notificationTime}>
+                      {formatTime(notification.created_at)}
+                    </Text>
+                  </View>
+                  <Text style={styles.notificationDescription}>
+                    {notification.body}
                   </Text>
-                  <Text style={styles.notificationTime}>
-                    {formatTime(notification.created_at)}
-                  </Text>
-                </View>
-                <Text style={styles.notificationDescription}>
-                  {notification.body}
-                </Text>
-              </Pressable>
+                </Pressable>
+              </Swipeable>
             ))}
           </View>
         )}
@@ -140,11 +203,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    resizeMode: 'contain',
-  },
   headerTitle: {
     flex: 1,
     color: '#2D2D2D',
@@ -163,6 +221,19 @@ const styles = StyleSheet.create({
   list: {
     gap: 16,
   },
+  deleteAction: {
+    width: 78,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderRadius: 16,
+    backgroundColor: '#D92D20',
+  },
+  deleteText: {
+    color: '#FFFFFF',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 12,
+  },
   notificationCard: {
     minHeight: 77,
     paddingHorizontal: 24,
@@ -173,6 +244,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
   },
+  unreadCard: {
+    borderColor: '#C7CDEE',
+    backgroundColor: '#F1F3FC',
+  },
   notificationTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,10 +255,24 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   notificationTitle: {
-    flex: 1,
     color: '#2D2D2D',
     fontFamily: 'FreesentationSemiBold',
     fontSize: 16,
+  },
+  titleArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  unreadDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#182365',
+  },
+  unreadTitle: {
+    fontFamily: 'FreesentationExtraBold',
   },
   notificationTime: {
     color: '#9C9C9C',

@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppIcon, type AppIconName } from '../../components/common/AppIcon';
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import {
   type ApplicationStage,
@@ -70,7 +71,7 @@ export default function ApplicationStatusScreen() {
           hitSlop={10}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>‹</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>내 신청 현황</Text>
         <View style={styles.headerSide} />

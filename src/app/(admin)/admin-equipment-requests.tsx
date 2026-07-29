@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -13,9 +14,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { AppIcon } from '../../components/common/AppIcon';
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   type AdminEquipmentRentalRequest,
+  adminDeleteEquipmentRentalRequest,
   type EquipmentRequestStatus,
   getAdminEquipmentRentalRequests,
   getEquipmentStatusLabel,
@@ -47,12 +51,36 @@ export default function AdminEquipmentRequestsScreen() {
     }, [loadRequests]),
   );
 
+  const confirmDelete = (request: AdminEquipmentRentalRequest) => {
+    Alert.alert(
+      '대여 신청 삭제',
+      `${request.requester?.name ?? '학생'}의 기자재 대여 신청을 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await adminDeleteEquipmentRentalRequest(request.id);
+              setRequests((current) =>
+                current.filter((item) => item.id !== request.id),
+              );
+            } catch (error) {
+              Alert.alert('삭제 실패', getAuthErrorMessage(error));
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Text style={styles.backText}>‹</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>기자재 대여 관리</Text>
         <View style={styles.headerSide} />
@@ -125,6 +153,17 @@ export default function AdminEquipmentRequestsScreen() {
                         {getEquipmentStatusLabel(request.status)}
                       </Text>
                     </View>
+                    <Pressable
+                      accessibilityLabel="기자재 대여 신청 삭제"
+                      hitSlop={8}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        confirmDelete(request);
+                      }}
+                      style={styles.deleteButton}
+                    >
+                      <AppIcon color={COLORS.error} name="trash" size={20} />
+                    </Pressable>
                   </View>
                   <Text style={styles.title}>
                     {request.equipment?.name ?? '기자재'} {request.quantity}개
@@ -177,6 +216,7 @@ const styles = StyleSheet.create({
   studentNumber: { color: COLORS.subText, fontSize: 11 },
   statusBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10 },
   statusText: { fontSize: 11, fontWeight: '800' },
+  deleteButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#FFF1F2' },
   title: { marginTop: 14, color: COLORS.text, fontSize: 16, fontWeight: '800' },
   period: { marginTop: 9, color: COLORS.subText, fontSize: 12 },
   chevron: { position: 'absolute', right: 17, bottom: 13, color: COLORS.subText, fontSize: 23 },

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../../constants/colors';
 import { getAuthErrorMessage } from '../../../services/auth';
 import {
@@ -21,8 +22,6 @@ import {
   type Notice,
 } from '../../../services/notices';
 
-const backIcon = require('../../../../assets/figma/student/back.png');
-const homeIcon = require('../../../../assets/figma/student/home.png');
 const sirenIcon = require('../../../../assets/figma/student/siren.png');
 
 export default function NoticesScreen() {
@@ -64,7 +63,7 @@ export default function NoticesScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Image source={backIcon} style={styles.headerIcon} />
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>학과 공지사항</Text>
         <Pressable
@@ -77,7 +76,7 @@ export default function NoticesScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Image source={homeIcon} style={styles.headerIcon} />
+          <PlatformHeaderIcon name="home" />
         </Pressable>
       </View>
 
@@ -183,11 +182,6 @@ const styles = StyleSheet.create({
     height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    resizeMode: 'contain',
   },
   headerTitle: {
     flex: 1,

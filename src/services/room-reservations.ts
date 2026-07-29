@@ -265,6 +265,16 @@ export async function transitionRoomReservationRequest(
   await sendPushNotificationEvent('room_request_status', id);
 }
 
+export async function adminDeleteRoomReservationRequest(id: string) {
+  const { error } = await requireSupabase().rpc('admin_delete_room_request', {
+    target_request_id: id,
+  });
+
+  if (error) {
+    throw new Error('실습실 대여 신청을 삭제하지 못했습니다.');
+  }
+}
+
 function normalizeRoomReservationRequest(
   request: RoomReservationRow,
 ): RoomReservationRequest {

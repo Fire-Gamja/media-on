@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { maskProfanityInput } from '../../lib/content-filter';
 import { DateField, parseDate } from '../../components/common/DateField';
@@ -123,7 +124,7 @@ export default function EquipmentRequestScreen() {
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Text style={styles.backText}>‹</Text>
+            <PlatformHeaderIcon name="back" />
           </Pressable>
           <Text style={styles.headerTitle}>대여 신청</Text>
           <View style={styles.headerSide} />

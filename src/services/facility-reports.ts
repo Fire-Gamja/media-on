@@ -215,9 +215,9 @@ export async function transitionFacilityReport(
   adminNote: string,
 ) {
   const client = requireSupabase();
-  const { error } = await client.rpc('transition_facility_report', {
+  const { error } = await client.rpc('transition_facility_report_v2', {
     target_report_id: id,
-    new_status: status,
+    requested_status: status,
     note: adminNote.trim() || null,
   });
 

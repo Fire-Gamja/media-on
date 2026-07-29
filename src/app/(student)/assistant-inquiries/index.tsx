@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../../constants/colors';
 import { getAuthErrorMessage } from '../../../services/auth';
 import { getAssistantCategoryLabel, getAssistantStatusLabel, getMyAssistantInquiries, type AssistantInquiry, type AssistantInquiryStatus } from '../../../services/assistant-inquiries';
@@ -22,7 +23,7 @@ export default function AssistantInquiriesScreen() {
   useFocusEffect(useCallback(() => { void loadInquiries(); }, [loadInquiries]));
 
   return <SafeAreaView style={styles.safeArea} edges={['top']}><StatusBar style="dark" />
-    <View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.headerTitle}>내 조교 문의</Text><Pressable onPress={() => router.push('/assistant-inquiry')} style={styles.addButton}><Text style={styles.addText}>문의</Text></Pressable></View>
+    <View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><PlatformHeaderIcon name="back" /></Pressable><Text style={styles.headerTitle}>내 조교 문의</Text><Pressable onPress={() => router.push('/assistant-inquiry')} style={styles.addButton}><Text style={styles.addText}>문의</Text></Pressable></View>
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => void loadInquiries(true)} colors={[COLORS.navy]} />}>
       {isLoading ? <View style={styles.stateBox}><ActivityIndicator size="large" color={COLORS.navy} /></View>
         : errorMessage ? <View style={styles.stateBox}><Text style={styles.errorTitle}>문의 내역을 불러오지 못했습니다.</Text><Text style={styles.stateText}>{errorMessage}</Text><Pressable onPress={() => void loadInquiries()} style={styles.retryButton}><Text style={styles.retryText}>다시 시도</Text></Pressable></View>

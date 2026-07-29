@@ -3,8 +3,10 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { PushNotificationManager } from '../components/PushNotificationManager';
+import { AppSettingsProvider } from '../context/app-settings-context';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -26,13 +28,17 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <PushNotificationManager />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
-      />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppSettingsProvider>
+          <PushNotificationManager />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+            }}
+          />
+        </AppSettingsProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

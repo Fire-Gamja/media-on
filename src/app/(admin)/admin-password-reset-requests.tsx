@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
@@ -123,7 +124,7 @@ export default function AdminPasswordResetRequestsScreen() {
           hitSlop={10}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>‹</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>비밀번호 재설정</Text>
         <View style={styles.headerSpacer} />

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { TimeSelectField } from '../../components/common/TimeSelectField';
 import { COLORS } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../services/auth';
@@ -86,7 +87,7 @@ export default function AdminOperatingHoursScreen() {
           hitSlop={10}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>‹</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>운영시간 설정</Text>
         <View style={styles.headerSide} />

@@ -5,6 +5,8 @@ import 'react-native-url-polyfill/auto';
 
 const AUTO_LOGIN_STORAGE_KEY = '@media-on/auto-login';
 const volatileAuthStorage = new Map<string, string>();
+const isServerRendering =
+  Platform.OS === 'web' && typeof window === 'undefined';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
 const supabasePublishableKey =
@@ -23,12 +25,20 @@ export const supabase = isSupabaseConfigured
               return volatileAuthStorage.get(key) ?? null;
             }
 
+            if (isServerRendering) {
+              return null;
+            }
+
             return (await getAutoLoginEnabled())
               ? AsyncStorage.getItem(key)
               : null;
           },
           async setItem(key, value) {
             volatileAuthStorage.set(key, value);
+
+            if (isServerRendering) {
+              return;
+            }
 
             if (await getAutoLoginEnabled()) {
               await AsyncStorage.setItem(key, value);
@@ -38,6 +48,11 @@ export const supabase = isSupabaseConfigured
           },
           async removeItem(key) {
             volatileAuthStorage.delete(key);
+
+            if (isServerRendering) {
+              return;
+            }
+
             await AsyncStorage.removeItem(key);
           },
         },

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
@@ -24,7 +25,9 @@ import {
 } from '../../services/facility-reports';
 
 export default function FacilityReportScreen() {
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState<(typeof FACILITY_LOCATION_OPTIONS)[number]>(
+    FACILITY_LOCATION_OPTIONS[0],
+  );
   const [category, setCategory] =
     useState<FacilityIssueCategory>('network');
   const [title, setTitle] = useState('');
@@ -62,7 +65,7 @@ export default function FacilityReportScreen() {
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Text style={styles.backText}>‹</Text>
+            <PlatformHeaderIcon name="back" />
           </Pressable>
           <Text style={styles.headerTitle}>시설 신고</Text>
           <Pressable
@@ -91,14 +94,34 @@ export default function FacilityReportScreen() {
           </View>
 
           <Text style={styles.label}>장소</Text>
-          <TextInput
-            value={location}
-            onChangeText={(value) => setLocation(maskProfanityInput(value))}
-            maxLength={100}
-            placeholder="예: 미디어관 301호"
-            placeholderTextColor={COLORS.placeholder}
-            style={styles.input}
-          />
+          <View style={styles.locationGrid}>
+            {FACILITY_LOCATION_OPTIONS.map((option) => {
+              const isSelected = location === option;
+
+              return (
+                <Pressable
+                  key={option}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  onPress={() => setLocation(option)}
+                  style={({ pressed }) => [
+                    styles.locationButton,
+                    isSelected && styles.locationButtonSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.locationText,
+                      isSelected && styles.locationTextSelected,
+                    ]}
+                  >
+                    {option.replace('제 1자연관 ', '')}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
           <Text style={[styles.label, styles.spacedLabel]}>신고 유형</Text>
           <View style={styles.categoryGrid}>
@@ -176,6 +199,16 @@ export default function FacilityReportScreen() {
   );
 }
 
+const FACILITY_LOCATION_OPTIONS = [
+  '제 1자연관 101호',
+  '제 1자연관 301호',
+  '제 1자연관 303호',
+  '제 1자연관 304호',
+  '제 1자연관 501호',
+  '제 1자연관 504호',
+  '제 1자연관 공용 공간',
+] as const;
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.surface },
   flex: { flex: 1 },
@@ -200,6 +233,11 @@ const styles = StyleSheet.create({
   label: { marginBottom: 9, color: COLORS.text, fontSize: 15, fontWeight: '800' },
   spacedLabel: { marginTop: 24 },
   input: { height: 56, paddingHorizontal: 16, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 15 },
+  locationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  locationButton: { minWidth: '30%', minHeight: 46, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, backgroundColor: COLORS.surface },
+  locationButtonSelected: { borderColor: COLORS.navy, backgroundColor: COLORS.softNavy },
+  locationText: { color: COLORS.subText, fontSize: 13, fontWeight: '700' },
+  locationTextSelected: { color: COLORS.navy, fontWeight: '900' },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   categoryButton: { minHeight: 42, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, backgroundColor: COLORS.surface },
   categoryButtonSelected: { borderColor: COLORS.navy, backgroundColor: COLORS.softNavy },

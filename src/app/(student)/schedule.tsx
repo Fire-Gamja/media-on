@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,11 +18,10 @@ import MonthCalendar, {
   fromDateKey,
   toDateKey,
 } from '../../components/student/MonthCalendar';
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
+import { TimeSelectField } from '../../components/common/TimeSelectField';
 import { maskProfanityInput } from '../../lib/content-filter';
 import { createStudentSchedule } from '../../services/student-schedule';
-
-const backIcon = require('../../../assets/figma/student/back.png');
-const homeIcon = require('../../../assets/figma/student/home.png');
 
 type DateField = 'start' | 'end';
 
@@ -35,6 +33,8 @@ export default function StudentScheduleScreen() {
   const [startDate, setStartDate] = useState(initialDate);
   const [endDate, setEndDate] = useState(initialDate);
   const [allDay, setAllDay] = useState(true);
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(fromDateKey(initialDate).getFullYear(), fromDateKey(initialDate).getMonth(), 1),
   );
@@ -87,6 +87,8 @@ export default function StudentScheduleScreen() {
         startDate,
         endDate: allDay ? startDate : endDate,
         allDay,
+        startTime: allDay ? '00:00' : startTime,
+        endTime: allDay ? '23:59' : endTime,
         memo: memo.trim(),
       });
       setShowConfirm(false);
@@ -115,7 +117,7 @@ export default function StudentScheduleScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Image source={backIcon} style={styles.headerIcon} />
+            <PlatformHeaderIcon name="back" />
           </Pressable>
 
           <Text style={styles.headerTitle}>일정등록</Text>
@@ -130,7 +132,7 @@ export default function StudentScheduleScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Image source={homeIcon} style={styles.headerIcon} />
+            <PlatformHeaderIcon name="home" />
           </Pressable>
         </View>
 
@@ -152,23 +154,6 @@ export default function StudentScheduleScreen() {
 
           <View style={styles.sectionTitleRow}>
             <Text style={styles.sectionTitle}>일정</Text>
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: allDay }}
-              onPress={() => setAllDay((current) => !current)}
-              style={({ pressed }) => [
-                styles.allDayButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View
-                style={[
-                  styles.toggleDot,
-                  allDay ? styles.toggleDotActive : styles.toggleDotInactive,
-                ]}
-              />
-              <Text style={styles.allDayText}>하루종일</Text>
-            </Pressable>
           </View>
 
           <View style={styles.dateFields}>
@@ -181,7 +166,7 @@ export default function StudentScheduleScreen() {
               ]}
             >
               <Text style={styles.dateText}>
-                {formatDateTime(startDate, '00:00')}
+                {formatDateTime(startDate, allDay ? '00:00' : startTime)}
               </Text>
             </Pressable>
 
@@ -196,10 +181,60 @@ export default function StudentScheduleScreen() {
               ]}
             >
               <Text style={styles.dateText}>
-                {formatDateTime(allDay ? startDate : endDate, '23:59')}
+                {formatDateTime(
+                  allDay ? startDate : endDate,
+                  allDay ? '23:59' : endTime,
+                )}
               </Text>
             </Pressable>
           </View>
+
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: allDay }}
+            onPress={() => setAllDay((current) => !current)}
+            style={({ pressed }) => [
+              styles.allDayButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View
+              style={[
+                styles.checkBox,
+                allDay && styles.checkBoxActive,
+              ]}
+            >
+              {allDay ? <Text style={styles.checkMark}>✓</Text> : null}
+            </View>
+            <Text style={styles.allDayText}>하루 종일</Text>
+          </Pressable>
+
+          {!allDay ? (
+            <View style={styles.timeFields}>
+              <TimeSelectField
+                label="시작 시간"
+                onChange={(value) => {
+                  setStartTime(value);
+                  if (endTime <= value) {
+                    setEndTime(
+                      SCHEDULE_TIME_OPTIONS.find((time) => time > value) ??
+                        '23:30',
+                    );
+                  }
+                }}
+                options={SCHEDULE_TIME_OPTIONS.slice(0, -1)}
+                value={startTime}
+              />
+              <TimeSelectField
+                label="종료 시간"
+                onChange={setEndTime}
+                options={SCHEDULE_TIME_OPTIONS.filter(
+                  (time) => time > startTime,
+                )}
+                value={endTime}
+              />
+            </View>
+          ) : null}
 
           <Text style={[styles.sectionTitle, styles.memoTitle]}>메모</Text>
           <TextInput
@@ -352,6 +387,13 @@ function formatKoreanDate(dateKey: string) {
   return `${dateKey.replaceAll('-', '.')} /`;
 }
 
+const SCHEDULE_TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const minutes = index * 30;
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(
+    minutes % 60,
+  ).padStart(2, '0')}`;
+});
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -374,11 +416,6 @@ const styles = StyleSheet.create({
     height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerIcon: {
-    width: 36,
-    height: 36,
-    resizeMode: 'contain',
   },
   headerTitle: {
     flex: 1,
@@ -419,21 +456,32 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   allDayButton: {
+    alignSelf: 'flex-start',
+    marginTop: 14,
     minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  toggleDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  checkBox: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#B8B8B8',
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
   },
-  toggleDotActive: {
+  checkBoxActive: {
+    borderColor: '#182365',
     backgroundColor: '#182365',
   },
-  toggleDotInactive: {
-    backgroundColor: '#B8B8B8',
+  checkMark: {
+    color: '#FFFFFF',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 14,
+    lineHeight: 17,
   },
   allDayText: {
     color: '#2D2D2D',
@@ -443,6 +491,11 @@ const styles = StyleSheet.create({
   dateFields: {
     marginTop: 12,
     gap: 8,
+  },
+  timeFields: {
+    marginTop: 16,
+    flexDirection: 'row',
+    gap: 10,
   },
   dateField: {
     height: 51,

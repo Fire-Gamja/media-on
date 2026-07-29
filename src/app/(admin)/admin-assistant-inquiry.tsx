@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -13,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AssistantChatRoom } from '../../components/assistant/AssistantChatRoom';
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import {
   getAdminAssistantInquiry,
@@ -54,7 +54,7 @@ export default function AdminAssistantInquiryScreen() {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Text style={styles.backText}>‹</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>조교 문의 상담</Text>
         <View style={styles.headerSide} />
@@ -65,54 +65,51 @@ export default function AdminAssistantInquiryScreen() {
           <ActivityIndicator size="large" color={COLORS.navy} />
         </View>
       ) : inquiry ? (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.studentCard}>
-            <View style={styles.studentArea}>
-              <Text style={styles.studentName}>
-                {inquiry.requester?.name ?? '학생'}
-              </Text>
-              <Text style={styles.studentNumber}>
-                {inquiry.requester?.student_number ?? '학번 미확인'}
-              </Text>
-            </View>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>
-                {getAssistantStatusLabel(inquiry.status)}
-              </Text>
-            </View>
-          </View>
+        <View style={styles.chatScreen}>
+          <AssistantChatRoom
+            canStartChat
+            header={
+              <>
+                <View style={styles.studentCard}>
+                  <View style={styles.studentArea}>
+                    <Text style={styles.studentName}>
+                      {inquiry.requester?.name ?? '학생'}
+                    </Text>
+                    <Text style={styles.studentNumber}>
+                      {inquiry.requester?.student_number ?? '학번 미확인'}
+                    </Text>
+                  </View>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusText}>
+                      {getAssistantStatusLabel(inquiry.status)}
+                    </Text>
+                  </View>
+                </View>
 
-          <View style={styles.inquiryCard}>
-            <Text style={styles.category}>
-              {getAssistantCategoryLabel(inquiry.category)}
-            </Text>
-            <Text style={styles.title}>{inquiry.title}</Text>
-            <Text style={styles.date}>
-              {formatDate(inquiry.created_at)} 문의
-            </Text>
-            <View style={styles.contentSection}>
-              <Text style={styles.sectionLabel}>문의 내용</Text>
-              <Text style={styles.bodyText}>{inquiry.content}</Text>
-            </View>
-          </View>
-
-          <View style={styles.chatCard}>
-            <Text style={styles.chatTitle}>실시간 상담</Text>
-            <Text style={styles.chatDescription}>
-              채팅 시작 후 학생과 실시간으로 대화할 수 있습니다.
-            </Text>
-            <AssistantChatRoom
-              canStartChat
-              inquiryId={inquiry.id}
-              onStatusChange={handleStatusChange}
-              status={inquiry.status}
-            />
-          </View>
-        </ScrollView>
+                <View style={styles.inquiryCard}>
+                  <Text style={styles.category}>
+                    {getAssistantCategoryLabel(inquiry.category)}
+                  </Text>
+                  <Text style={styles.title}>{inquiry.title}</Text>
+                  <Text style={styles.date}>
+                    {formatDate(inquiry.created_at)} 문의
+                  </Text>
+                  <View style={styles.contentSection}>
+                    <Text style={styles.sectionLabel}>문의 내용</Text>
+                    <Text style={styles.bodyText}>{inquiry.content}</Text>
+                  </View>
+                </View>
+                <Text style={styles.chatTitle}>실시간 상담</Text>
+                <Text style={styles.chatDescription}>
+                  채팅 시작 후 학생과 실시간으로 대화할 수 있습니다.
+                </Text>
+              </>
+            }
+            inquiryId={inquiry.id}
+            onStatusChange={handleStatusChange}
+            status={inquiry.status}
+          />
+        </View>
       ) : null}
     </SafeAreaView>
   );
@@ -148,8 +145,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
   headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingBottom: 80 },
+  chatScreen: { flex: 1, backgroundColor: COLORS.background },
   studentCard: {
     padding: 18,
     flexDirection: 'row',
@@ -197,24 +193,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 23,
   },
-  chatCard: {
-    marginTop: 15,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 17,
-    backgroundColor: COLORS.surface,
-  },
   chatTitle: {
-    paddingTop: 18,
-    paddingHorizontal: 18,
+    marginTop: 18,
     color: COLORS.text,
     fontSize: 16,
     fontWeight: '800',
   },
   chatDescription: {
     marginTop: 7,
-    paddingHorizontal: 18,
     color: COLORS.subText,
     fontSize: 12,
     lineHeight: 19,

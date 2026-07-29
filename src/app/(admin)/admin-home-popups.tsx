@@ -1,9 +1,11 @@
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,12 +18,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   getAdminHomePopups,
   type HomePopupInput,
   updateHomePopups,
+  uploadHomePopupImage,
 } from '../../services/home-popups';
 
 const EMPTY_POPUPS: HomePopupInput[] = [1, 2, 3].map((slot) => ({
@@ -30,6 +34,7 @@ const EMPTY_POPUPS: HomePopupInput[] = [1, 2, 3].map((slot) => ({
   body: '',
   action_label: '자세히 보기',
   action_url: null,
+  image_url: null,
   is_active: false,
 }));
 
@@ -37,6 +42,7 @@ export default function AdminHomePopupsScreen() {
   const [popups, setPopups] = useState<HomePopupInput[]>(EMPTY_POPUPS);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
 
   const activeCount = useMemo(
     () => popups.filter((popup) => popup.is_active).length,
@@ -123,6 +129,34 @@ export default function AdminHomePopupsScreen() {
     }
   };
 
+  const handleImageSelect = async (
+    slotNumber: HomePopupInput['slot_number'],
+  ) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    try {
+      setUploadingSlot(slotNumber);
+      const imageUrl = await uploadHomePopupImage(
+        slotNumber,
+        result.assets[0].uri,
+      );
+      updatePopup(slotNumber, { image_url: imageUrl });
+    } catch (error) {
+      Alert.alert('이미지 등록 실패', getAuthErrorMessage(error));
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -132,7 +166,7 @@ export default function AdminHomePopupsScreen() {
           hitSlop={10}
           onPress={() => router.back()}
         >
-          <Text style={styles.backText}>‹</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
         <Text style={styles.headerTitle}>첫 팝업 관리</Text>
         <View style={styles.headerSide} />
@@ -229,6 +263,49 @@ export default function AdminHomePopupsScreen() {
                   placeholder="https://..."
                   value={popup.action_url ?? ''}
                 />
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>팝업 사진 (선택)</Text>
+                  {popup.image_url ? (
+                    <Image
+                      source={{ uri: popup.image_url }}
+                      style={styles.popupImage}
+                    />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Text style={styles.imagePlaceholderText}>
+                        등록된 사진이 없습니다.
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.imageActions}>
+                    <Pressable
+                      disabled={uploadingSlot !== null}
+                      onPress={() =>
+                        void handleImageSelect(popup.slot_number)
+                      }
+                      style={styles.imageButton}
+                    >
+                      {uploadingSlot === popup.slot_number ? (
+                        <ActivityIndicator color={COLORS.navy} />
+                      ) : (
+                        <Text style={styles.imageButtonText}>
+                          {popup.image_url ? '사진 변경' : '사진 추가'}
+                        </Text>
+                      )}
+                    </Pressable>
+                    {popup.image_url ? (
+                      <Pressable
+                        disabled={uploadingSlot !== null}
+                        onPress={() =>
+                          updatePopup(popup.slot_number, { image_url: null })
+                        }
+                        style={styles.imageRemoveButton}
+                      >
+                        <Text style={styles.imageRemoveText}>사진 제거</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
               </View>
             ))}
 
@@ -333,6 +410,45 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: COLORS.surface,
   },
+  popupImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 13,
+    resizeMode: 'cover',
+    backgroundColor: COLORS.background,
+  },
+  imagePlaceholder: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 13,
+    backgroundColor: COLORS.background,
+  },
+  imagePlaceholderText: { color: COLORS.subText, fontSize: 12 },
+  imageActions: { marginTop: 9, flexDirection: 'row', gap: 9 },
+  imageButton: {
+    flex: 1,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: COLORS.softNavy,
+  },
+  imageButtonText: { color: COLORS.navy, fontSize: 13, fontWeight: '800' },
+  imageRemoveButton: {
+    flex: 1,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F4B8BE',
+    borderRadius: 11,
+    backgroundColor: '#FFF7F8',
+  },
+  imageRemoveText: { color: COLORS.error, fontSize: 13, fontWeight: '800' },
   cardHeader: {
     marginBottom: 18,
     flexDirection: 'row',

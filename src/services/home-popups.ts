@@ -6,17 +6,24 @@ export type HomePopup = {
   body: string;
   action_label: string;
   action_url: string | null;
+  image_url: string | null;
   is_active: boolean;
   updated_at: string;
 };
 
 export type HomePopupInput = Pick<
   HomePopup,
-  'slot_number' | 'title' | 'body' | 'action_label' | 'action_url' | 'is_active'
+  | 'slot_number'
+  | 'title'
+  | 'body'
+  | 'action_label'
+  | 'action_url'
+  | 'image_url'
+  | 'is_active'
 >;
 
 const popupColumns =
-  'slot_number, title, body, action_label, action_url, is_active, updated_at';
+  'slot_number, title, body, action_label, action_url, image_url, is_active, updated_at';
 
 const requireSupabase = () => {
   if (!supabase) {
@@ -68,6 +75,7 @@ export async function updateHomePopups(popups: HomePopupInput[]) {
         body: popup.body.trim(),
         action_label: popup.action_label.trim() || '자세히 보기',
         action_url: popup.action_url?.trim() || null,
+        image_url: popup.image_url?.trim() || null,
         is_active: popup.is_active,
       })
       .eq('slot_number', popup.slot_number);
@@ -76,4 +84,37 @@ export async function updateHomePopups(popups: HomePopupInput[]) {
       throw new Error(`${popup.slot_number}번 팝업을 저장하지 못했습니다.`);
     }
   }
+}
+
+export async function uploadHomePopupImage(
+  slotNumber: HomePopupInput['slot_number'],
+  uri: string,
+) {
+  const client = requireSupabase();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user) {
+    throw new Error('로그인이 필요합니다.');
+  }
+
+  const bytes = await (await fetch(uri)).arrayBuffer();
+  const path = `${user.id}/popup-${slotNumber}.jpg`;
+  const { error } = await client.storage
+    .from('home-popup-images')
+    .upload(path, bytes, {
+      contentType: 'image/jpeg',
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error('팝업 이미지를 업로드하지 못했습니다.');
+  }
+
+  const { data } = client.storage
+    .from('home-popup-images')
+    .getPublicUrl(path);
+
+  return `${data.publicUrl}?v=${Date.now()}`;
 }

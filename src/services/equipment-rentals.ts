@@ -261,6 +261,17 @@ export async function transitionEquipmentRentalRequest(
   await sendPushNotificationEvent('equipment_request_status', id);
 }
 
+export async function adminDeleteEquipmentRentalRequest(id: string) {
+  const { error } = await requireSupabase().rpc(
+    'admin_delete_equipment_request',
+    { target_request_id: id },
+  );
+
+  if (error) {
+    throw new Error('기자재 대여 신청을 삭제하지 못했습니다.');
+  }
+}
+
 function normalizeEquipmentRentalRequest(
   request: EquipmentRentalRow,
 ): EquipmentRentalRequest {

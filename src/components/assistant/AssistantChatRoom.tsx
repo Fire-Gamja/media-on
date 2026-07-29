@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +29,7 @@ type Props = {
   inquiryId: string;
   status: AssistantInquiryStatus;
   canStartChat?: boolean;
+  header?: ReactNode;
   onStatusChange?: (status: AssistantInquiryStatus) => void;
 };
 
@@ -36,6 +37,7 @@ export function AssistantChatRoom({
   inquiryId,
   status,
   canStartChat = false,
+  header,
   onStatusChange,
 }: Props) {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
@@ -51,6 +53,20 @@ export function AssistantChatRoom({
     setLiveStatus(status);
   }, [status]);
 
+  const mergeMessages = useCallback((incoming: AssistantMessage[]) => {
+    setMessages((current) => {
+      const byId = new Map(current.map((message) => [message.id, message]));
+      incoming.forEach((message) => byId.set(message.id, message));
+      return [...byId.values()].sort((left, right) =>
+        left.created_at.localeCompare(right.created_at),
+      );
+    });
+  }, []);
+
+  const refreshMessages = useCallback(async () => {
+    mergeMessages(await getAssistantMessages(inquiryId));
+  }, [inquiryId, mergeMessages]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -60,7 +76,7 @@ export function AssistantChatRoom({
     ])
       .then(([loaded, auth]) => {
         if (!mounted) return;
-        setMessages(loaded);
+        mergeMessages(loaded);
         setUserId(auth?.data.user?.id ?? '');
       })
       .catch((error) =>
@@ -76,24 +92,24 @@ export function AssistantChatRoom({
     const unsubscribeMessages = subscribeToAssistantMessages(
       inquiryId,
       (message) => {
-        setMessages((current) =>
-          current.some((item) => item.id === message.id)
-            ? current
-            : [...current, message],
-        );
+        mergeMessages([message]);
       },
     );
     const unsubscribeStatus = subscribeToAssistantInquiryStatus(
       inquiryId,
       updateStatus,
     );
+    const polling = setInterval(() => {
+      void refreshMessages().catch(() => undefined);
+    }, 2500);
 
     return () => {
       mounted = false;
+      clearInterval(polling);
       unsubscribeMessages();
       unsubscribeStatus();
     };
-  }, [inquiryId]);
+  }, [inquiryId, mergeMessages, refreshMessages]);
 
   const updateStatus = (nextStatus: AssistantInquiryStatus) => {
     setLiveStatus(nextStatus);
@@ -109,6 +125,7 @@ export function AssistantChatRoom({
     try {
       setIsSending(true);
       await sendAssistantMessage(inquiryId, content);
+      await refreshMessages();
     } catch (error) {
       setDraft(content);
       Alert.alert(
@@ -173,14 +190,21 @@ export function AssistantChatRoom({
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
       <FlatList
         ref={listRef}
         data={messages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        keyboardDismissMode={
+          Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+        }
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={header ? <View style={styles.header}>{header}</View> : null}
         onContentSizeChange={() => listRef.current?.scrollToEnd()}
+        onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
         renderItem={({ item }) => {
           const mine = item.sender_id === userId;
 
@@ -247,6 +271,11 @@ export function AssistantChatRoom({
               maxLength={5000}
               placeholder="메시지를 입력하세요"
               placeholderTextColor={COLORS.placeholder}
+              onFocus={() =>
+                requestAnimationFrame(() =>
+                  listRef.current?.scrollToEnd({ animated: true }),
+                )
+              }
               style={styles.input}
             />
             <Pressable
@@ -290,9 +319,10 @@ function formatTime(value: string) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, minHeight: 420 },
+  container: { flex: 1, backgroundColor: COLORS.surface },
   loading: { margin: 40 },
-  list: { minHeight: 250, padding: 18, gap: 10 },
+  list: { flexGrow: 1, padding: 18, paddingBottom: 24, gap: 10 },
+  header: { marginBottom: 16 },
   bubble: { maxWidth: '80%', padding: 12, borderRadius: 16 },
   mine: { alignSelf: 'flex-end', backgroundColor: COLORS.navy },
   theirs: { alignSelf: 'flex-start', backgroundColor: '#EEF0F6' },
@@ -315,6 +345,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
   input: {
     flex: 1,

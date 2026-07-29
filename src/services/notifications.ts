@@ -31,6 +31,17 @@ export async function markNotificationRead(id: string) {
   if (error) throw new Error('알림을 읽음 처리하지 못했습니다.');
 }
 
+export async function deleteNotification(id: string) {
+  const { error } = await requireClient()
+    .from('app_notifications')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    throw new Error('알림을 삭제하지 못했습니다.');
+  }
+}
+
 export async function getUnreadNotificationCount() {
   const { count, error } = await requireClient()
     .from('app_notifications')

@@ -9,12 +9,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import {
   AUTH_COLORS,
   AUTH_FONTS,
 } from '../../constants/auth-theme';
 
-const backIcon = require('../../../assets/figma/auth/back.png');
 const phoneIcon = require('../../../assets/figma/auth/phone.png');
 const passwordAlertIcon = require('../../../assets/figma/auth/password-alert.png');
 const managerIcon = require('../../../assets/figma/auth/manager.png');
@@ -37,7 +37,7 @@ export default function PasswordResetScreen() {
           pressed && styles.pressed,
         ]}
       >
-        <Image source={backIcon} style={styles.backIcon} />
+        <PlatformHeaderIcon color="#FFFFFF" name="back" />
       </Pressable>
 
       <Text style={styles.title}>

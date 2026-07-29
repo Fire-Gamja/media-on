@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
@@ -137,7 +138,7 @@ export default function AdminFacilityReportScreen() {
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Text style={styles.backText}>‹</Text>
+            <PlatformHeaderIcon name="back" />
           </Pressable>
           <Text style={styles.headerTitle}>시설 신고 처리</Text>
           <View style={styles.headerSide} />

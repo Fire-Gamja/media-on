@@ -19,6 +19,13 @@ export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
     keywords: ['공지', '알림', '학과 소식', '긴급 공지'],
   },
   {
+    id: 'rentals',
+    title: '대여',
+    description: '기자재 대여와 실습실 대여를 한곳에서 확인합니다.',
+    route: '/rentals',
+    keywords: ['대여', '기자재', '실습실', '장비', '공간'],
+  },
+  {
     id: 'equipment-rental',
     title: '기자재 대여',
     description: '카메라와 학부 기자재를 조회하고 대여합니다.',
@@ -49,8 +56,8 @@ export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
   {
     id: 'academic-leave',
     title: '휴학·복학 안내',
-    description: '휴학과 복학 절차를 조교 문의에서 확인합니다.',
-    route: '/assistant-inquiry',
+    description: '행정 업무에서 휴학과 복학 절차를 확인합니다.',
+    route: '/administration',
     keywords: [
       '휴학',
       '복학',
@@ -59,6 +66,13 @@ export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
       '휴학하고 싶어',
       '학교를 쉬고 싶어',
     ],
+  },
+  {
+    id: 'administration',
+    title: '행정 업무',
+    description: '휴·복학, 공결, 졸업 및 학과 일정을 확인합니다.',
+    route: '/administration',
+    keywords: ['행정', '휴학', '복학', '공결', '졸업', '학과 일정'],
   },
   {
     id: 'applications',
@@ -87,6 +101,13 @@ export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
     description: '읽지 않은 알림과 이전 알림을 확인합니다.',
     route: '/notifications',
     keywords: ['알림', '푸시', '메시지', '미확인'],
+  },
+  {
+    id: 'settings',
+    title: '설정',
+    description: '일반 알림과 다크 모드 설정을 변경합니다.',
+    route: '/settings',
+    keywords: ['설정', '다크 모드', '알림 끄기', '알림 켜기'],
   },
 ];
 

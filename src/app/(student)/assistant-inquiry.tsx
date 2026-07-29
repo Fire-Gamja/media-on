@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { maskProfanityInput } from '../../lib/content-filter';
 import { getAuthErrorMessage } from '../../services/auth';
@@ -53,7 +54,7 @@ export default function AssistantInquiryScreen() {
   };
 
   return <SafeAreaView style={styles.safeArea} edges={['top']}><StatusBar style="dark" /><KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-    <View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.headerTitle}>조교 문의</Text><Pressable onPress={() => router.push('/assistant-inquiries')}><Text style={styles.historyText}>내 문의</Text></Pressable></View>
+    <View style={styles.header}><Pressable onPress={() => router.back()} hitSlop={10}><PlatformHeaderIcon name="back" /></Pressable><Text style={styles.headerTitle}>조교 문의</Text><Pressable onPress={() => router.push('/assistant-inquiries')}><Text style={styles.historyText}>내 문의</Text></Pressable></View>
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}>
       <View style={styles.guideCard}><Text style={styles.guideTitle}>궁금한 내용을 남겨 주세요.</Text><Text style={styles.guideText}>내용을 먼저 작성하면 AI가 문의 유형과 제목을 추천합니다. 추천 결과는 접수 전에 직접 수정할 수 있습니다.</Text></View>
       <Text style={styles.label}>문의 내용</Text><TextInput value={content} onChangeText={(value) => setContent(maskProfanityInput(value))} maxLength={5000} multiline textAlignVertical="top" placeholder="조교에게 문의할 내용을 자세히 입력해 주세요" placeholderTextColor={COLORS.placeholder} style={styles.contentInput} />

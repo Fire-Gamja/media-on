@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import AuthButton from '../../components/auth/AuthButton';
 import AuthField from '../../components/auth/AuthField';
 import {
@@ -33,7 +34,6 @@ import {
 
 const loginHero = require('../../../assets/figma/auth/login-hero.png');
 const logoMark = require('../../../assets/figma/auth/logo-mark.png');
-const backIcon = require('../../../assets/figma/auth/back.png');
 const eyeIcon = require('../../../assets/figma/auth/eye.png');
 
 type LoginStep = 'welcome' | 'identifier' | 'password';
@@ -176,7 +176,7 @@ export default function LoginScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Image source={backIcon} style={styles.backIcon} />
+              <PlatformHeaderIcon color="#FFFFFF" name="back" />
             </Pressable>
 
             <View style={styles.formContent}>

@@ -7,6 +7,7 @@ type MonthCalendarProps = {
   onSelectDate?: (date: string) => void;
   onChangeMonth?: (month: Date) => void;
   showMonthControls?: boolean;
+  dark?: boolean;
 };
 
 type CalendarCell = {
@@ -24,6 +25,7 @@ export default function MonthCalendar({
   onSelectDate,
   onChangeMonth,
   showMonthControls = false,
+  dark = false,
 }: MonthCalendarProps) {
   const cells = createCalendarCells(month);
   const todayKey = toDateKey(new Date());
@@ -42,13 +44,13 @@ export default function MonthCalendar({
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.monthButtonText}>‹</Text>
+            <Text style={[styles.monthButtonText, dark && styles.darkText]}>‹</Text>
           </Pressable>
         ) : (
           <View style={styles.monthButton} />
         )}
 
-        <Text style={styles.monthTitle}>
+        <Text style={[styles.monthTitle, dark && styles.darkText]}>
           {month.getFullYear()}년 {month.getMonth() + 1}월
         </Text>
 
@@ -63,7 +65,7 @@ export default function MonthCalendar({
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.monthButtonText}>›</Text>
+            <Text style={[styles.monthButtonText, dark && styles.darkText]}>›</Text>
           </Pressable>
         ) : (
           <View style={styles.monthButton} />
@@ -76,6 +78,7 @@ export default function MonthCalendar({
             key={weekday}
             style={[
               styles.weekday,
+              dark && styles.darkSubText,
               index === 0 && styles.sunday,
               index === 6 && styles.saturday,
             ]}
@@ -113,6 +116,7 @@ export default function MonthCalendar({
                 <Text
                   style={[
                     styles.dateText,
+                    dark && styles.darkText,
                     !cell.isCurrentMonth && styles.otherMonth,
                     weekday === 0 && styles.sunday,
                     weekday === 6 && styles.saturday,
@@ -248,6 +252,12 @@ const styles = StyleSheet.create({
   },
   otherMonth: {
     opacity: 0.35,
+  },
+  darkText: {
+    color: '#F7F8FC',
+  },
+  darkSubText: {
+    color: '#AAB2CD',
   },
   sunday: {
     color: '#FF6464',

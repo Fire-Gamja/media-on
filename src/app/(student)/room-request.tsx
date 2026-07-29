@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { DateField, inclusiveDays, parseDate } from '../../components/common/DateField';
 import { TimeSelectField } from '../../components/common/TimeSelectField';
@@ -32,20 +33,16 @@ export default function RoomRequestScreen() {
   const [room, setRoom] = useState<PracticeRoom | null>(null);
   const [reservationDate, setReservationDate] = useState(() => getLocalDate(1));
   const [endDate, setEndDate] = useState(() => getLocalDate(1));
-  const [startTime, setStartTime] = useState('10:00');
-  const [endTime, setEndTime] = useState('11:00');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('09:50');
   const [purpose, setPurpose] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const timeOptions = useMemo(
-    () =>
-      room
-        ? createTimeOptions(room.open_time, room.close_time)
-        : ['10:00', '10:30', '11:00'],
+  const { startTimeOptions, endTimeOptions } = useMemo(
+    () => createClassTimeOptions(room?.open_time, room?.close_time),
     [room],
   );
-  const startTimeOptions = timeOptions.slice(0, -1);
-  const endTimeOptions = timeOptions.filter((value) => value > startTime);
+  const availableEndTimes = endTimeOptions.filter((value) => value > startTime);
 
   useEffect(() => {
     if (!roomId) {
@@ -55,17 +52,14 @@ export default function RoomRequestScreen() {
     void getPracticeRoom(roomId)
       .then((nextRoom) => {
         setRoom(nextRoom);
-        const options = createTimeOptions(
+        const options = createClassTimeOptions(
           nextRoom.open_time,
           nextRoom.close_time,
         );
-        const nextStart = options.includes('10:00')
-          ? '10:00'
-          : options[0];
-        const laterOptions = options.filter((value) => value > nextStart);
-        const nextEnd = laterOptions.includes('11:00')
-          ? '11:00'
-          : laterOptions[0];
+        const nextStart = options.startTimeOptions[0] ?? '09:00';
+        const nextEnd =
+          options.endTimeOptions.find((value) => value > nextStart) ??
+          '09:50';
         setStartTime(nextStart);
         setEndTime(nextEnd);
       })
@@ -131,7 +125,7 @@ export default function RoomRequestScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <Text style={styles.backText}>‹</Text>
+            <PlatformHeaderIcon name="back" />
           </Pressable>
           <Text style={styles.headerTitle}>실습실 대여 신청</Text>
           <View style={styles.headerSide} />
@@ -168,7 +162,8 @@ export default function RoomRequestScreen() {
                     setStartTime(value);
                     if (endTime <= value) {
                       setEndTime(
-                        timeOptions.find((option) => option > value) ?? value,
+                        endTimeOptions.find((option) => option > value) ??
+                          value,
                       );
                     }
                   }}
@@ -178,7 +173,7 @@ export default function RoomRequestScreen() {
                 <TimeSelectField
                   label="종료 시간"
                   onChange={setEndTime}
-                  options={endTimeOptions}
+                  options={availableEndTimes}
                   value={endTime}
                 />
               </View>
@@ -234,24 +229,22 @@ function getLocalDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function createTimeOptions(openTime: string, closeTime: string) {
-  const startMinutes = toMinutes(openTime);
-  const endMinutes = toMinutes(closeTime);
-  const options: string[] = [];
+function createClassTimeOptions(openTime = '09:00', closeTime = '23:50') {
+  const firstHour = Math.floor(toMinutes(openTime) / 60);
+  const lastHour = Math.floor(toMinutes(closeTime) / 60);
+  const hours = Array.from(
+    { length: Math.max(0, lastHour - firstHour + 1) },
+    (_, index) => firstHour + index,
+  );
 
-  for (
-    let current = startMinutes;
-    current <= endMinutes;
-    current += 30
-  ) {
-    const hour = Math.floor(current / 60);
-    const minute = current % 60;
-    options.push(
-      `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
-    );
-  }
-
-  return options;
+  return {
+    startTimeOptions: hours.map(
+      (hour) => `${String(hour).padStart(2, '0')}:00`,
+    ),
+    endTimeOptions: hours.map(
+      (hour) => `${String(hour).padStart(2, '0')}:50`,
+    ),
+  };
 }
 
 function toMinutes(value: string) {

@@ -48,6 +48,7 @@ export async function getPublishedNotices(limit?: number): Promise<Notice[]> {
     .from('notices')
     .select(noticeColumns)
     .eq('is_published', true)
+    .order('is_urgent', { ascending: false })
     .order('published_at', { ascending: false });
 
   if (limit) {
