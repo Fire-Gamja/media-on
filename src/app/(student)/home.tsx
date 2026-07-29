@@ -27,7 +27,6 @@ import MonthCalendar, {
   toDateKey,
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
-import { useAppSettings } from '../../context/app-settings-context';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
@@ -127,7 +126,6 @@ export default function StudentHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { noticeCount } = useNoticeSettings();
-  const { isDarkMode } = useAppSettings();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [notices, setNotices] = useState<HomeNotice[]>(FALLBACK_NOTICES);
   const [schedules, setSchedules] = useState<StudentSchedule[]>([]);
@@ -430,16 +428,11 @@ export default function StudentHomeScreen() {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, isDarkMode && styles.darkSafeArea]}
-      edges={['top']}
-    >
-      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <StatusBar style="dark" />
 
-      <View style={[styles.header, isDarkMode && styles.darkSurface]}>
-        <Text style={[styles.headerTitle, isDarkMode && styles.darkText]}>
-          홈
-        </Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>홈</Text>
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
@@ -451,11 +444,7 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon
-              color={isDarkMode ? '#FFFFFF' : '#2D2D2D'}
-              name="bell"
-              size={20}
-            />
+            <AppIcon color="#2D2D2D" name="bell" size={20} />
             {unreadNotificationCount > 0 ? (
               <View style={styles.notificationDot} />
             ) : null}
@@ -470,11 +459,7 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon
-              color={isDarkMode ? '#FFFFFF' : '#2D2D2D'}
-              name="search"
-              size={20}
-            />
+            <AppIcon color="#2D2D2D" name="search" size={20} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -486,24 +471,20 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon
-              color={isDarkMode ? '#FFFFFF' : '#2D2D2D'}
-              name="settings"
-              size={20}
-            />
+            <AppIcon color="#2D2D2D" name="settings" size={20} />
           </Pressable>
         </View>
       </View>
 
       <ScrollView
-        style={[styles.scrollView, isDarkMode && styles.darkBackground]}
+        style={styles.scrollView}
         contentContainerStyle={styles.content}
         refreshControl={
           <RefreshControl
             colors={['#182365']}
             onRefresh={() => void refreshHome()}
             refreshing={isRefreshing}
-            tintColor={isDarkMode ? '#FFFFFF' : '#182365'}
+            tintColor="#182365"
           />
         }
         showsVerticalScrollIndicator={false}
@@ -522,7 +503,6 @@ export default function StudentHomeScreen() {
               <Text style={styles.profileEditText}>정보 변경</Text>
             </Pressable>
           }
-          dark={isDarkMode}
           title="내 정보"
         />
 
@@ -531,7 +511,6 @@ export default function StudentHomeScreen() {
           onPress={() => setShowStudentId(true)}
           style={({ pressed }) => [
             styles.profileCard,
-            isDarkMode && styles.darkSurface,
             pressed && styles.pressed,
           ]}
         >
@@ -554,19 +533,12 @@ export default function StudentHomeScreen() {
               </Text>
             </View>
             <View style={styles.profileNameRow}>
-              <Text style={[styles.profileName, isDarkMode && styles.darkText]}>
-                {profile?.name ?? '홍길동'}
-              </Text>
-              <Text style={[styles.studentNumber, isDarkMode && styles.darkText]}>
+              <Text style={styles.profileName}>{profile?.name ?? '홍길동'}</Text>
+              <Text style={styles.studentNumber}>
                 ({profile?.student_number ?? '2022112736'})
               </Text>
             </View>
-            <Text
-              style={[
-                styles.profileDepartment,
-                isDarkMode && styles.darkSubText,
-              ]}
-            >
+            <Text style={styles.profileDepartment}>
               미디어콘텐츠학부ㆍ
               {formatMajor(profile?.major ?? '영상미디어전공')}
             </Text>
@@ -574,10 +546,8 @@ export default function StudentHomeScreen() {
         </Pressable>
 
         <View style={styles.sectionGap}>
-          <SectionTitle dark={isDarkMode} title="내 신청 현황" />
-          <View
-            style={[styles.requestSummary, isDarkMode && styles.darkSurface]}
-          >
+          <SectionTitle title="내 신청 현황" />
+          <View style={styles.requestSummary}>
             <RequestCount
               count={requestCounts.pending}
               label="신청 대기"
@@ -617,7 +587,7 @@ export default function StudentHomeScreen() {
         </View>
 
         <View style={styles.sectionGap}>
-          <SectionTitle dark={isDarkMode} title="빠른 메뉴" />
+          <SectionTitle title="빠른 메뉴" />
           <View style={styles.quickMenu}>
             {QUICK_ACTIONS.map((action) => (
               <Pressable
@@ -630,17 +600,9 @@ export default function StudentHomeScreen() {
                 ]}
               >
                 <View style={styles.quickIconBox}>
-                  <AppIcon
-                    color={isDarkMode ? '#CAD1F2' : '#182366'}
-                    name={action.id}
-                    size={34}
-                  />
+                  <AppIcon color="#182366" name={action.id} size={34} />
                 </View>
-                <Text
-                  style={[styles.quickLabel, isDarkMode && styles.darkText]}
-                >
-                  {action.title}
-                </Text>
+                <Text style={styles.quickLabel}>{action.title}</Text>
               </Pressable>
             ))}
           </View>
@@ -651,7 +613,6 @@ export default function StudentHomeScreen() {
           onPress={openInstagram}
           style={({ pressed }) => [
             styles.instagramBanner,
-            isDarkMode && styles.darkSurface,
             pressed && styles.pressed,
           ]}
         >
@@ -662,31 +623,19 @@ export default function StudentHomeScreen() {
             </View>
           </View>
           <View style={styles.instagramBannerText}>
-            <Text
-              style={[
-                styles.instagramBannerTitle,
-                isDarkMode && styles.darkText,
-              ]}
-            >
+            <Text style={styles.instagramBannerTitle}>
               미디어콘텐츠학부 Instagram
             </Text>
-            <Text
-              style={[
-                styles.instagramBannerDescription,
-                isDarkMode && styles.darkSubText,
-              ]}
-            >
+            <Text style={styles.instagramBannerDescription}>
               행사와 학부 소식을 빠르게 확인해 보세요.
             </Text>
           </View>
           <Text style={styles.instagramChevron}>›</Text>
         </Pressable>
 
-        <View style={[styles.cardSection, isDarkMode && styles.darkSurface]}>
+        <View style={styles.cardSection}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, isDarkMode && styles.darkText]}>
-              학과 공지사항
-            </Text>
+            <Text style={styles.cardTitle}>학과 공지사항</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="공지사항 표시 설정"
@@ -716,7 +665,7 @@ export default function StudentHomeScreen() {
                   ) : null}
                   <Text
                     numberOfLines={1}
-                    style={[styles.noticeTitle, isDarkMode && styles.darkText]}
+                    style={styles.noticeTitle}
                   >
                     {notice.title}
                   </Text>
@@ -732,11 +681,9 @@ export default function StudentHomeScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.calendarCard, isDarkMode && styles.darkSurface]}>
+        <View style={styles.calendarCard}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, isDarkMode && styles.darkText]}>
-              일정
-            </Text>
+            <Text style={styles.cardTitle}>일정</Text>
             <View style={styles.calendarHeaderActions}>
               <Pressable
                 accessibilityRole="button"
@@ -771,7 +718,6 @@ export default function StudentHomeScreen() {
 
           <View style={styles.calendarBody}>
             <MonthCalendar
-              dark={isDarkMode}
               eventDates={eventDates}
               month={visibleMonth}
               onChangeMonth={setVisibleMonth}
@@ -788,12 +734,10 @@ export default function StudentHomeScreen() {
               <Text style={styles.operationIconText}>i</Text>
             </View>
             <View style={styles.operationTextArea}>
-              <Text style={[styles.operationTitle, isDarkMode && styles.darkText]}>
+              <Text style={styles.operationTitle}>
                 {operatingHoursDisplay.title}
               </Text>
-              <Text
-                style={[styles.operationText, isDarkMode && styles.darkSubText]}
-              >
+              <Text style={styles.operationText}>
                 {operatingHoursDisplay.description}
               </Text>
             </View>
@@ -960,15 +904,13 @@ export default function StudentHomeScreen() {
 function SectionTitle({
   title,
   action,
-  dark = false,
 }: {
   title: string;
   action?: React.ReactNode;
-  dark?: boolean;
 }) {
   return (
     <View style={styles.sectionTitleRow}>
-      <Text style={[styles.sectionTitle, dark && styles.darkText]}>{title}</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {action}
     </View>
   );
@@ -1662,14 +1604,6 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.65,
   },
-  darkSafeArea: { backgroundColor: '#101424' },
-  darkBackground: { backgroundColor: '#101424' },
-  darkSurface: {
-    borderColor: '#2D3553',
-    backgroundColor: '#171C2E',
-  },
-  darkText: { color: '#F7F8FC' },
-  darkSubText: { color: '#AAB2CD' },
   modalBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',

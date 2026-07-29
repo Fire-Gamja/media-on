@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,11 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppIcon } from '../../components/common/AppIcon';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   type AdminFacilityReport,
+  adminDeleteFacilityReport,
   type FacilityReportStatus,
   getAdminFacilityReports,
   getFacilityCategoryLabel,
@@ -48,6 +51,30 @@ export default function AdminFacilityReportsScreen() {
       void loadReports();
     }, [loadReports]),
   );
+
+  const confirmDelete = (report: AdminFacilityReport) => {
+    Alert.alert(
+      '시설 신고 삭제',
+      `${report.reporter?.name ?? '학생'}의 시설 신고를 삭제하시겠습니까?\n삭제하면 복구할 수 없습니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await adminDeleteFacilityReport(report.id);
+              setReports((current) =>
+                current.filter((item) => item.id !== report.id),
+              );
+            } catch (error) {
+              Alert.alert('삭제 실패', getAuthErrorMessage(error));
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -144,6 +171,17 @@ export default function AdminFacilityReportsScreen() {
                         {getFacilityStatusLabel(report.status)}
                       </Text>
                     </View>
+                    <Pressable
+                      accessibilityLabel="시설 신고 삭제"
+                      hitSlop={8}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        confirmDelete(report);
+                      }}
+                      style={styles.deleteButton}
+                    >
+                      <AppIcon color={COLORS.error} name="trash" size={20} />
+                    </Pressable>
                   </View>
                   <Text style={styles.title} numberOfLines={2}>
                     {report.title}
@@ -215,6 +253,14 @@ const styles = StyleSheet.create({
   studentNumber: { color: COLORS.subText, fontSize: 11 },
   statusBadge: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 10 },
   statusText: { fontSize: 11, fontWeight: '800' },
+  deleteButton: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#FFF1F2',
+  },
   title: { marginTop: 14, color: COLORS.text, fontSize: 16, lineHeight: 23, fontWeight: '800' },
   meta: { marginTop: 8, color: COLORS.subText, fontSize: 12 },
   cardBottom: { marginTop: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

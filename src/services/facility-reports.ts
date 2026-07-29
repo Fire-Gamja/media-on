@@ -215,13 +215,18 @@ export async function transitionFacilityReport(
   adminNote: string,
 ) {
   const client = requireSupabase();
-  const { error } = await client.rpc('transition_facility_report_v2', {
+  const { error } = await client.rpc('admin_transition_facility_report', {
     target_report_id: id,
-    requested_status: status,
-    note: adminNote.trim() || null,
+    target_status: status,
+    admin_note_input: adminNote.trim() || null,
   });
 
   if (error) {
+    console.warn('시설 신고 처리 RPC 실패', {
+      code: error.code,
+      details: error.details,
+      message: error.message,
+    });
     throw new Error(
       status === 'rejected'
         ? '시설 신고를 반려 처리하지 못했습니다.'
@@ -230,4 +235,22 @@ export async function transitionFacilityReport(
   }
 
   await sendPushNotificationEvent('facility_report_status', id);
+}
+
+export async function adminDeleteFacilityReport(id: string) {
+  const { error } = await requireSupabase().rpc(
+    'admin_delete_facility_report',
+    {
+      target_report_id: id,
+    },
+  );
+
+  if (error) {
+    console.warn('시설 신고 삭제 RPC 실패', {
+      code: error.code,
+      details: error.details,
+      message: error.message,
+    });
+    throw new Error('시설 신고를 삭제하지 못했습니다.');
+  }
 }

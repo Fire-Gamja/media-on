@@ -105,9 +105,9 @@ export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
   {
     id: 'settings',
     title: '설정',
-    description: '일반 알림과 다크 모드 설정을 변경합니다.',
+    description: '일반 상태 알림 설정을 변경합니다.',
     route: '/settings',
-    keywords: ['설정', '다크 모드', '알림 끄기', '알림 켜기'],
+    keywords: ['설정', '알림 끄기', '알림 켜기'],
   },
 ];
 

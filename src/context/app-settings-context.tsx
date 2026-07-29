@@ -10,7 +10,6 @@ import {
 import { Appearance } from 'react-native';
 
 import {
-  type AppColorMode,
   type AppSettings,
   DEFAULT_APP_SETTINGS,
   getMyAppSettings,
@@ -18,9 +17,7 @@ import {
 } from '../services/app-settings';
 
 type AppSettingsContextValue = AppSettings & {
-  isDarkMode: boolean;
   isLoaded: boolean;
-  setColorMode: (mode: AppColorMode) => Promise<void>;
   setGeneralNotificationsEnabled: (enabled: boolean) => Promise<void>;
   refreshSettings: () => Promise<void>;
 };
@@ -45,8 +42,8 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
   }, [refreshSettings]);
 
   useEffect(() => {
-    Appearance.setColorScheme(settings.colorMode);
-  }, [settings.colorMode]);
+    Appearance.setColorScheme('light');
+  }, []);
 
   const saveSettings = useCallback(async (next: AppSettings) => {
     const previous = settings;
@@ -63,10 +60,8 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
   const value = useMemo<AppSettingsContextValue>(
     () => ({
       ...settings,
-      isDarkMode: settings.colorMode === 'dark',
       isLoaded,
       refreshSettings,
-      setColorMode: (colorMode) => saveSettings({ ...settings, colorMode }),
       setGeneralNotificationsEnabled: (generalNotificationsEnabled) =>
         saveSettings({ ...settings, generalNotificationsEnabled }),
     }),

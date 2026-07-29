@@ -20,94 +20,61 @@ import { getAuthErrorMessage } from '../../services/auth';
 
 export default function StudentSettingsScreen() {
   const {
-    colorMode,
     generalNotificationsEnabled,
-    isDarkMode,
-    setColorMode,
     setGeneralNotificationsEnabled,
   } = useAppSettings();
-  const [savingKey, setSavingKey] = useState<'notifications' | 'theme' | null>(
-    null,
-  );
+  const [isSaving, setIsSaving] = useState(false);
 
   const updateGeneralNotifications = async (enabled: boolean) => {
     try {
-      setSavingKey('notifications');
+      setIsSaving(true);
       await setGeneralNotificationsEnabled(enabled);
     } catch (error) {
       Alert.alert('설정 실패', getAuthErrorMessage(error));
     } finally {
-      setSavingKey(null);
-    }
-  };
-
-  const updateTheme = async (dark: boolean) => {
-    try {
-      setSavingKey('theme');
-      await setColorMode(dark ? 'dark' : 'light');
-    } catch (error) {
-      Alert.alert('설정 실패', getAuthErrorMessage(error));
-    } finally {
-      setSavingKey(null);
+      setIsSaving(false);
     }
   };
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={[styles.safeArea, isDarkMode && styles.darkSafeArea]}
-    >
-      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-      <View style={[styles.header, isDarkMode && styles.darkSurface]}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <StatusBar style="dark" />
+      <View style={styles.header}>
         <Pressable
           accessibilityLabel="뒤로 가기"
           hitSlop={10}
           onPress={() => router.back()}
           style={styles.headerSide}
         >
-          <PlatformHeaderIcon
-            color={isDarkMode ? COLORS.white : COLORS.navy}
-            name="back"
-          />
+          <PlatformHeaderIcon color={COLORS.navy} name="back" />
         </Pressable>
-        <Text style={[styles.headerTitle, isDarkMode && styles.darkText]}>
-          설정
-        </Text>
+        <Text style={styles.headerTitle}>설정</Text>
         <View style={styles.headerSide} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
-        style={[styles.scrollView, isDarkMode && styles.darkBackground]}
+        style={styles.scrollView}
       >
-        <Text style={[styles.sectionLabel, isDarkMode && styles.darkSubText]}>
-          알림
-        </Text>
-        <View style={[styles.card, isDarkMode && styles.darkSurface]}>
+        <Text style={styles.sectionLabel}>알림</Text>
+        <View style={styles.card}>
           <SettingRow
             description="공지, 대여·신고·문의 처리 상태 알림"
-            disabled={savingKey !== null}
-            isDarkMode={isDarkMode}
+            disabled={isSaving}
             label="일반 상태 알림"
             onValueChange={(value) => void updateGeneralNotifications(value)}
             value={generalNotificationsEnabled}
           />
-          <View
-            style={[styles.divider, isDarkMode && styles.darkDivider]}
-          />
+          <View style={styles.divider} />
           <View style={styles.row}>
             <View style={styles.rowText}>
               <View style={styles.lockedTitleRow}>
-                <Text style={[styles.rowTitle, isDarkMode && styles.darkText]}>
-                  긴급 알림
-                </Text>
+                <Text style={styles.rowTitle}>긴급 알림</Text>
                 <View style={styles.requiredBadge}>
                   <Text style={styles.requiredText}>필수</Text>
                 </View>
               </View>
-              <Text
-                style={[styles.rowDescription, isDarkMode && styles.darkSubText]}
-              >
+              <Text style={styles.rowDescription}>
                 안전·학사 긴급 공지는 항상 전달됩니다.
               </Text>
             </View>
@@ -121,26 +88,10 @@ export default function StudentSettingsScreen() {
           </View>
         </View>
 
-        <Text style={[styles.sectionLabel, isDarkMode && styles.darkSubText]}>
-          화면
-        </Text>
-        <View style={[styles.card, isDarkMode && styles.darkSurface]}>
-          <SettingRow
-            description="학생 화면을 어두운 색상으로 표시합니다."
-            disabled={savingKey !== null}
-            isDarkMode={isDarkMode}
-            label="다크 모드"
-            onValueChange={(value) => void updateTheme(value)}
-            value={colorMode === 'dark'}
-          />
-        </View>
-
-        {savingKey ? (
+        {isSaving ? (
           <View style={styles.saving}>
             <ActivityIndicator color={COLORS.navy} />
-            <Text style={[styles.savingText, isDarkMode && styles.darkSubText]}>
-              설정을 저장하는 중입니다.
-            </Text>
+            <Text style={styles.savingText}>설정을 저장하는 중입니다.</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -151,14 +102,12 @@ export default function StudentSettingsScreen() {
 function SettingRow({
   description,
   disabled,
-  isDarkMode,
   label,
   onValueChange,
   value,
 }: {
   description: string;
   disabled: boolean;
-  isDarkMode: boolean;
   label: string;
   onValueChange: (value: boolean) => void;
   value: boolean;
@@ -166,14 +115,8 @@ function SettingRow({
   return (
     <View style={styles.row}>
       <View style={styles.rowText}>
-        <Text style={[styles.rowTitle, isDarkMode && styles.darkText]}>
-          {label}
-        </Text>
-        <Text
-          style={[styles.rowDescription, isDarkMode && styles.darkSubText]}
-        >
-          {description}
-        </Text>
+        <Text style={styles.rowTitle}>{label}</Text>
+        <Text style={styles.rowDescription}>{description}</Text>
       </View>
       <Switch
         disabled={disabled}
@@ -189,7 +132,6 @@ function SettingRow({
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.surface },
-  darkSafeArea: { backgroundColor: '#101424' },
   header: {
     height: 60,
     paddingHorizontal: 16,
@@ -251,9 +193,4 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   savingText: { color: COLORS.subText, fontSize: 12 },
-  darkSurface: { borderColor: '#2D3553', backgroundColor: '#171C2E' },
-  darkBackground: { backgroundColor: '#101424' },
-  darkText: { color: '#F7F8FC' },
-  darkSubText: { color: '#AAB2CD' },
-  darkDivider: { backgroundColor: '#2D3553' },
 });
