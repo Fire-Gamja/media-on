@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { PushNotificationManager } from '../components/PushNotificationManager';
 import { AppSettingsProvider } from '../context/app-settings-context';
@@ -29,16 +30,18 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppSettingsProvider>
-          <PushNotificationManager />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-            }}
-          />
-        </AppSettingsProvider>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <AppSettingsProvider>
+            <PushNotificationManager />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+              }}
+            />
+          </AppSettingsProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

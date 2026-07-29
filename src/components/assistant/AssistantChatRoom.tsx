@@ -1,16 +1,25 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type ComponentRef,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import {
+  KeyboardChatScrollView,
+  KeyboardStickyView,
+} from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
 import { maskProfanityInput } from '../../lib/content-filter';
@@ -40,6 +49,7 @@ export function AssistantChatRoom({
   header,
   onStatusChange,
 }: Props) {
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [liveStatus, setLiveStatus] = useState(status);
   const [userId, setUserId] = useState('');
@@ -47,7 +57,8 @@ export function AssistantChatRoom({
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isChangingStatus, setIsChangingStatus] = useState(false);
-  const listRef = useRef<FlatList<AssistantMessage>>(null);
+  const listRef =
+    useRef<ComponentRef<typeof KeyboardChatScrollView>>(null);
 
   useEffect(() => {
     setLiveStatus(status);
@@ -188,43 +199,43 @@ export function AssistantChatRoom({
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
-    >
-      <FlatList
+    <View style={styles.container}>
+      <KeyboardChatScrollView
         ref={listRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
+        style={styles.chatScroll}
         contentContainerStyle={styles.list}
-        keyboardDismissMode={
-          Platform.OS === 'ios' ? 'interactive' : 'on-drag'
-        }
+        automaticallyAdjustKeyboardInsets={false}
+        keyboardDismissMode="interactive"
+        keyboardLiftBehavior="always"
         keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={header ? <View style={styles.header}>{header}</View> : null}
         onContentSizeChange={() => listRef.current?.scrollToEnd()}
         onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
-        renderItem={({ item }) => {
-          const mine = item.sender_id === userId;
-
-          return (
-            <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-              <Text style={[styles.message, mine && styles.mineText]}>
-                {item.content}
-              </Text>
-              <Text style={[styles.time, mine && styles.mineTime]}>
-                {formatTime(item.created_at)}
-              </Text>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
+      >
+        {header ? <View style={styles.header}>{header}</View> : null}
+        {messages.length === 0 ? (
           <Text style={styles.empty}>
             상담이 시작되면 이곳에서 실시간으로 대화할 수 있습니다.
           </Text>
-        }
-      />
+        ) : (
+          messages.map((item) => {
+            const mine = item.sender_id === userId;
+
+            return (
+              <View
+                key={item.id}
+                style={[styles.bubble, mine ? styles.mine : styles.theirs]}
+              >
+                <Text style={[styles.message, mine && styles.mineText]}>
+                  {item.content}
+                </Text>
+                <Text style={[styles.time, mine && styles.mineTime]}>
+                  {formatTime(item.created_at)}
+                </Text>
+              </View>
+            );
+          })
+        )}
+      </KeyboardChatScrollView>
 
       {liveStatus === 'submitted' ? (
         canStartChat ? (
@@ -260,7 +271,13 @@ export function AssistantChatRoom({
           <Text style={styles.closedText}>상담이 완료되었습니다.</Text>
         </View>
       ) : (
-        <>
+        <KeyboardStickyView
+          offset={{ closed: 0, opened: insets.bottom }}
+          style={[
+            styles.chatFooter,
+            { paddingBottom: insets.bottom },
+          ]}
+        >
           <View style={styles.composer}>
             <TextInput
               value={draft}
@@ -271,6 +288,9 @@ export function AssistantChatRoom({
               maxLength={5000}
               placeholder="메시지를 입력하세요"
               placeholderTextColor={COLORS.placeholder}
+              keyboardAppearance="light"
+              selectionColor={COLORS.navy}
+              textAlignVertical="center"
               onFocus={() =>
                 requestAnimationFrame(() =>
                   listRef.current?.scrollToEnd({ animated: true }),
@@ -303,9 +323,9 @@ export function AssistantChatRoom({
               <Text style={styles.endButtonText}>상담 종료</Text>
             )}
           </Pressable>
-        </>
+        </KeyboardStickyView>
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -320,6 +340,7 @@ function formatTime(value: string) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
+  chatScroll: { flex: 1 },
   loading: { margin: 40 },
   list: { flexGrow: 1, padding: 18, paddingBottom: 24, gap: 10 },
   header: { marginBottom: 16 },
@@ -338,6 +359,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
+  chatFooter: { backgroundColor: COLORS.surface },
   composer: {
     padding: 12,
     flexDirection: 'row',
@@ -356,8 +378,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 16,
+    backgroundColor: COLORS.surface,
     color: COLORS.text,
     fontSize: 14,
+    lineHeight: 20,
   },
   send: {
     height: 46,
