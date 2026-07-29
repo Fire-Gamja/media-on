@@ -62,6 +62,11 @@ import {
   getStudentSchedules,
   type StudentSchedule,
 } from '../../services/student-schedule';
+import {
+  DEFAULT_PRE_GRADUATION_SETTINGS,
+  getPreGraduationSettings,
+  type PreGraduationSettings,
+} from '../../services/pre-graduation';
 
 const settingsIcon = require('../../../assets/figma/student/settings.png');
 const profileAvatar = require('../../../assets/figma/student/profile-avatar.png');
@@ -143,6 +148,8 @@ export default function StudentHomeScreen() {
   const [popupIndex, setPopupIndex] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStudentId, setShowStudentId] = useState(false);
+  const [preGraduationSettings, setPreGraduationSettings] =
+    useState<PreGraduationSettings>(DEFAULT_PRE_GRADUATION_SETTINGS);
 
   const visibleNotices = notices.slice(0, Math.max(1, noticeCount));
   const requestCounts = useMemo(
@@ -290,6 +297,11 @@ export default function StudentHomeScreen() {
     useCallback(() => {
       void getStudentSchedules().then(setSchedules);
       void getOperatingHoursSettings().then(setOperatingHours);
+      void getPreGraduationSettings()
+        .then(setPreGraduationSettings)
+        .catch(() =>
+          setPreGraduationSettings(DEFAULT_PRE_GRADUATION_SETTINGS),
+        );
 
       if (!isSupabaseConfigured) {
         return;
@@ -373,6 +385,37 @@ export default function StudentHomeScreen() {
     router.push(routes[action.id]);
   };
 
+  const openPreGraduation = () => {
+    if (!profile) {
+      Alert.alert(
+        '정보 확인 중',
+        '학생 정보를 확인한 뒤 다시 시도해 주세요.',
+      );
+      return;
+    }
+
+    if (profile.grade !== 4) {
+      Alert.alert(
+        '4학년 전용',
+        '예비졸업사정 신청은 4학년 학생만 이용할 수 있습니다.',
+      );
+      return;
+    }
+
+    if (
+      !preGraduationSettings.access_enabled ||
+      preGraduationSettings.enabled_weekdays.length === 0
+    ) {
+      Alert.alert(
+        '신청 기간 아님',
+        '관리자가 예비졸업사정 신청을 열면 이용할 수 있습니다.',
+      );
+      return;
+    }
+
+    router.push('/pre-graduation');
+  };
+
   const refreshHome = async () => {
     setIsRefreshing(true);
 
@@ -385,6 +428,9 @@ export default function StudentHomeScreen() {
       setOperatingHours(nextHours);
 
       if (isSupabaseConfigured) {
+        const preGraduationSettingsPromise = getPreGraduationSettings().catch(
+          () => DEFAULT_PRE_GRADUATION_SETTINGS,
+        );
         const [
           nextProfile,
           nextApplicationItems,
@@ -399,6 +445,9 @@ export default function StudentHomeScreen() {
         setProfile(nextProfile);
         setApplicationItems(nextApplicationItems);
         setUnreadNotificationCount(nextUnreadCount);
+        setPreGraduationSettings(
+          await preGraduationSettingsPromise,
+        );
         setNotices(
           nextNotices.map((notice) => ({
             id: notice.id,
@@ -631,6 +680,55 @@ export default function StudentHomeScreen() {
             </Text>
           </View>
           <Text style={styles.instagramChevron}>›</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={openPreGraduation}
+          style={({ pressed }) => [
+            styles.preGraduationBanner,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.preGraduationLogo}>
+            <AppIcon color="#182365" name="graduation" size={28} />
+          </View>
+          <View style={styles.preGraduationBannerText}>
+            <Text style={styles.preGraduationBannerTitle}>
+              4학년 예비졸업사정
+            </Text>
+            <Text style={styles.preGraduationBannerDescription}>
+              요일과 시간을 선택해 예비졸업사정을 예약하세요.
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.preGraduationStatus,
+              profile?.grade === 4 &&
+              preGraduationSettings.access_enabled &&
+              preGraduationSettings.enabled_weekdays.length > 0
+                ? styles.preGraduationStatusOpen
+                : styles.preGraduationStatusClosed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.preGraduationStatusText,
+                profile?.grade === 4 &&
+                preGraduationSettings.access_enabled &&
+                preGraduationSettings.enabled_weekdays.length > 0
+                  ? styles.preGraduationStatusTextOpen
+                  : styles.preGraduationStatusTextClosed,
+              ]}
+            >
+              {profile?.grade === 4 &&
+              preGraduationSettings.access_enabled &&
+              preGraduationSettings.enabled_weekdays.length > 0
+                ? '신청 가능'
+                : '접근 제한'}
+            </Text>
+          </View>
+          <Text style={styles.preGraduationChevron}>›</Text>
         </Pressable>
 
         <View style={styles.cardSection}>
@@ -1298,6 +1396,67 @@ const styles = StyleSheet.create({
   },
   instagramChevron: {
     marginLeft: 8,
+    color: '#8C8C8C',
+    fontSize: 24,
+  },
+  preGraduationBanner: {
+    minHeight: 78,
+    marginTop: 10,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E4E7F4',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  preGraduationLogo: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: '#ECEEF8',
+  },
+  preGraduationBannerText: {
+    flex: 1,
+    marginLeft: 13,
+  },
+  preGraduationBannerTitle: {
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 15,
+  },
+  preGraduationBannerDescription: {
+    marginTop: 5,
+    color: '#777777',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 11,
+  },
+  preGraduationStatus: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  preGraduationStatusOpen: {
+    backgroundColor: '#E9F8ED',
+  },
+  preGraduationStatusClosed: {
+    backgroundColor: '#F1F2F5',
+  },
+  preGraduationStatusText: {
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 10,
+  },
+  preGraduationStatusTextOpen: {
+    color: '#16A34A',
+  },
+  preGraduationStatusTextClosed: {
+    color: '#8C8C8C',
+  },
+  preGraduationChevron: {
+    marginLeft: 6,
     color: '#8C8C8C',
     fontSize: 24,
   },

@@ -53,7 +53,8 @@ type ManagementAction = {
     | 'facility'
     | 'assistant'
     | 'popup'
-    | 'hours';
+    | 'hours'
+    | 'graduation';
   title: string;
   route:
     | '/admin-notices'
@@ -62,7 +63,8 @@ type ManagementAction = {
     | '/admin-facility-reports'
     | '/admin-assistant-inquiries'
     | '/admin-home-popups'
-    | '/admin-operating-hours';
+    | '/admin-operating-hours'
+    | '/admin-pre-graduation';
   icon: AppIconName;
 };
 
@@ -116,6 +118,12 @@ const MANAGEMENT_ACTIONS: ManagementAction[] = [
     title: '운영시간',
     route: '/admin-operating-hours',
     icon: 'hours',
+  },
+  {
+    id: 'graduation',
+    title: '예졸사 예약',
+    route: '/admin-pre-graduation',
+    icon: 'graduation',
   },
 ];
 
@@ -569,8 +577,10 @@ export default function AdminHomeScreen() {
                     </Text>
                   </View>
                   <View style={styles.inquiryPerson}>
-                    <Text numberOfLines={1} style={styles.inquiryName}>
-                      {inquiry.name}
+                    <Text numberOfLines={1} style={styles.inquiryIdentity}>
+                      {inquiry.studentNumber
+                        ? `${inquiry.studentNumber} · ${inquiry.name}`
+                        : inquiry.name}
                     </Text>
                     <Text style={styles.inquiryDate}>
                       {formatShortDate(inquiry.date)}
@@ -1107,7 +1117,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   inquiryCard: {
-    minHeight: 50,
+    minHeight: 58,
     paddingHorizontal: 12,
     paddingVertical: 13,
     flexDirection: 'row',
@@ -1136,16 +1146,16 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
   },
-  inquiryName: {
+  inquiryIdentity: {
     color: '#000000',
     fontFamily: 'FreesentationSemiBold',
-    fontSize: 10,
+    fontSize: 14,
   },
   inquiryDate: {
-    marginTop: 2,
+    marginTop: 4,
     color: '#39393E',
     fontFamily: 'FreesentationRegular',
-    fontSize: 10,
+    fontSize: 11,
   },
   inquiryStatus: {
     flexDirection: 'row',
