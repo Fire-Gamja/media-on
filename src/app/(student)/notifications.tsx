@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import {
@@ -64,7 +64,7 @@ export default function StudentNotificationsScreen() {
     }
 
     if (notification.route) {
-      router.push(notification.route);
+      router.push(notification.route as Href);
     }
   };
 
