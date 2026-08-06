@@ -11,6 +11,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -24,6 +25,14 @@ import FormField from '../components/common/FormField';
 import { PlatformHeaderIcon } from '../components/common/PlatformHeaderIcon';
 import PrimaryButton from '../components/common/PrimaryButton';
 import { COLORS } from '../constants/colors';
+import {
+  getProfileAvatarPresetValue,
+  getProfileAvatarSource,
+  getSelectedProfileAvatarPreset,
+  isProfileAvatarPreset,
+  PROFILE_AVATAR_OPTIONS,
+  type ProfileAvatarPreset,
+} from '../lib/profile-avatar';
 import { supabase } from '../lib/supabase';
 import {
   changeCurrentPassword,
@@ -41,7 +50,6 @@ const MAJORS = [
   '전공 미정',
 ] as const;
 const ENROLLMENT_STATUSES = ['재학', '휴학', '졸업', '제적·자퇴'] as const;
-const profileAvatar = require('../../assets/figma/student/profile-avatar.png');
 
 export default function ProfileScreen() {
   const { mustChangePassword } = useLocalSearchParams<{
@@ -62,6 +70,7 @@ export default function ProfileScreen() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isAvatarPickerVisible, setIsAvatarPickerVisible] = useState(false);
 
   const applyProfile = useCallback((nextProfile: StudentProfile) => {
     setProfile(nextProfile);
@@ -86,21 +95,64 @@ export default function ProfileScreen() {
     }
   }, [applyProfile]);
 
-  const handleAvatarChange = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.75 });
+  const handleAvatarPhotoUpload = async () => {
+    setIsAvatarPickerVisible(false);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.75,
+    });
     if (result.canceled || !supabase || !profile) return;
     try {
       setIsSaving(true);
       const bytes = await (await fetch(result.assets[0].uri)).arrayBuffer();
       const path = `${profile.id}/avatar.jpg`;
-      const { error } = await supabase.storage.from('profile-images').upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+      const { error } = await supabase.storage
+        .from('profile-images')
+        .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
       if (error) throw error;
-      const { data } = supabase.storage.from('profile-images').getPublicUrl(path);
+      const { data } = supabase.storage
+        .from('profile-images')
+        .getPublicUrl(path);
       const url = `${data.publicUrl}?v=${Date.now()}`;
       const updatedProfile = await updateCurrentAvatarUrl(url);
       applyProfile(updatedProfile);
     } catch {
       Alert.alert('변경 실패', '프로필 사진을 변경하지 못했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAvatarPresetChange = async (preset: ProfileAvatarPreset) => {
+    if (!profile || !supabase) return;
+
+    const nextAvatarValue = getProfileAvatarPresetValue(preset);
+    if (avatarUrl === nextAvatarValue || (!avatarUrl && preset === 'male')) {
+      setIsAvatarPickerVisible(false);
+      return;
+    }
+
+    const previousAvatarUrl = avatarUrl;
+
+    try {
+      setIsSaving(true);
+      const updatedProfile = await updateCurrentAvatarUrl(nextAvatarValue);
+      applyProfile(updatedProfile);
+      setIsAvatarPickerVisible(false);
+
+      if (previousAvatarUrl && !isProfileAvatarPreset(previousAvatarUrl)) {
+        const { error } = await supabase.storage
+          .from('profile-images')
+          .remove([`${profile.id}/avatar.jpg`]);
+
+        if (error) {
+          console.warn('기존 프로필 사진 파일을 삭제하지 못했습니다.', error);
+        }
+      }
+    } catch {
+      Alert.alert('변경 실패', '기본 프로필을 변경하지 못했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -293,17 +345,13 @@ export default function ProfileScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.profileCard}>
-              {avatarUrl ? (
-                <Image
-                  source={{ uri: avatarUrl }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <Image source={profileAvatar} style={styles.avatarImage} />
-              )}
+              <Image
+                source={getProfileAvatarSource(avatarUrl)}
+                style={styles.avatarImage}
+              />
               <Pressable
                 disabled={isSaving}
-                onPress={() => void handleAvatarChange()}
+                onPress={() => setIsAvatarPickerVisible(true)}
                 style={({ pressed }) => [
                   styles.avatarChangeButton,
                   isSaving && styles.disabled,
@@ -465,6 +513,87 @@ export default function ProfileScreen() {
           </ScrollView>
         )}
       </KeyboardAvoidingView>
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setIsAvatarPickerVisible(false)}
+        transparent
+        visible={isAvatarPickerVisible}
+      >
+        <View style={styles.avatarModalBackdrop}>
+          <Pressable
+            accessibilityLabel="프로필 선택 닫기"
+            onPress={() => setIsAvatarPickerVisible(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.avatarModalCard}>
+            <Text style={styles.avatarModalTitle}>프로필 사진 선택</Text>
+            <Text style={styles.avatarModalDescription}>
+              기본 프로필을 고르거나 내 사진을 사용할 수 있습니다.
+            </Text>
+            <View style={styles.avatarPresetRow}>
+              {PROFILE_AVATAR_OPTIONS.map((option) => {
+                const selected =
+                  getSelectedProfileAvatarPreset(avatarUrl) === option.preset;
+
+                return (
+                  <Pressable
+                    key={option.preset}
+                    accessibilityLabel={`${option.label} 기본 프로필`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    disabled={isSaving}
+                    onPress={() =>
+                      void handleAvatarPresetChange(option.preset)
+                    }
+                    style={({ pressed }) => [
+                      styles.avatarPresetOption,
+                      selected && styles.avatarPresetOptionSelected,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Image
+                      source={option.source}
+                      style={styles.avatarPresetImage}
+                    />
+                    <Text
+                      style={[
+                        styles.avatarPresetLabel,
+                        selected && styles.avatarPresetLabelSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text style={styles.avatarPresetState}>
+                      {selected ? '선택됨' : '선택하기'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Pressable
+              disabled={isSaving}
+              onPress={() => void handleAvatarPhotoUpload()}
+              style={({ pressed }) => [
+                styles.avatarUploadButton,
+                isSaving && styles.disabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.avatarUploadButtonText}>내 사진 업로드</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setIsAvatarPickerVisible(false)}
+              style={({ pressed }) => [
+                styles.avatarModalCloseButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.avatarModalCloseText}>취소</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -599,6 +728,96 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  avatarModalBackdrop: {
+    flex: 1,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(14, 20, 54, 0.58)',
+  },
+  avatarModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    padding: 22,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+  },
+  avatarModalTitle: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  avatarModalDescription: {
+    marginTop: 7,
+    color: COLORS.subText,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
+  avatarPresetRow: {
+    marginTop: 20,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  avatarPresetOption: {
+    flex: 1,
+    minHeight: 166,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderRadius: 17,
+    backgroundColor: COLORS.background,
+  },
+  avatarPresetOptionSelected: {
+    borderColor: COLORS.navy,
+    backgroundColor: COLORS.softNavy,
+  },
+  avatarPresetImage: {
+    width: 94,
+    height: 94,
+    borderRadius: 47,
+  },
+  avatarPresetLabel: {
+    marginTop: 9,
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  avatarPresetLabelSelected: {
+    color: COLORS.navy,
+  },
+  avatarPresetState: {
+    marginTop: 3,
+    color: COLORS.subText,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  avatarUploadButton: {
+    minHeight: 48,
+    marginTop: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: COLORS.navy,
+  },
+  avatarUploadButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  avatarModalCloseButton: {
+    minHeight: 44,
+    marginTop: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarModalCloseText: {
+    color: COLORS.subText,
+    fontSize: 14,
+    fontWeight: '700',
   },
   profileName: {
     marginTop: 14,

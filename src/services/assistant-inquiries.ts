@@ -66,11 +66,11 @@ export const ASSISTANT_CATEGORY_OPTIONS: ReadonlyArray<{
   value: AssistantInquiryCategory;
   label: string;
 }> = [
-  { value: 'academic', label: '수강·학사' },
+  { value: 'academic', label: '학사·행정' },
   { value: 'equipment', label: '기자재 대여' },
   { value: 'room', label: '실습실 대여' },
   { value: 'facility', label: '시설·환경' },
-  { value: 'other', label: '기타' },
+  { value: 'other', label: '기타 행정 문의' },
 ];
 
 export const ASSISTANT_CATEGORY_GROUPS: ReadonlyArray<{
@@ -80,12 +80,12 @@ export const ASSISTANT_CATEGORY_GROUPS: ReadonlyArray<{
 }> = [
   {
     value: 'practice',
-    label: '실습',
+    label: '실습조교',
     categories: ['equipment', 'room', 'facility'],
   },
   {
     value: 'administration',
-    label: '행정',
+    label: '행정조교',
     categories: ['academic', 'other'],
   },
 ];

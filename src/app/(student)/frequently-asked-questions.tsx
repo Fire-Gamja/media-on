@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -52,6 +53,12 @@ export default function FrequentlyAskedQuestionsScreen() {
     });
   }, [query, selectedCategory]);
 
+  const resultTitle = query.trim()
+    ? `검색 결과 ${visibleQuestions.length}개`
+    : selectedCategory === ALL_CATEGORIES
+      ? `전체 질문 ${visibleQuestions.length}개`
+      : `${selectedCategory} 관련 질문 ${visibleQuestions.length}개`;
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -73,24 +80,14 @@ export default function FrequentlyAskedQuestionsScreen() {
         keyboardShouldPersistTaps="handled"
         style={styles.scrollView}
       >
-        <View style={styles.introCard}>
-          <View style={styles.introIcon}>
-            <AppIcon name="faq" size={30} />
-          </View>
-          <View style={styles.introTextArea}>
-            <Text style={styles.introTitle}>궁금한 내용을 찾아보세요.</Text>
-            <Text style={styles.introDescription}>
-              질문을 검색하거나 카테고리별로 빠르게 확인할 수 있습니다.
-            </Text>
-          </View>
-        </View>
-
         <View style={styles.searchBox}>
-          <AppIcon color={COLORS.subText} name="search" size={20} />
+          <AppIcon color={COLORS.text} name="search" size={21} />
           <TextInput
+            accessibilityLabel="자주 묻는 질문 검색"
             onChangeText={setQuery}
-            placeholder="질문 검색"
+            placeholder="예: 군휴학 신청"
             placeholderTextColor={COLORS.placeholder}
+            returnKeyType="search"
             style={styles.searchInput}
             value={query}
           />
@@ -118,6 +115,11 @@ export default function FrequentlyAskedQuestionsScreen() {
             );
           })}
         </ScrollView>
+
+        <View style={styles.resultHeader}>
+          <Text style={styles.resultTitle}>{resultTitle}</Text>
+          <Text style={styles.resultHint}>질문을 누르면 답변이 펼쳐집니다.</Text>
+        </View>
 
         {visibleQuestions.length > 0 ? (
           <View style={styles.questionList}>
@@ -167,18 +169,47 @@ function QuestionItem({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.questionCard, pressed && styles.pressed]}
+      accessibilityState={{ expanded: open }}
+      style={({ pressed }) => [
+        styles.questionCard,
+        open && styles.questionCardOpen,
+        pressed && styles.pressed,
+      ]}
     >
       <View style={styles.questionHeader}>
+        <View style={[styles.questionBadge, open && styles.questionBadgeOpen]}>
+          <Text style={[styles.questionBadgeText, open && styles.questionBadgeTextOpen]}>
+            Q
+          </Text>
+        </View>
         <View style={styles.questionTextArea}>
           <Text style={styles.questionCategory}>{item.category}</Text>
-          <Text style={styles.questionText}>Q. {item.question}</Text>
+          <Text style={styles.questionText}>{item.question}</Text>
         </View>
-        <Text style={styles.chevron}>{open ? '−' : '+'}</Text>
+        <Text style={[styles.chevron, open && styles.chevronOpen]}>
+          {open ? '⌃' : '⌄'}
+        </Text>
       </View>
       {open ? (
         <View style={styles.answerArea}>
           <Text style={styles.answerText}>{item.answer}</Text>
+          {item.links?.map((link) => (
+            <Pressable
+              key={link.url}
+              accessibilityRole="link"
+              onPress={(event) => {
+                event.stopPropagation();
+                void Linking.openURL(link.url);
+              }}
+              style={({ pressed }) => [
+                styles.linkButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.linkText}>{link.label}</Text>
+              <Text style={styles.linkArrow}>›</Text>
+            </Pressable>
+          ))}
         </View>
       ) : null}
     </Pressable>
@@ -197,8 +228,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
   headerSide: {
@@ -208,93 +237,99 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { color: COLORS.text, fontSize: 19, fontWeight: '900' },
-  scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingBottom: 48 },
-  introCard: {
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 18,
-    backgroundColor: COLORS.navy,
-  },
-  introIcon: {
-    width: 50,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    backgroundColor: COLORS.white,
-  },
-  introTextArea: { flex: 1, marginLeft: 14 },
-  introTitle: { color: COLORS.white, fontSize: 16, fontWeight: '900' },
-  introDescription: {
-    marginTop: 6,
-    color: '#D9DDEF',
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  scrollView: { flex: 1, backgroundColor: COLORS.surface },
+  content: { paddingHorizontal: 22, paddingTop: 22, paddingBottom: 52 },
   searchBox: {
-    height: 52,
-    marginTop: 18,
+    height: 56,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: COLORS.surface,
   },
-  searchInput: { flex: 1, color: COLORS.text, fontSize: 14 },
-  categories: { gap: 8, paddingVertical: 16 },
+  searchInput: { flex: 1, color: COLORS.text, fontSize: 15 },
+  categories: { gap: 8, paddingVertical: 20 },
   categoryButton: {
     minHeight: 38,
     paddingHorizontal: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 19,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#F0F2F7',
   },
-  categorySelected: { borderColor: COLORS.navy, backgroundColor: COLORS.navy },
+  categorySelected: { backgroundColor: COLORS.navy },
   categoryText: { color: COLORS.subText, fontSize: 12, fontWeight: '700' },
   categoryTextSelected: { color: COLORS.white, fontWeight: '800' },
-  questionList: { gap: 10 },
+  resultHeader: { marginTop: 4, marginBottom: 12 },
+  resultTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
+  resultHint: { marginTop: 6, color: COLORS.subText, fontSize: 12 },
+  questionList: { gap: 6 },
   questionCard: {
-    padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ECEEF4',
     backgroundColor: COLORS.surface,
   },
+  questionCardOpen: {
+    marginVertical: 4,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0,
+    borderRadius: 18,
+    backgroundColor: COLORS.softNavy,
+  },
   questionHeader: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  questionBadge: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    backgroundColor: COLORS.softNavy,
+  },
+  questionBadgeOpen: { backgroundColor: COLORS.navy },
+  questionBadgeText: { color: COLORS.navy, fontSize: 17, fontWeight: '900' },
+  questionBadgeTextOpen: { color: COLORS.white },
   questionTextArea: { flex: 1 },
-  questionCategory: { color: COLORS.navy, fontSize: 11, fontWeight: '800' },
+  questionCategory: { color: COLORS.navy, fontSize: 10, fontWeight: '800' },
   questionText: {
-    marginTop: 6,
+    marginTop: 4,
     color: COLORS.text,
     fontSize: 15,
     lineHeight: 22,
     fontWeight: '800',
   },
-  chevron: { color: COLORS.navy, fontSize: 23, fontWeight: '600' },
+  chevron: { color: COLORS.subText, fontSize: 21, fontWeight: '700' },
+  chevronOpen: { color: COLORS.navy },
   answerArea: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: 'rgba(24, 35, 102, 0.12)',
   },
-  answerText: { color: COLORS.subText, fontSize: 14, lineHeight: 22 },
+  answerText: { color: COLORS.text, fontSize: 14, lineHeight: 23 },
+  linkButton: {
+    minHeight: 48,
+    marginTop: 14,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 13,
+    backgroundColor: COLORS.surface,
+  },
+  linkText: { flex: 1, color: COLORS.navy, fontSize: 13, fontWeight: '800' },
+  linkArrow: { marginLeft: 10, color: COLORS.navy, fontSize: 24 },
   emptyCard: {
     minHeight: 240,
     padding: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
   },
   emptyTitle: {
     marginTop: 16,

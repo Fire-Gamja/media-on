@@ -94,6 +94,28 @@ export default function AssistantInquiryScreen() {
       return;
     }
 
+    if (categoryGroup === 'administration') {
+      Alert.alert(
+        '행정조교 문의 전 확인',
+        '휴학·자퇴, 공결, 수강신청, 졸업요건, 취업계, 희망전공 변경, 복수전공은 자주 묻는 질문에 안내되어 있습니다. 이미 안내된 내용에 대한 문의는 답변이 지연되거나 별도 답변이 제공되지 않을 수 있습니다.',
+        [
+          {
+            text: 'FAQ 확인',
+            onPress: () => router.push('/frequently-asked-questions'),
+          },
+          {
+            text: '그래도 문의하기',
+            onPress: () => void submitInquiry(),
+          },
+        ],
+      );
+      return;
+    }
+
+    await submitInquiry();
+  };
+
+  const submitInquiry = async () => {
     try {
       setIsSubmitting(true);
       const inquiryId = await createAssistantInquiry(
@@ -141,12 +163,97 @@ export default function AssistantInquiryScreen() {
           <View style={styles.guideCard}>
             <Text style={styles.guideTitle}>궁금한 내용을 남겨 주세요.</Text>
             <Text style={styles.guideText}>
-              실습 또는 행정을 먼저 선택한 뒤 세부 분류를 선택할 수
-              있습니다. 내용을 작성하면 AI가 분류와 제목도 추천합니다.
+              담당 조교를 먼저 선택한 뒤 세부 분류를 선택해 주세요.
+              내용을 작성하면 AI가 분류와 제목도 추천합니다.
             </Text>
           </View>
 
-          <Text style={styles.label}>문의 내용</Text>
+          <Text style={styles.label}>담당 조교</Text>
+          <View style={styles.groupGrid}>
+            {ASSISTANT_CATEGORY_GROUPS.map((group) => {
+              const selected = categoryGroup === group.value;
+              return (
+                <Pressable
+                  key={group.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => selectCategoryGroup(group.value)}
+                  style={[
+                    styles.groupButton,
+                    selected && styles.groupSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.groupText,
+                      selected && styles.groupTextSelected,
+                    ]}
+                  >
+                    {group.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {categoryGroup === 'administration' ? (
+            <View accessibilityRole="alert" style={styles.adminNoticeCard}>
+              <View style={styles.adminNoticeTitleRow}>
+                <Text style={styles.adminNoticeMark}>!</Text>
+                <Text style={styles.adminNoticeTitle}>
+                  행정조교 문의 전 확인해 주세요
+                </Text>
+              </View>
+              <Text style={styles.adminNoticeText}>
+                휴학·자퇴, 공결, 수강신청, 졸업요건, 취업계, 희망전공 변경,
+                복수전공은 자주 묻는 질문에 안내되어 있습니다. 이미 안내된
+                내용에 대한 문의는 답변이 지연되거나 별도 답변이 제공되지
+                않을 수 있습니다.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/frequently-asked-questions')}
+                style={({ pressed }) => [
+                  styles.faqButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.faqButtonText}>
+                  자주 묻는 질문 확인하기
+                </Text>
+                <Text style={styles.faqButtonArrow}>›</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          <Text style={[styles.label, styles.spacedLabel]}>세부 분류</Text>
+          <View style={styles.categoryGrid}>
+            {categoryOptions.map((option) => {
+              const selected = category === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => setCategory(option.value)}
+                  style={[
+                    styles.categoryButton,
+                    selected && styles.categorySelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      selected && styles.categoryTextSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.label, styles.spacedLabel]}>문의 내용</Text>
           <TextInput
             maxLength={5000}
             multiline
@@ -187,58 +294,6 @@ export default function AssistantInquiryScreen() {
             >
               <Text style={styles.aiNoticeLink}>내용 보기</Text>
             </Pressable>
-          </View>
-
-          <Text style={styles.label}>상위 분류</Text>
-          <View style={styles.groupGrid}>
-            {ASSISTANT_CATEGORY_GROUPS.map((group) => {
-              const selected = categoryGroup === group.value;
-              return (
-                <Pressable
-                  key={group.value}
-                  onPress={() => selectCategoryGroup(group.value)}
-                  style={[
-                    styles.groupButton,
-                    selected && styles.groupSelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.groupText,
-                      selected && styles.groupTextSelected,
-                    ]}
-                  >
-                    {group.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.label, styles.spacedLabel]}>세부 분류</Text>
-          <View style={styles.categoryGrid}>
-            {categoryOptions.map((option) => {
-              const selected = category === option.value;
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => setCategory(option.value)}
-                  style={[
-                    styles.categoryButton,
-                    selected && styles.categorySelected,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      selected && styles.categoryTextSelected,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
           </View>
 
           <Text style={[styles.label, styles.spacedLabel]}>제목</Text>
@@ -362,6 +417,45 @@ const styles = StyleSheet.create({
   groupSelected: { borderColor: COLORS.navy, backgroundColor: COLORS.navy },
   groupText: { color: COLORS.subText, fontSize: 15, fontWeight: '800' },
   groupTextSelected: { color: COLORS.white },
+  adminNoticeCard: {
+    marginTop: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F2CC79',
+    borderRadius: 15,
+    backgroundColor: '#FFF9E9',
+  },
+  adminNoticeTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  adminNoticeMark: {
+    width: 24,
+    height: 24,
+    color: '#8A5700',
+    fontSize: 15,
+    lineHeight: 24,
+    fontWeight: '900',
+    textAlign: 'center',
+    borderRadius: 12,
+    backgroundColor: '#FFE5A8',
+  },
+  adminNoticeTitle: { flex: 1, color: '#704600', fontSize: 14, fontWeight: '900' },
+  adminNoticeText: {
+    marginTop: 10,
+    color: '#805B19',
+    fontSize: 12,
+    lineHeight: 19,
+  },
+  faqButton: {
+    minHeight: 44,
+    marginTop: 13,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+  },
+  faqButtonText: { color: COLORS.navy, fontSize: 13, fontWeight: '800' },
+  faqButtonArrow: { color: COLORS.navy, fontSize: 22, fontWeight: '700' },
   categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   categoryButton: {
     minHeight: 42,
@@ -414,5 +508,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
   },
   submitText: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
+  pressed: { opacity: 0.7 },
   disabled: { opacity: 0.55 },
 });

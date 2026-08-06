@@ -28,6 +28,7 @@ import MonthCalendar, {
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
 import { useNoticeSettings } from '../../context/notice-settings-context';
+import { getProfileAvatarSource } from '../../lib/profile-avatar';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
   type ApplicationStage,
@@ -69,7 +70,6 @@ import {
 } from '../../services/pre-graduation';
 
 const settingsIcon = require('../../../assets/figma/student/settings.png');
-const profileAvatar = require('../../../assets/figma/student/profile-avatar.png');
 const menuIcon = require('../../../assets/figma/student/menu.png');
 const sirenIcon = require('../../../assets/figma/student/siren.png');
 
@@ -567,11 +567,7 @@ export default function StudentHomeScreen() {
           ]}
         >
           <Image
-            source={
-              profile?.avatar_url
-                ? { uri: profile.avatar_url }
-                : profileAvatar
-            }
+            source={getProfileAvatarSource(profile?.avatar_url)}
             style={styles.profileAvatar}
           />
           <View style={styles.profileTextArea}>
@@ -966,13 +962,11 @@ export default function StudentHomeScreen() {
           />
           <View style={styles.studentIdCard}>
             <View style={styles.studentIdHeader}>
-              <Text style={styles.studentIdBrand}>SEO WON UNIVERSITY</Text>
+              <Text style={styles.studentIdBrand}>SEOWON UNIVERSITY</Text>
               <Text style={styles.studentIdType}>STUDENT ID</Text>
             </View>
             <Image
-              source={
-                profile?.avatar_url ? { uri: profile.avatar_url } : profileAvatar
-              }
+              source={getProfileAvatarSource(profile?.avatar_url)}
               style={styles.studentIdPhoto}
             />
             <Text style={styles.studentIdName}>{profile?.name ?? '학생'}</Text>
