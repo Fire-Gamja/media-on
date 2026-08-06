@@ -9,6 +9,8 @@ export type AssistantInquiryCategory =
   | 'facility'
   | 'other';
 
+export type AssistantInquiryGroup = 'practice' | 'administration';
+
 export type AssistantInquiryStatus =
   | 'submitted'
   | 'in_progress'
@@ -71,6 +73,23 @@ export const ASSISTANT_CATEGORY_OPTIONS: ReadonlyArray<{
   { value: 'other', label: '기타' },
 ];
 
+export const ASSISTANT_CATEGORY_GROUPS: ReadonlyArray<{
+  value: AssistantInquiryGroup;
+  label: string;
+  categories: readonly AssistantInquiryCategory[];
+}> = [
+  {
+    value: 'practice',
+    label: '실습',
+    categories: ['equipment', 'room', 'facility'],
+  },
+  {
+    value: 'administration',
+    label: '행정',
+    categories: ['academic', 'other'],
+  },
+];
+
 export const ASSISTANT_STATUS_OPTIONS: ReadonlyArray<{
   value: AssistantInquiryStatus;
   label: string;
@@ -96,6 +115,28 @@ export function getAssistantCategoryLabel(category: AssistantInquiryCategory) {
   return (
     ASSISTANT_CATEGORY_OPTIONS.find((option) => option.value === category)
       ?.label ?? '기타'
+  );
+}
+
+export function getAssistantCategoryGroup(
+  category: AssistantInquiryCategory,
+): AssistantInquiryGroup {
+  return (
+    ASSISTANT_CATEGORY_GROUPS.find((group) =>
+      group.categories.includes(category),
+    )?.value ?? 'administration'
+  );
+}
+
+export function getAssistantCategoryOptionsForGroup(
+  group: AssistantInquiryGroup,
+) {
+  const categoryValues =
+    ASSISTANT_CATEGORY_GROUPS.find((option) => option.value === group)
+      ?.categories ?? [];
+
+  return ASSISTANT_CATEGORY_OPTIONS.filter((option) =>
+    categoryValues.includes(option.value),
   );
 }
 

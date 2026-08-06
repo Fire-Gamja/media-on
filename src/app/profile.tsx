@@ -41,6 +41,7 @@ const MAJORS = [
   '전공 미정',
 ] as const;
 const ENROLLMENT_STATUSES = ['재학', '휴학', '졸업', '제적·자퇴'] as const;
+const profileAvatar = require('../../assets/figma/student/profile-avatar.png');
 
 export default function ProfileScreen() {
   const { mustChangePassword } = useLocalSearchParams<{
@@ -298,11 +299,7 @@ export default function ProfileScreen() {
                   style={styles.avatarImage}
                 />
               ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {profile.name.slice(0, 1)}
-                  </Text>
-                </View>
+                <Image source={profileAvatar} style={styles.avatarImage} />
               )}
               <Pressable
                 disabled={isSaving}
@@ -584,21 +581,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 20,
     backgroundColor: COLORS.navy,
-  },
-  avatar: {
-    width: 76,
-    height: 76,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.42)',
-    borderRadius: 38,
-    backgroundColor: '#303D82',
-  },
-  avatarText: {
-    color: COLORS.white,
-    fontSize: 30,
-    fontWeight: '800',
   },
   avatarImage: { width: 82, height: 82, alignSelf: 'center', borderRadius: 41 },
   avatarChangeButton: {

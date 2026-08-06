@@ -1,4 +1,4 @@
-import Svg, { Circle, G, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
 
 export type AppIconName =
   | 'notice'
@@ -12,12 +12,23 @@ export type AppIconName =
   | 'search'
   | 'settings'
   | 'rental'
-  | 'administration'
+  | 'faq'
+  | 'instagram'
   | 'graduation'
   | 'trash'
   | 'check';
 
-export function AppIcon({ name, size = 28, color = '#182366' }: { name: AppIconName; size?: number; color?: string }) {
+export function AppIcon({
+  name,
+  size = 28,
+  color = '#182366',
+  monochrome = false,
+}: {
+  name: AppIconName;
+  size?: number;
+  color?: string;
+  monochrome?: boolean;
+}) {
   const viewBox =
     name === 'notice' ||
     name === 'room' ||
@@ -25,6 +36,8 @@ export function AppIcon({ name, size = 28, color = '#182366' }: { name: AppIconN
     name === 'assistant'
       ? '0 0 20 20'
       : '0 0 24 24';
+  const assistantPrimaryColor = monochrome ? color : '#292D32';
+  const assistantAccentColor = monochrome ? color : '#0080FF';
 
   return <Svg width={size} height={size} viewBox={viewBox} fill="none">
     {name === 'notice' ? <><Path opacity="0.6" d="M15.8333 6.66669C17.214 6.66669 18.3333 5.5474 18.3333 4.16669C18.3333 2.78598 17.214 1.66669 15.8333 1.66669C14.4526 1.66669 13.3333 2.78598 13.3333 4.16669C13.3333 5.5474 14.4526 6.66669 15.8333 6.66669Z" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -45,18 +58,15 @@ export function AppIcon({ name, size = 28, color = '#182366' }: { name: AppIconN
 <Path opacity="0.6" d="M9.99999 9.46667V9.29171C9.99999 8.72504 10.35 8.42503 10.7 8.18336C11.0417 7.95003 11.3833 7.65004 11.3833 7.10004C11.3833 6.33337 10.7667 5.71667 9.99999 5.71667C9.23333 5.71667 8.61668 6.33337 8.61668 7.10004" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
 <Path opacity="0.6" d="M9.99624 11.4584H10.0037" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
 </> : null}
-    {name === 'assistant' ? <><Path d="M18.3333 8.33335V10.8334C18.3333 14.1667 16.6667 15.8334 13.3333 15.8334H12.9167C12.6583 15.8334 12.4083 15.9584 12.25 16.1667L11 17.8334C10.45 18.5667 9.54999 18.5667 8.99999 17.8334L7.74999 16.1667C7.61666 15.9834 7.30832 15.8334 7.08332 15.8334H6.66666C3.33332 15.8334 1.66666 15 1.66666 10.8334V6.66669C1.66666 3.33335 3.33332 1.66669 6.66666 1.66669H11.6667" stroke="#292D32" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
-<Path opacity="0.6" d="M16.25 5.83335C17.4006 5.83335 18.3333 4.90061 18.3333 3.75002C18.3333 2.59943 17.4006 1.66669 16.25 1.66669C15.0994 1.66669 14.1667 2.59943 14.1667 3.75002C14.1667 4.90061 15.0994 5.83335 16.25 5.83335Z" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-<Path opacity="0.6" d="M13.3304 9.16667H13.3379" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-<Path opacity="0.6" d="M9.99623 9.16667H10.0037" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-<Path opacity="0.6" d="M6.66209 9.16667H6.66957" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    {name === 'assistant' ? <><Path d="M18.3333 8.33335V10.8334C18.3333 14.1667 16.6667 15.8334 13.3333 15.8334H12.9167C12.6583 15.8334 12.4083 15.9584 12.25 16.1667L11 17.8334C10.45 18.5667 9.54999 18.5667 8.99999 17.8334L7.74999 16.1667C7.61666 15.9834 7.30832 15.8334 7.08332 15.8334H6.66666C3.33332 15.8334 1.66666 15 1.66666 10.8334V6.66669C1.66666 3.33335 3.33332 1.66669 6.66666 1.66669H11.6667" stroke={assistantPrimaryColor} strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
+<Path opacity={monochrome ? 1 : 0.6} d="M16.25 5.83335C17.4006 5.83335 18.3333 4.90061 18.3333 3.75002C18.3333 2.59943 17.4006 1.66669 16.25 1.66669C15.0994 1.66669 14.1667 2.59943 14.1667 3.75002C14.1667 4.90061 15.0994 5.83335 16.25 5.83335Z" stroke={assistantAccentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+<Path opacity={monochrome ? 1 : 0.6} d="M13.3304 9.16667H13.3379" stroke={assistantAccentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+<Path opacity={monochrome ? 1 : 0.6} d="M9.99623 9.16667H10.0037" stroke={assistantAccentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+<Path opacity={monochrome ? 1 : 0.6} d="M6.66209 9.16667H6.66957" stroke={assistantAccentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
 </> : null}
     {name === 'popup' ? <><Rect x="3.5" y="4.5" width="17" height="15" rx="2.5" stroke={color} strokeWidth="1.8" /><Path d="M3.5 8.5h17M7 6.5h.01M10 6.5h.01M8 13h8M8 16h5" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></> : null}
     {name === 'hours' ? <><Circle cx="12" cy="12" r="8.5" stroke={color} strokeWidth="1.8" /><Path d="M12 7v5l3.5 2" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></> : null}
-    {name === 'bell' ? <G transform="scale(0.666667)">
-      <Path d="M23.3333 14.401C23.3333 12.9685 22.7714 11.5948 21.7712 10.5819C20.771 9.56903 19.4145 9 18 9C16.5855 9 15.229 9.56903 14.2288 10.5819C13.2286 11.5948 12.6667 12.9685 12.6667 14.401C12.6667 20.7021 10 22.5024 10 22.5024H26C26 22.5024 23.3333 20.7021 23.3333 14.401Z" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      <Path d="M19.5365 26.103C19.3802 26.3758 19.1559 26.6023 18.886 26.7597C18.6161 26.9171 18.3102 27 17.9987 27C17.6873 27 17.3813 26.9171 17.1114 26.7597C16.8415 26.6023 16.6172 26.3758 16.4609 26.103" stroke="#2D2D2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-</G> : null}
+    {name === 'bell' ? <><Path d="M18 8A6 6 0 0 0 6 8C6 15 3 15 3 18H21C21 15 18 15 18 8Z" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><Path d="M10 21H14" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></> : null}
     {name === 'search' ? <><Circle cx="10.5" cy="10.5" r="6.5" stroke={color} strokeWidth="1.8" /><Line x1="15.5" y1="15.5" x2="20" y2="20" stroke={color} strokeWidth="1.8" strokeLinecap="round" /></> : null}
     {name === 'settings' ? <>
     <Path d="M15 12C15 12.5933 14.8241 13.1734 14.4944 13.6667C14.1648 14.1601 13.6962 14.5446 13.1481 14.7716C12.5999 14.9987 11.9967 15.0581 11.4147 14.9424C10.8328 14.8266 10.2982 14.5409 9.87868 14.1213C9.45912 13.7018 9.1734 13.1672 9.05765 12.5853C8.94189 12.0033 9.0013 11.4001 9.22836 10.8519C9.45543 10.3038 9.83994 9.83524 10.3333 9.50559C10.8266 9.17595 11.4067 9 12 9C12.7957 9 13.5587 9.31607 14.1213 9.87868C14.6839 10.4413 15 11.2044 15 12Z" stroke="#60ACF9" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -66,7 +76,8 @@ export function AppIcon({ name, size = 28, color = '#182366' }: { name: AppIconN
         <Path opacity="0.6" d="M10.5 8H13.5" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         <Path opacity="0.6" d="M12 18C13.79 18 15.25 16.54 15.25 14.75C15.25 12.96 13.79 11.5 12 11.5C10.21 11.5 8.75 12.96 8.75 14.75C8.75 16.54 10.21 18 12 18Z" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </> : null}
-    {name === 'administration' ? <><Path d="M5.75 2.25H14.25L19.75 7.75V20.25C19.75 21.0784 19.0784 21.75 18.25 21.75H5.75C4.92157 21.75 4.25 21.0784 4.25 20.25V3.75C4.25 2.92157 4.92157 2.25 5.75 2.25Z" stroke="#292D32" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><Path opacity="0.6" d="M14.25 2.25V7.75H19.75M8.25 11.25H15.75M8.25 15H15.75M8.25 18.75H12.75" stroke="#0080FF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></> : null}
+    {name === 'faq' ? <><Path d="M5.25 3.25H18.75C20.1307 3.25 21.25 4.36929 21.25 5.75V15.25C21.25 16.6307 20.1307 17.75 18.75 17.75H11L6.25 21V17.75H5.25C3.86929 17.75 2.75 16.6307 2.75 15.25V5.75C2.75 4.36929 3.86929 3.25 5.25 3.25Z" stroke="#292D32" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><Path opacity="0.6" d="M9.75 8.25C9.75 7.00736 10.7574 6 12 6C13.2426 6 14.25 7.00736 14.25 8.25C14.25 10.125 12 10.125 12 12M12 14.75H12.01" stroke="#0080FF" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></> : null}
+    {name === 'instagram' ? <><Rect x="3" y="3" width="18" height="18" rx="5" stroke={color} strokeWidth="1.8" /><Circle cx="12" cy="12" r="4.25" stroke={color} strokeWidth="1.8" /><Circle cx="17.35" cy="6.65" r="1.1" fill={color} /></> : null}
     {name === 'graduation' ? <><Path d="m2.5 8.5 9.5-5 9.5 5-9.5 5-9.5-5Z" stroke={color} strokeWidth="1.8" strokeLinejoin="round" /><Path d="M6.5 10.7v5.2c3.4 2.3 7.6 2.3 11 0v-5.2M21.5 8.5v6" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><Circle cx="21.5" cy="16.5" r="1" fill={color} /></> : null}
     {name === 'trash' ? <><Path d="M5.5 7h13M9 7V4.5h6V7M7.5 7l.8 13h7.4l.8-13M10 10.5v6M14 10.5v6" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></> : null}
     {name === 'check' ? <Path d="m5 12.5 4.2 4.2L19 7" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /> : null}

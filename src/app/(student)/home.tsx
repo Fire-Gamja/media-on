@@ -74,7 +74,7 @@ const menuIcon = require('../../../assets/figma/student/menu.png');
 const sirenIcon = require('../../../assets/figma/student/siren.png');
 
 type QuickAction = {
-  id: 'notice' | 'rental' | 'report' | 'assistant' | 'administration';
+  id: 'notice' | 'rental' | 'report' | 'assistant' | 'faq';
   title: string;
 };
 
@@ -103,8 +103,8 @@ const QUICK_ACTIONS: QuickAction[] = [
     title: '조교 문의',
   },
   {
-    id: 'administration',
-    title: '행정 업무',
+    id: 'faq',
+    title: '자주 묻는 질문',
   },
 ];
 
@@ -379,7 +379,7 @@ export default function StudentHomeScreen() {
       rental: '/rentals',
       report: '/facility-report',
       assistant: '/assistant-inquiry',
-      administration: '/administration',
+      faq: '/frequently-asked-questions',
     } as const;
 
     router.push(routes[action.id]);
@@ -493,7 +493,7 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon color="#2D2D2D" name="bell" size={20} />
+            <AppIcon color="#2D2D2D" name="bell" size={26} />
             {unreadNotificationCount > 0 ? (
               <View style={styles.notificationDot} />
             ) : null}
@@ -666,10 +666,7 @@ export default function StudentHomeScreen() {
           ]}
         >
           <View style={styles.instagramLogo}>
-            <View style={styles.instagramCamera}>
-              <View style={styles.instagramLens} />
-              <View style={styles.instagramDot} />
-            </View>
+            <AppIcon color="#C13584" name="instagram" size={30} />
           </View>
           <View style={styles.instagramBannerText}>
             <Text style={styles.instagramBannerTitle}>
@@ -864,7 +861,7 @@ export default function StudentHomeScreen() {
           pressed && styles.pressed,
         ]}
       >
-        <AppIcon color="#FFFFFF" name="assistant" size={29} />
+        <AppIcon color="#FFFFFF" monochrome name="assistant" size={29} />
       </Pressable>
 
       <Modal
@@ -1139,11 +1136,13 @@ const styles = StyleSheet.create({
   },
   notificationDot: {
     position: 'absolute',
-    top: 4,
-    right: 7,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    top: 3,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+    borderRadius: 3,
     backgroundColor: '#182365',
   },
   scrollView: {
@@ -1353,31 +1352,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 14,
     backgroundColor: '#F6EAF4',
-  },
-  instagramCamera: {
-    width: 25,
-    height: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#A6388B',
-    borderRadius: 7,
-  },
-  instagramLens: {
-    width: 9,
-    height: 9,
-    borderWidth: 2,
-    borderColor: '#A6388B',
-    borderRadius: 5,
-  },
-  instagramDot: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#A6388B',
   },
   instagramBannerText: {
     flex: 1,
