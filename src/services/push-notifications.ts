@@ -20,6 +20,35 @@ const STORED_PUSH_TOKEN_KEY = 'media-on:expo-push-token';
 const NOTIFICATION_CHANNEL_ID = 'media-on';
 
 let registrationPromise: Promise<string | null> | null = null;
+let permissionRequestPromise: Promise<boolean> | null = null;
+
+export async function getNotificationPermissionGranted() {
+  if (Platform.OS === 'web') {
+    return true;
+  }
+
+  const Notifications = await import('expo-notifications');
+  const permissions = await Notifications.getPermissionsAsync();
+  return isNotificationPermissionGranted(Notifications, permissions);
+}
+
+export async function requestRequiredNotificationPermission() {
+  if (Platform.OS === 'web') {
+    return true;
+  }
+
+  if (permissionRequestPromise) {
+    return permissionRequestPromise;
+  }
+
+  permissionRequestPromise = requestNotificationPermission();
+
+  try {
+    return await permissionRequestPromise;
+  } finally {
+    permissionRequestPromise = null;
+  }
+}
 
 export async function registerCurrentDeviceForPush() {
   if (Platform.OS === 'web' || !supabase) {
@@ -62,32 +91,11 @@ async function registerDevice() {
     return null;
   }
 
-  const Notifications = await import('expo-notifications');
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
-      name: 'MEDIA ON 알림',
-      description: '공지사항과 신청·문의 처리 상태를 알려드립니다.',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#182366',
-      sound: 'default',
-    });
-  }
-
-  const currentPermissions = await Notifications.getPermissionsAsync();
-  let permissionStatus = currentPermissions.status;
-
-  if (permissionStatus !== 'granted') {
-    const requestedPermissions =
-      await Notifications.requestPermissionsAsync();
-    permissionStatus = requestedPermissions.status;
-  }
-
-  if (permissionStatus !== 'granted') {
+  if (!(await requestRequiredNotificationPermission())) {
     return null;
   }
 
+  const Notifications = await import('expo-notifications');
   const projectId =
     Constants.expoConfig?.extra?.eas?.projectId ??
     Constants.easConfig?.projectId;
@@ -113,6 +121,56 @@ async function registerDevice() {
 
   await AsyncStorage.setItem(STORED_PUSH_TOKEN_KEY, pushToken);
   return pushToken;
+}
+
+async function requestNotificationPermission() {
+  const Notifications = await import('expo-notifications');
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
+      name: 'MEDIA ON 알림',
+      description: '공지사항과 신청·문의 처리 상태를 알려드립니다.',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#182366',
+      sound: 'default',
+    });
+  }
+
+  const currentPermissions = await Notifications.getPermissionsAsync();
+  if (isNotificationPermissionGranted(Notifications, currentPermissions)) {
+    return true;
+  }
+
+  if (!currentPermissions.canAskAgain) {
+    return false;
+  }
+
+  const requestedPermissions =
+    await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+    });
+  return isNotificationPermissionGranted(
+    Notifications,
+    requestedPermissions,
+  );
+}
+
+function isNotificationPermissionGranted(
+  Notifications: typeof import('expo-notifications'),
+  permissions: import('expo-notifications').NotificationPermissionsStatus,
+) {
+  return (
+    permissions.granted ||
+    permissions.ios?.status ===
+      Notifications.IosAuthorizationStatus.PROVISIONAL ||
+    permissions.ios?.status ===
+      Notifications.IosAuthorizationStatus.EPHEMERAL
+  );
 }
 
 export async function disablePushForCurrentDevice() {

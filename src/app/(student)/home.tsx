@@ -344,10 +344,13 @@ export default function StudentHomeScreen() {
     }
 
     if (hideToday) {
-      await AsyncStorage.setItem(
-        getHomePopupStorageKey(currentHomePopup),
-        getLocalDateKey(),
+      const today = getLocalDateKey();
+      await AsyncStorage.multiSet(
+        homePopups.map((popup) => [getHomePopupStorageKey(popup), today]),
       );
+      setHomePopups([]);
+      setPopupIndex(0);
+      return;
     }
 
     if (popupIndex < homePopups.length - 1) {
@@ -508,7 +511,7 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon color="#2D2D2D" name="search" size={20} />
+            <AppIcon color="#2D2D2D" name="search" size={26} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -520,7 +523,7 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon color="#2D2D2D" name="settings" size={20} />
+            <AppIcon color="#2D2D2D" name="settings" size={26} />
           </Pressable>
         </View>
       </View>
