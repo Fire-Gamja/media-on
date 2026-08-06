@@ -1,3 +1,4 @@
+import * as Network from 'expo-network';
 import { StatusBar } from 'expo-status-bar';
 import {
   type PropsWithChildren,
@@ -7,7 +8,6 @@ import {
 } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,11 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type AccessStatus = 'checking' | 'allowed' | 'blocked';
 
 const NETWORK_RECHECK_INTERVAL_MS = 10_000;
-const NETWORK_CHECK_TIMEOUT_MS = 6_000;
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
-const CONNECTIVITY_CHECK_URL = supabaseUrl
-  ? `${supabaseUrl.replace(/\/+$/, '')}/auth/v1/health`
-  : 'https://clients3.google.com/generate_204';
 
 export function StudentAccessGate({ children }: PropsWithChildren) {
   const [networkStatus, setNetworkStatus] =
@@ -39,12 +34,18 @@ export function StudentAccessGate({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void checkNetwork();
+    const subscription = Network.addNetworkStateListener((state) => {
+      setNetworkStatus(getAccessStatus(state));
+    });
     const interval = setInterval(
       () => void checkNetwork(),
       NETWORK_RECHECK_INTERVAL_MS,
     );
 
-    return () => clearInterval(interval);
+    return () => {
+      subscription.remove();
+      clearInterval(interval);
+    };
   }, [checkNetwork]);
 
   if (networkStatus === 'checking') {
@@ -66,27 +67,22 @@ export function StudentAccessGate({ children }: PropsWithChildren) {
 }
 
 async function hasInternetConnection() {
-  if (Platform.OS === 'web') {
-    return typeof navigator === 'undefined' || navigator.onLine;
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    NETWORK_CHECK_TIMEOUT_MS,
-  );
-
   try {
-    const response = await fetch(CONNECTIVITY_CHECK_URL, {
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-    return response.ok;
+    const state = await Network.getNetworkStateAsync();
+    return getAccessStatus(state) === 'allowed';
   } catch {
-    return false;
-  } finally {
-    clearTimeout(timeout);
+    // 네트워크 상태 조회 자체의 일시적 실패로 앱 이용을 잘못 막지 않는다.
+    return true;
   }
+}
+
+function getAccessStatus(state: Network.NetworkState): AccessStatus {
+  const isDefinitelyOffline =
+    state.type === Network.NetworkStateType.NONE ||
+    state.isConnected === false ||
+    state.isInternetReachable === false;
+
+  return isDefinitelyOffline ? 'blocked' : 'allowed';
 }
 
 function AccessLoadingScreen({ message }: { message: string }) {

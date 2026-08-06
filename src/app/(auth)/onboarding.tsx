@@ -1,247 +1,307 @@
-import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useRef, useState } from 'react';
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useRef } from "react";
 import {
-  FlatList,
+  Animated,
+  Easing,
   Image,
-  type ImageSourcePropType,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import AuthButton from '../../components/auth/AuthButton';
-import {
-  AUTH_COLORS,
-  AUTH_FONTS,
-} from '../../constants/auth-theme';
+import AuthButton from "../../components/auth/AuthButton";
+import { AUTH_COLORS, AUTH_FONTS } from "../../constants/auth-theme";
 
-type OnboardingItem = {
-  id: string;
-  image: ImageSourcePropType;
-  imageLabel: string;
-  imageWidth: number;
-  imageHeight: number;
-  title: string;
-  description: string;
-};
-
-const ONBOARDING_DATA: OnboardingItem[] = [
-  {
-    id: 'notice',
-    image: require('../../../assets/figma/auth/onboarding-notice.png'),
-    imageLabel: '학부 소식 알림',
-    imageWidth: 90,
-    imageHeight: 90,
-    title: '학부 소식을 한눈에 확인',
-    description:
-      '학부 공지와 학사일정을 빠르게 확인하고\n중요한 알림을 놓치지 마세요.',
-  },
-  {
-    id: 'inquiry',
-    image: require('../../../assets/figma/auth/onboarding-inquiry.png'),
-    imageLabel: '문의와 고장 신고',
-    imageWidth: 90,
-    imageHeight: 90,
-    title: '문의와 고장 신고를 더 간편하게',
-    description:
-      '행정ㆍ실습 문의부터 강의실 고장 신고까지\n앱에서 간편하게 접수할 수 있습니다.',
-  },
-  {
-    id: 'assistant',
-    image: require('../../../assets/figma/auth/onboarding-assistant.png'),
-    imageLabel: '조교 문의 관리',
-    imageWidth: 154,
-    imageHeight: 138,
-    title: '조교님 문의도 한곳에서 관리',
-    description:
-      '조교님 문의 요청의 처리 상태를\n한눈에 확인하세요.',
-  },
-];
+const backgroundImage = require("../../../assets/figma/auth/main-1.jpg");
+const swipeArrow = require("../../../assets/figma/auth/swipe-arrow.png");
+const BACKGROUND_IMAGE_ASPECT_RATIO = 16 / 9;
+const BACKGROUND_CROP_POSITION = 0.656;
 
 export default function OnboardingScreen() {
-  const { width } = useWindowDimensions();
-  const listRef = useRef<FlatList<OnboardingItem>>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const isLastPage = currentIndex === ONBOARDING_DATA.length - 1;
+  const { height, width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+  const entranceProgress = useRef(new Animated.Value(0)).current;
 
-  const handleScrollEnd = (
-    event: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    setCurrentIndex(
-      Math.round(event.nativeEvent.contentOffset.x / width),
-    );
-  };
+  useEffect(() => {
+    Animated.timing(entranceProgress, {
+      toValue: 1,
+      duration: 900,
+      delay: 250,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [entranceProgress]);
 
-  const finishOnboarding = () => router.replace('/login');
-
-  const handleNext = () => {
-    if (isLastPage) {
-      finishOnboarding();
-      return;
-    }
-
-    const nextIndex = currentIndex + 1;
-    listRef.current?.scrollToIndex({
-      index: nextIndex,
-      animated: true,
-    });
-    setCurrentIndex(nextIndex);
+  const showLoginPage = () => {
+    scrollRef.current?.scrollTo({ x: width, animated: true });
   };
 
   return (
-    <SafeAreaView
-      edges={['top', 'bottom']}
-      style={styles.safeArea}
-    >
+    <View style={styles.screen}>
       <StatusBar style="light" />
-
-      {!isLastPage ? (
-        <Pressable
-          accessibilityRole="button"
-          hitSlop={12}
-          onPress={finishOnboarding}
-          style={({ pressed }) => [
-            styles.skipButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.skipText}>건너뛰기</Text>
-        </Pressable>
-      ) : null}
-
-      <FlatList
-        ref={listRef}
-        data={ONBOARDING_DATA}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={[styles.page, { width }]}>
-            <View style={styles.illustrationArea}>
-              <Image
-                accessibilityLabel={item.imageLabel}
-                resizeMode="contain"
-                source={item.image}
-                style={{
-                  width: item.imageWidth,
-                  height: item.imageHeight,
-                }}
-              />
-            </View>
-
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.description}>
-              {item.description}
-            </Text>
-          </View>
-        )}
-        horizontal
-        pagingEnabled
-        bounces={false}
-        onMomentumScrollEnd={handleScrollEnd}
-        showsHorizontalScrollIndicator={false}
+      <View
+        pointerEvents="none"
+        style={[styles.statusBarScrim, { height: insets.top }]}
       />
 
-      <View style={styles.bottomArea}>
-        <View style={styles.indicators}>
-          {ONBOARDING_DATA.map((item, index) => (
-            <View
-              key={item.id}
-              style={[
-                styles.indicator,
-                index === currentIndex && styles.activeIndicator,
-              ]}
+      <ScrollView
+        ref={scrollRef}
+        accessibilityRole="adjustable"
+        bounces={false}
+        decelerationRate="fast"
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+      >
+        <View style={[styles.page, { height, width }]}>
+          <AuthBackground height={height} width={width} />
+          <LinearGradient
+            colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.16)", "rgba(0,0,0,0)"]}
+            locations={[0, 0.5, 1]}
+            pointerEvents="none"
+            style={styles.titleScrim}
+          />
+
+          <Animated.Text
+            style={[
+              styles.welcomeTitle,
+              {
+                top: height * 0.469,
+                opacity: entranceProgress,
+                transform: [
+                  {
+                    translateY: entranceProgress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [28, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            서원대학교 미디어콘텐츠학부에{`\n`}오신 것을 환영합니다
+          </Animated.Text>
+
+          <Pressable
+            accessibilityHint="로그인과 회원가입 화면으로 이동합니다."
+            accessibilityRole="button"
+            onPress={showLoginPage}
+            style={({ pressed }) => [
+              styles.swipeHint,
+              { bottom: Math.max(insets.bottom + 4, 20) },
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.swipeText}>
+              시작하려면 옆으로 슬라이드 해주세요
+            </Text>
+            <Image
+              accessibilityIgnoresInvertColors
+              resizeMode="contain"
+              source={swipeArrow}
+              style={styles.swipeArrow}
             />
-          ))}
+          </Pressable>
         </View>
 
-        <AuthButton
-          title={isLastPage ? '시작하기' : '다음'}
-          onPress={handleNext}
-        />
-      </View>
-    </SafeAreaView>
+        <View style={[styles.page, { height, width }]}>
+          <AuthBackground height={height} width={width} />
+          <View style={[styles.brand, { top: height * 0.574 }]}>
+            <Text style={styles.department}>서원대학교</Text>
+            <Text style={styles.department}>미디어콘텐츠학부</Text>
+            <Text style={styles.departmentEnglish}>
+              Division of Media Contents
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.accountArea,
+              { bottom: Math.max(insets.bottom + 4, 24) },
+            ]}
+          >
+            <View style={styles.loginArea}>
+              <AuthButton
+                title="로그인 하기"
+                onPress={() => router.push("/login")}
+              />
+              <Text style={styles.loginGuide}>
+                로그인 안내{`\n`}
+                회원가입 후 관리자 승인이 완료되어야 로그인할 수 있습니다.
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={12}
+              onPress={() => router.push("/signup")}
+              style={({ pressed }) => [
+                styles.signupButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.signupText}>회원가입 하기</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+type AuthBackgroundProps = {
+  height: number;
+  width: number;
+};
+
+function AuthBackground({ height, width }: AuthBackgroundProps) {
+  const imageWidth = Math.max(width, height * BACKGROUND_IMAGE_ASPECT_RATIO);
+
+  return (
+    <>
+      <Image
+        accessibilityIgnoresInvertColors
+        resizeMode="cover"
+        source={backgroundImage}
+        style={[
+          styles.backgroundImage,
+          {
+            height,
+            left: -(imageWidth - width) * BACKGROUND_CROP_POSITION,
+            width: imageWidth,
+          },
+        ]}
+      />
+      <View style={styles.backgroundOverlay} />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
+    overflow: "hidden",
     backgroundColor: AUTH_COLORS.background,
   },
-  skipButton: {
-    position: 'absolute',
-    zIndex: 2,
-    top: 44,
-    right: 20,
-    minHeight: 44,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  skipText: {
-    color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.regular,
-    fontSize: 14,
-    lineHeight: 18,
-  },
   page: {
-    alignItems: 'center',
-    paddingTop: 147,
+    overflow: "hidden",
+    backgroundColor: AUTH_COLORS.background,
   },
-  illustrationArea: {
-    width: '100%',
-    height: 138,
-    alignItems: 'center',
-    justifyContent: 'center',
+  backgroundImage: {
+    position: "absolute",
+    top: 0,
   },
-  title: {
-    width: 250,
-    marginTop: 71,
+  backgroundOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(26, 28, 41, 0.50)",
+  },
+  statusBarScrim: {
+    position: "absolute",
+    zIndex: 2,
+    top: 0,
+    right: 0,
+    left: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.49)",
+  },
+  titleScrim: {
+    position: "absolute",
+    top: "30%",
+    right: 0,
+    left: 0,
+    height: "40%",
+  },
+  welcomeTitle: {
+    position: "absolute",
+    right: 24,
+    left: 24,
     color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.extraBold,
     fontSize: 24,
-    lineHeight: 35,
-    textAlign: 'center',
+    lineHeight: 28,
+    letterSpacing: 1,
+    textAlign: "center",
   },
-  description: {
-    width: 300,
-    marginTop: 35,
+  swipeHint: {
+    position: "absolute",
+    right: 0,
+    left: 0,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  swipeText: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  swipeArrow: {
+    width: 87,
+    height: 6,
+  },
+  brand: {
+    position: "absolute",
+    left: 36,
+  },
+  department: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 25,
+    lineHeight: 28,
+  },
+  departmentEnglish: {
     color: AUTH_COLORS.text,
     fontFamily: AUTH_FONTS.regular,
+    fontSize: 13,
+    lineHeight: 15,
+  },
+  accountArea: {
+    position: "absolute",
+    right: 0,
+    left: 0,
+    gap: 20,
+  },
+  loginArea: {
+    marginHorizontal: 24,
+    gap: 8,
+  },
+  loginGuide: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
     fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
+    lineHeight: 22,
+    textAlign: "center",
   },
-  bottomArea: {
-    position: 'absolute',
-    right: 16,
-    bottom: 56,
-    left: 16,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255, 255, 255, 0.28)",
   },
-  indicators: {
-    height: 8,
-    marginBottom: 23,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 11,
+  signupButton: {
+    minHeight: 17,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  indicator: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: AUTH_COLORS.text,
-  },
-  activeIndicator: {
-    width: 20,
-    borderRadius: 4,
+  signupText: {
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.semiBold,
+    fontSize: 14,
+    lineHeight: 17,
   },
   pressed: {
-    opacity: 0.65,
+    opacity: 0.7,
   },
 });

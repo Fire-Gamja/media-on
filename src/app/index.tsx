@@ -1,121 +1,129 @@
-import { router } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import AuthButton from '../components/auth/AuthButton';
+import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useRef } from "react";
 import {
-  AUTH_COLORS,
-  AUTH_FONTS,
-} from '../constants/auth-theme';
-import { supabase } from '../lib/supabase';
+  Animated,
+  Easing,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
-const logoMark = require('../../assets/figma/auth/logo-mark.png');
+import { AUTH_COLORS } from "../constants/auth-theme";
+import { supabase } from "../lib/supabase";
 
-export default function StartScreen() {
-  const [checkingSession, setCheckingSession] = useState(true);
+const loadingImage = require("../../assets/figma/auth/main-2.jpg");
+
+const MINIMUM_LOADING_TIME = 2500;
+const IMAGE_ASPECT_RATIO = 16 / 9;
+const PAN_DISTANCE = 56;
+const LOADING_CROP_POSITION = 0.688;
+
+type OpeningDestination = "/admin-home" | "/home" | "/onboarding";
+
+export default function OpeningLoadingScreen() {
+  const { height, width } = useWindowDimensions();
+  const panProgress = useRef(new Animated.Value(0)).current;
+  const imageWidth = Math.max(width, height * IMAGE_ASPECT_RATIO);
 
   useEffect(() => {
-    if (!supabase) {
-      setCheckingSession(false);
-      return;
-    }
-    void supabase.auth.getSession().then(async ({ data }) => {
-      const user = data.session?.user;
-      if (!user) {
-        setCheckingSession(false);
-        return;
-      }
-      const { data: profile } = await supabase!
-        .from('profiles')
-        .select('role, approval_status')
-        .eq('id', user.id)
-        .single();
-      if (profile?.approval_status === 'approved') {
-        router.replace(profile.role === 'admin' ? '/admin-home' : '/home');
-      } else {
-        await supabase!.auth.signOut();
-        setCheckingSession(false);
+    let isActive = true;
+
+    const panAnimation = Animated.timing(panProgress, {
+      toValue: 1,
+      duration: 2800,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    });
+
+    panAnimation.start();
+
+    void Promise.all([
+      resolveOpeningDestination(),
+      wait(MINIMUM_LOADING_TIME),
+    ]).then(([destination]) => {
+      if (isActive) {
+        router.replace(destination);
       }
     });
-  }, []);
 
-  if (checkingSession) {
-    return <SafeAreaView style={styles.safeArea}><ActivityIndicator style={styles.loader} color={AUTH_COLORS.text} /></SafeAreaView>;
-  }
+    return () => {
+      isActive = false;
+      panAnimation.stop();
+    };
+  }, [panProgress]);
+
+  const translateX = panProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [PAN_DISTANCE, -PAN_DISTANCE],
+  });
+
   return (
-    <SafeAreaView
-      edges={['top', 'bottom']}
-      style={styles.safeArea}
-    >
-      <StatusBar style="light" />
-
-      <View style={styles.logoArea}>
-        <View style={styles.logoTextArea}>
-          <Text style={styles.department}>서원대학교</Text>
-          <Text style={styles.department}>미디어콘텐츠학부</Text>
-          <Text style={styles.departmentEnglish}>
-            Division of Media Contents
-          </Text>
-        </View>
-        <Image
-          accessibilityLabel="미디어콘텐츠학부 로고"
-          source={logoMark}
-          style={styles.logoMark}
-        />
-      </View>
-
-      <AuthButton
-        title="시작하기"
-        onPress={() => router.push('/onboarding')}
-        style={styles.startButton}
+    <View style={styles.screen}>
+      <StatusBar hidden />
+      <Animated.Image
+        accessibilityIgnoresInvertColors
+        resizeMode="cover"
+        source={loadingImage}
+        style={[
+          styles.image,
+          {
+            height,
+            left: -(imageWidth - width) * LOADING_CROP_POSITION,
+            width: imageWidth,
+            transform: [{ translateX }],
+          },
+        ]}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
+async function resolveOpeningDestination(): Promise<OpeningDestination> {
+  if (!supabase) {
+    return "/onboarding";
+  }
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    const user = data.session?.user;
+
+    if (!user) {
+      return "/onboarding";
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, approval_status")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.approval_status === "approved") {
+      return profile.role === "admin" ? "/admin-home" : "/home";
+    }
+
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.warn("앱 시작 중 로그인 상태를 확인하지 못했습니다.", error);
+  }
+
+  return "/onboarding";
+}
+
+function wait(duration: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, duration);
+  });
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
+  screen: {
     flex: 1,
+    overflow: "hidden",
     backgroundColor: AUTH_COLORS.background,
   },
-  logoArea: {
-    position: 'absolute',
-    top: '42%',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-    transform: [{ translateY: -38 }],
+  image: {
+    position: "absolute",
+    top: 0,
   },
-  logoTextArea: {
-    alignItems: 'flex-end',
-  },
-  department: {
-    color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.semiBold,
-    fontSize: 25,
-    lineHeight: 28,
-  },
-  departmentEnglish: {
-    marginTop: 1,
-    color: AUTH_COLORS.text,
-    fontFamily: AUTH_FONTS.regular,
-    fontSize: 13,
-    lineHeight: 15,
-  },
-  logoMark: {
-    width: 76,
-    height: 76,
-  },
-  startButton: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 56,
-  },
-  loader: { flex: 1 },
 });
