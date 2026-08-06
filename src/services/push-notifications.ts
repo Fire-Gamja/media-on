@@ -68,6 +68,15 @@ export async function registerCurrentDeviceForPush() {
   }
 }
 
+export async function requestAndRegisterCurrentDeviceForPush() {
+  const granted = await requestRequiredNotificationPermission();
+  if (!granted) {
+    return null;
+  }
+
+  return registerCurrentDeviceForPush();
+}
+
 async function registerDevice() {
   if (!supabase || (Platform.OS !== 'android' && Platform.OS !== 'ios')) {
     return null;
@@ -91,7 +100,7 @@ async function registerDevice() {
     return null;
   }
 
-  if (!(await requestRequiredNotificationPermission())) {
+  if (!(await getNotificationPermissionGranted())) {
     return null;
   }
 

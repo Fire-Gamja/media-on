@@ -7,8 +7,6 @@ import {
 } from 'react';
 import {
   ActivityIndicator,
-  AppState,
-  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -16,13 +14,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AppIcon } from '../common/AppIcon';
-import {
-  getNotificationPermissionGranted,
-  registerCurrentDeviceForPush,
-  requestRequiredNotificationPermission,
-} from '../../services/push-notifications';
 
 type AccessStatus = 'checking' | 'allowed' | 'blocked';
 
@@ -36,10 +27,6 @@ const CONNECTIVITY_CHECK_URL = supabaseUrl
 export function StudentAccessGate({ children }: PropsWithChildren) {
   const [networkStatus, setNetworkStatus] =
     useState<AccessStatus>('checking');
-  const [notificationStatus, setNotificationStatus] =
-    useState<AccessStatus>(
-      Platform.OS === 'web' ? 'allowed' : 'checking',
-    );
 
   const checkNetwork = useCallback(async (showLoading = false) => {
     if (showLoading) {
@@ -48,24 +35,6 @@ export function StudentAccessGate({ children }: PropsWithChildren) {
 
     const hasInternet = await hasInternetConnection();
     setNetworkStatus(hasInternet ? 'allowed' : 'blocked');
-  }, []);
-
-  const checkNotificationPermission = useCallback(async () => {
-    if (Platform.OS === 'web') {
-      setNotificationStatus('allowed');
-      return;
-    }
-
-    setNotificationStatus('checking');
-    try {
-      const granted = await getNotificationPermissionGranted();
-      setNotificationStatus(granted ? 'allowed' : 'blocked');
-      if (granted) {
-        void registerCurrentDeviceForPush().catch(() => undefined);
-      }
-    } catch {
-      setNotificationStatus('blocked');
-    }
   }, []);
 
   useEffect(() => {
@@ -78,48 +47,6 @@ export function StudentAccessGate({ children }: PropsWithChildren) {
     return () => clearInterval(interval);
   }, [checkNetwork]);
 
-  useEffect(() => {
-    if (networkStatus !== 'allowed' || Platform.OS === 'web') {
-      return;
-    }
-
-    let isActive = true;
-    setNotificationStatus('checking');
-    void requestRequiredNotificationPermission()
-      .then((granted) => {
-        if (isActive) {
-          setNotificationStatus(granted ? 'allowed' : 'blocked');
-          if (granted) {
-            void registerCurrentDeviceForPush().catch(() => undefined);
-          }
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setNotificationStatus('blocked');
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [networkStatus]);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      return;
-    }
-
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        void checkNetwork();
-        void checkNotificationPermission();
-      }
-    });
-
-    return () => subscription.remove();
-  }, [checkNetwork, checkNotificationPermission]);
-
   if (networkStatus === 'checking') {
     return <AccessLoadingScreen message="인터넷 연결을 확인하고 있어요." />;
   }
@@ -131,23 +58,6 @@ export function StudentAccessGate({ children }: PropsWithChildren) {
         onPress={() => void checkNetwork(true)}
         title="인터넷에 연결해 주세요"
         buttonLabel="다시 확인"
-        type="network"
-      />
-    );
-  }
-
-  if (notificationStatus === 'checking') {
-    return <AccessLoadingScreen message="알림 권한을 확인하고 있어요." />;
-  }
-
-  if (notificationStatus === 'blocked') {
-    return (
-      <AccessBlockedScreen
-        description="중요 공지와 신청 처리 상태를 놓치지 않도록 알림 허용이 필요합니다. 휴대전화 설정에서 MEDIA ON 알림을 허용해 주세요."
-        onPress={() => void Linking.openSettings()}
-        title="알림을 허용해 주세요"
-        buttonLabel="설정으로 이동"
-        type="notification"
       />
     );
   }
@@ -196,24 +106,18 @@ function AccessBlockedScreen({
   description,
   onPress,
   title,
-  type,
 }: {
   buttonLabel: string;
   description: string;
   onPress: () => void;
   title: string;
-  type: 'network' | 'notification';
 }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       <View style={styles.centeredContent}>
         <View style={styles.iconCircle}>
-          {type === 'notification' ? (
-            <AppIcon color="#182366" name="bell" size={42} />
-          ) : (
-            <Text style={styles.networkIcon}>!</Text>
-          )}
+          <Text style={styles.networkIcon}>!</Text>
         </View>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.description}>{description}</Text>

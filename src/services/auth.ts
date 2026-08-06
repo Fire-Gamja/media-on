@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { disablePushForCurrentDevice } from './push-notifications';
+import { acceptRequiredLegalDocuments } from './legal';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
@@ -38,7 +39,6 @@ export type StudentSignupInput = {
   phoneNumber: string;
   privacyAgreed: boolean;
   termsAgreed: boolean;
-  marketingAgreed: boolean;
 };
 
 export type StudentLoginResult =
@@ -116,7 +116,7 @@ export async function registerStudent(input: StudentSignupInput) {
         phone_number: input.phoneNumber.replace(/\D/g, ''),
         privacy_agreed: input.privacyAgreed,
         terms_agreed: input.termsAgreed,
-        marketing_agreed: input.marketingAgreed,
+        marketing_agreed: false,
       },
     },
   });
@@ -132,7 +132,16 @@ export async function registerStudent(input: StudentSignupInput) {
     throw new Error('가입 신청을 저장하지 못했습니다. 다시 시도해 주세요.');
   }
 
-  await client.auth.signOut();
+  try {
+    await acceptRequiredLegalDocuments();
+  } catch (error) {
+    console.warn(
+      '가입 시 약관 기록을 완료하지 못했습니다. 첫 로그인에서 다시 확인합니다.',
+      error,
+    );
+  } finally {
+    await client.auth.signOut();
+  }
 }
 
 export async function getPendingStudents(): Promise<AdminStudentProfile[]> {

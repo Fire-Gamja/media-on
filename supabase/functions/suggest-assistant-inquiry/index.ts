@@ -38,6 +38,7 @@ Deno.serve(async (request) => {
       },
       body: JSON.stringify({
         model: 'gpt-5.6-sol',
+        store: false,
         reasoning: { effort: 'none' },
         instructions: [
           '서원대학교 미디어콘텐츠학부 조교 문의를 분류하고 짧은 한국어 제목을 만든다.',

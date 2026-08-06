@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "media-on",
+    "name": "MEDIA ON",
     "slug": "media-on",
     "version": "1.0.0",
+    "description": "서원대학교 미디어콘텐츠학부 학사·실습 지원 앱",
     "orientation": "portrait",
     "icon": "./assets/images/media-on-app-icon.png",
     "scheme": "mediaon",
@@ -12,6 +13,8 @@
     "ios": {
       "icon": "./assets/images/media-on-app-icon.png",
       "bundleIdentifier": "com.leeinjun.mediaon",
+      "buildNumber": "1",
+      "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -25,6 +28,7 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.leeinjun.mediaon",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json"
     },
     "web": {

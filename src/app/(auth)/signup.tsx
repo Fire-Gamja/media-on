@@ -69,7 +69,6 @@ export default function SignUpScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
-  const [marketingAgreed, setMarketingAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const passwordIsValid = useMemo(() => {
@@ -221,7 +220,6 @@ export default function SignUpScreen() {
           phoneNumber,
           privacyAgreed,
           termsAgreed,
-          marketingAgreed,
         });
 
         Alert.alert(
@@ -333,13 +331,11 @@ export default function SignUpScreen() {
               phoneNumber={phoneNumber}
               privacyAgreed={privacyAgreed}
               termsAgreed={termsAgreed}
-              marketingAgreed={marketingAgreed}
               onChangePhoneNumber={(value) =>
                 setPhoneNumber(formattedPhoneNumber(value))
               }
               onChangePrivacyAgreed={setPrivacyAgreed}
               onChangeTermsAgreed={setTermsAgreed}
-              onChangeMarketingAgreed={setMarketingAgreed}
             />
           )}
         </ScrollView>
@@ -533,32 +529,26 @@ type StepThreeProps = {
   phoneNumber: string;
   privacyAgreed: boolean;
   termsAgreed: boolean;
-  marketingAgreed: boolean;
   onChangePhoneNumber: (value: string) => void;
   onChangePrivacyAgreed: (value: boolean) => void;
   onChangeTermsAgreed: (value: boolean) => void;
-  onChangeMarketingAgreed: (value: boolean) => void;
 };
 
 function StepThree({
   phoneNumber,
   privacyAgreed,
   termsAgreed,
-  marketingAgreed,
   onChangePhoneNumber,
   onChangePrivacyAgreed,
   onChangeTermsAgreed,
-  onChangeMarketingAgreed,
 }: StepThreeProps) {
-  const allAgreed =
-    privacyAgreed && termsAgreed && marketingAgreed;
+  const allAgreed = privacyAgreed && termsAgreed;
 
   const handleAllAgreement = () => {
     const nextValue = !allAgreed;
 
     onChangePrivacyAgreed(nextValue);
     onChangeTermsAgreed(nextValue);
-    onChangeMarketingAgreed(nextValue);
   };
 
   return (
@@ -591,22 +581,26 @@ function StepThree({
         <View style={styles.agreementDivider} />
 
         <AgreementRow
-          label="[필수] 개인정보 수집·이용 동의"
+          label="[필수] 개인정보처리방침 확인"
           checked={privacyAgreed}
           onPress={() => onChangePrivacyAgreed(!privacyAgreed)}
+          onView={() =>
+            router.push({
+              pathname: '/legal-document',
+              params: { type: 'privacy' },
+            })
+          }
         />
 
         <AgreementRow
           label="[필수] 서비스 이용약관 동의"
           checked={termsAgreed}
           onPress={() => onChangeTermsAgreed(!termsAgreed)}
-        />
-
-        <AgreementRow
-          label="[선택] 마케팅·홍보 알림 수신 동의"
-          checked={marketingAgreed}
-          onPress={() =>
-            onChangeMarketingAgreed(!marketingAgreed)
+          onView={() =>
+            router.push({
+              pathname: '/legal-document',
+              params: { type: 'terms' },
+            })
           }
         />
       </View>
@@ -709,6 +703,7 @@ type AgreementRowProps = {
   checked: boolean;
   emphasized?: boolean;
   onPress: () => void;
+  onView?: () => void;
 };
 
 function AgreementRow({
@@ -716,34 +711,42 @@ function AgreementRow({
   checked,
   emphasized = false,
   onPress,
+  onView,
 }: AgreementRowProps) {
   return (
-    <Pressable
-      style={styles.agreementRow}
-      onPress={onPress}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
-    >
-      <View
-        style={[
-          styles.checkbox,
-          checked && styles.checkboxSelected,
-        ]}
+    <View style={styles.agreementRow}>
+      <Pressable
+        style={styles.agreementMain}
+        onPress={onPress}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked }}
       >
-        <Text style={styles.checkboxMark}>
-          {checked ? '✓' : ''}
-        </Text>
-      </View>
+        <View
+          style={[
+            styles.checkbox,
+            checked && styles.checkboxSelected,
+          ]}
+        >
+          <Text style={styles.checkboxMark}>
+            {checked ? '✓' : ''}
+          </Text>
+        </View>
 
-      <Text
-        style={[
-          styles.agreementText,
-          emphasized && styles.agreementTextEmphasized,
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
+        <Text
+          style={[
+            styles.agreementText,
+            emphasized && styles.agreementTextEmphasized,
+          ]}
+        >
+          {label}
+        </Text>
+      </Pressable>
+      {onView ? (
+        <Pressable accessibilityRole="link" hitSlop={8} onPress={onView}>
+          <Text style={styles.agreementView}>내용 보기</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -898,6 +901,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  agreementMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   agreementDivider: {
     height: 1,
@@ -932,6 +941,12 @@ const styles = StyleSheet.create({
   },
   agreementTextEmphasized: {
     fontWeight: '800',
+  },
+  agreementView: {
+    color: COLORS.navy,
+    fontSize: 12,
+    fontWeight: '800',
+    textDecorationLine: 'underline',
   },
   approvalGuide: {
     marginTop: 24,

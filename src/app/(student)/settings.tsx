@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +19,11 @@ import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { useAppSettings } from '../../context/app-settings-context';
 import { getAuthErrorMessage } from '../../services/auth';
+import {
+  disablePushForCurrentDevice,
+  getNotificationPermissionGranted,
+  requestAndRegisterCurrentDeviceForPush,
+} from '../../services/push-notifications';
 
 export default function StudentSettingsScreen() {
   const {
@@ -24,11 +31,79 @@ export default function StudentSettingsScreen() {
     setGeneralNotificationsEnabled,
   } = useAppSettings();
   const [isSaving, setIsSaving] = useState(false);
+  const [notificationPermissionGranted, setNotificationPermissionGranted] =
+    useState<boolean | null>(null);
+
+  const refreshNotificationPermission = useCallback(async () => {
+    try {
+      setNotificationPermissionGranted(
+        await getNotificationPermissionGranted(),
+      );
+    } catch {
+      setNotificationPermissionGranted(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshNotificationPermission();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void refreshNotificationPermission();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [refreshNotificationPermission]);
+
+  const requestNotificationPermission = async () => {
+    try {
+      setIsSaving(true);
+      await requestAndRegisterCurrentDeviceForPush();
+      const granted = await getNotificationPermissionGranted();
+      setNotificationPermissionGranted(granted);
+
+      if (!granted) {
+        Alert.alert(
+          '알림 권한이 꺼져 있습니다',
+          '알림은 선택 사항입니다. 허용하려면 휴대전화 설정에서 MEDIA ON 알림을 켜 주세요.',
+          [
+            { text: '나중에', style: 'cancel' },
+            {
+              text: '설정으로 이동',
+              onPress: () => void Linking.openSettings(),
+            },
+          ],
+        );
+      }
+
+      return granted;
+    } catch (error) {
+      Alert.alert('알림 설정 실패', getAuthErrorMessage(error));
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const updateGeneralNotifications = async (enabled: boolean) => {
     try {
       setIsSaving(true);
+
+      if (enabled && !notificationPermissionGranted) {
+        setIsSaving(false);
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          return;
+        }
+        setIsSaving(true);
+      }
+
       await setGeneralNotificationsEnabled(enabled);
+      if (enabled) {
+        await requestAndRegisterCurrentDeviceForPush();
+      } else {
+        await disablePushForCurrentDevice();
+      }
     } catch (error) {
       Alert.alert('설정 실패', getAuthErrorMessage(error));
     } finally {
@@ -60,32 +135,75 @@ export default function StudentSettingsScreen() {
         <View style={styles.card}>
           <SettingRow
             description="공지, 대여·신고·문의 처리 상태 알림"
-            disabled={isSaving}
+            disabled={isSaving || notificationPermissionGranted === null}
             label="일반 상태 알림"
             onValueChange={(value) => void updateGeneralNotifications(value)}
-            value={generalNotificationsEnabled}
+            value={
+              generalNotificationsEnabled &&
+              notificationPermissionGranted === true
+            }
           />
           <View style={styles.divider} />
-          <View style={styles.row}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={isSaving}
+            onPress={() => void requestNotificationPermission()}
+            style={styles.row}
+          >
             <View style={styles.rowText}>
-              <View style={styles.lockedTitleRow}>
-                <Text style={styles.rowTitle}>긴급 알림</Text>
-                <View style={styles.requiredBadge}>
-                  <Text style={styles.requiredText}>필수</Text>
-                </View>
-              </View>
+              <Text style={styles.rowTitle}>기기 알림 권한</Text>
               <Text style={styles.rowDescription}>
-                안전·학사 긴급 공지는 항상 전달됩니다.
+                선택 사항이며, 허용하지 않아도 앱을 이용할 수 있습니다.
               </Text>
             </View>
-            <Switch
-              disabled
-              ios_backgroundColor={COLORS.navy}
-              thumbColor={COLORS.white}
-              trackColor={{ false: COLORS.navy, true: COLORS.navy }}
-              value
-            />
-          </View>
+            <View
+              style={[
+                styles.permissionBadge,
+                notificationPermissionGranted && styles.permissionBadgeOn,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.permissionText,
+                  notificationPermissionGranted && styles.permissionTextOn,
+                ]}
+              >
+                {notificationPermissionGranted ? '허용됨' : '설정하기'}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+
+        <Text style={styles.sectionLabel}>서비스 및 개인정보</Text>
+        <View style={styles.card}>
+          <LinkRow
+            description="버전 2026-08-06"
+            label="서비스 이용약관"
+            onPress={() =>
+              router.push({
+                pathname: '/legal-document',
+                params: { type: 'terms' },
+              })
+            }
+          />
+          <View style={styles.divider} />
+          <LinkRow
+            description="수집 항목·보유기간·해외 처리·권리 안내"
+            label="개인정보처리방침"
+            onPress={() =>
+              router.push({
+                pathname: '/legal-document',
+                params: { type: 'privacy' },
+              })
+            }
+          />
+          <View style={styles.divider} />
+          <LinkRow
+            danger
+            description="계정과 연결된 개인정보를 영구 삭제합니다."
+            label="계정 및 데이터 삭제"
+            onPress={() => router.push('/account-deletion')}
+          />
         </View>
 
         {isSaving ? (
@@ -96,6 +214,34 @@ export default function StudentSettingsScreen() {
         ) : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function LinkRow({
+  danger = false,
+  description,
+  label,
+  onPress,
+}: {
+  danger?: boolean;
+  description: string;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+    >
+      <View style={styles.rowText}>
+        <Text style={[styles.rowTitle, danger && styles.dangerText]}>
+          {label}
+        </Text>
+        <Text style={styles.rowDescription}>{description}</Text>
+      </View>
+      <Text style={[styles.chevron, danger && styles.dangerText]}>›</Text>
+    </Pressable>
   );
 }
 
@@ -176,15 +322,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  lockedTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  requiredBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 9,
-    backgroundColor: COLORS.softNavy,
+  permissionBadge: {
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 11,
+    backgroundColor: COLORS.background,
   },
-  requiredText: { color: COLORS.navy, fontSize: 10, fontWeight: '900' },
+  permissionBadgeOn: { backgroundColor: COLORS.softNavy },
+  permissionText: { color: COLORS.subText, fontSize: 11, fontWeight: '900' },
+  permissionTextOn: { color: COLORS.navy },
   divider: { height: 1, backgroundColor: COLORS.border },
+  linkRow: {
+    minHeight: 84,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  chevron: { color: COLORS.subText, fontSize: 25, lineHeight: 28 },
+  dangerText: { color: COLORS.error },
+  pressed: { opacity: 0.7 },
   saving: {
     marginTop: 2,
     flexDirection: 'row',

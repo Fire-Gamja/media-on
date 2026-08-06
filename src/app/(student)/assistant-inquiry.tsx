@@ -28,6 +28,7 @@ import {
   type AssistantInquiryGroup,
 } from '../../services/assistant-inquiries';
 import { getAuthErrorMessage } from '../../services/auth';
+import { acceptAiTransfer } from '../../services/legal';
 
 export default function AssistantInquiryScreen() {
   const [categoryGroup, setCategoryGroup] =
@@ -53,14 +54,29 @@ export default function AssistantInquiryScreen() {
     }
   };
 
-  const handleSuggestion = async () => {
+  const handleSuggestion = () => {
     if (content.trim().length < 10) {
       Alert.alert('내용 확인', '문의 내용을 10자 이상 입력해 주세요.');
       return;
     }
 
+    Alert.alert(
+      'AI 기능 개인정보 처리 안내',
+      '작성한 문의 내용이 제목·분류 추천을 위해 OpenAI API로 전송됩니다. 동의하지 않아도 제목과 분류를 직접 입력해 문의할 수 있습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '동의하고 사용',
+          onPress: () => void runSuggestion(),
+        },
+      ],
+    );
+  };
+
+  const runSuggestion = async () => {
     try {
       setIsSuggesting(true);
+      await acceptAiTransfer();
       const suggestion = await suggestAssistantInquiry(content);
       setCategoryGroup(getAssistantCategoryGroup(suggestion.category));
       setCategory(suggestion.category);
@@ -155,6 +171,23 @@ export default function AssistantInquiryScreen() {
               <Text style={styles.aiButtonText}>AI로 분류·제목 정리하기</Text>
             )}
           </Pressable>
+          <View style={styles.aiNoticeRow}>
+            <Text style={styles.aiNoticeText}>
+              선택 시 작성 내용이 해외 OpenAI API로 전송됩니다.
+            </Text>
+            <Pressable
+              accessibilityRole="link"
+              hitSlop={8}
+              onPress={() =>
+                router.push({
+                  pathname: '/legal-document',
+                  params: { type: 'ai-transfer' },
+                })
+              }
+            >
+              <Text style={styles.aiNoticeLink}>내용 보기</Text>
+            </Pressable>
+          </View>
 
           <Text style={styles.label}>상위 분류</Text>
           <View style={styles.groupGrid}>
@@ -292,7 +325,7 @@ const styles = StyleSheet.create({
   aiButton: {
     height: 48,
     marginTop: 10,
-    marginBottom: 24,
+    marginBottom: 9,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -301,6 +334,20 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.softNavy,
   },
   aiButtonText: { color: COLORS.navy, fontSize: 14, fontWeight: '800' },
+  aiNoticeRow: {
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  aiNoticeText: { flex: 1, color: COLORS.subText, fontSize: 10, lineHeight: 16 },
+  aiNoticeLink: {
+    color: COLORS.navy,
+    fontSize: 11,
+    fontWeight: '800',
+    textDecorationLine: 'underline',
+  },
   groupGrid: { flexDirection: 'row', gap: 10 },
   groupButton: {
     flex: 1,
