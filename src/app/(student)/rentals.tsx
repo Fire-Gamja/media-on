@@ -1,6 +1,13 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../../components/common/AppIcon';
@@ -25,6 +32,26 @@ const RENTAL_MENUS = [
 ];
 
 export default function StudentRentalsScreen() {
+  const openRentalRequest = (route: '/equipment' | '/rooms') => {
+    if (route !== '/rooms') {
+      router.push(route);
+      return;
+    }
+
+    Alert.alert('통합정보시스템에 신청하셨나요?', undefined, [
+      {
+        text: '아니오',
+        style: 'cancel',
+        onPress: () =>
+          Alert.alert(
+            '신청 안내',
+            '통합정보시스템에서 신청 후 해당 기능을 사용해 주세요.',
+          ),
+      },
+      { text: '예', onPress: () => router.push('/rooms') },
+    ]);
+  };
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -61,7 +88,7 @@ export default function StudentRentalsScreen() {
                   <Text style={styles.secondaryText}>내 신청</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => router.push(menu.route)}
+                  onPress={() => openRentalRequest(menu.route)}
                   style={styles.primaryButton}
                 >
                   <Text style={styles.primaryText}>대여 신청</Text>
