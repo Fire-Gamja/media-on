@@ -65,6 +65,14 @@ const adminOnlyEvents: PushNotificationEvent[] = [
   'room_request_status',
 ];
 
+const studentToAdminEvents: PushNotificationEvent[] = [
+  'assistant_inquiry_submitted',
+  'assistant_message_received',
+  'equipment_request_submitted',
+  'facility_report_submitted',
+  'room_request_submitted',
+];
+
 const equipmentStatusLabels: Record<string, string> = {
   submitted: '신청 완료',
   approved: '승인 완료',
@@ -149,10 +157,7 @@ Deno.serve(async (request) => {
       return json({ error: '승인된 계정이 필요합니다.' }, 403);
     }
 
-    if (
-      adminOnlyEvents.includes(event) &&
-      callerProfile.role !== 'admin'
-    ) {
+    if (adminOnlyEvents.includes(event) && callerProfile.role !== 'admin') {
       return json({ error: '관리자 권한이 필요합니다.' }, 403);
     }
 
@@ -167,6 +172,19 @@ Deno.serve(async (request) => {
 
     if (target.recipientIds.length === 0) {
       return json({ sent: 0, failed: 0, skipped: 0 });
+    }
+
+    if (
+      callerProfile.role !== 'admin' &&
+      studentToAdminEvents.includes(event) &&
+      !(await isWithinOperatingHours(supabaseUrl, adminHeaders))
+    ) {
+      return json({
+        sent: 0,
+        failed: 0,
+        skipped: target.recipientIds.length,
+        outsideOperatingHours: true,
+      });
     }
 
     const activeDevices = await adminSelect<PushDevice>(
@@ -625,6 +643,42 @@ async function getCallerId(
   return user.id;
 }
 
+async function isWithinOperatingHours(
+  supabaseUrl: string,
+  adminHeaders: Record<string, string>,
+) {
+  const [settings] = await adminSelect<{
+    start_time: string;
+    end_time: string;
+  }>(supabaseUrl, adminHeaders, 'operating_hours_settings', {
+    select: 'start_time,end_time',
+    id: 'eq.1',
+    limit: '1',
+  });
+
+  if (!settings) {
+    return true;
+  }
+
+  const koreaTime = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const weekday = koreaTime.getUTCDay();
+  if (weekday === 0 || weekday === 6) {
+    return false;
+  }
+
+  const currentMinutes =
+    koreaTime.getUTCHours() * 60 + koreaTime.getUTCMinutes();
+  return (
+    currentMinutes >= toMinutes(settings.start_time) &&
+    currentMinutes < toMinutes(settings.end_time)
+  );
+}
+
+function toMinutes(value: string) {
+  const [hours = '0', minutes = '0'] = value.split(':');
+  return Number(hours) * 60 + Number(minutes);
+}
+
 async function adminSelect<T>(
   supabaseUrl: string,
   adminHeaders: Record<string, string>,
@@ -713,9 +767,7 @@ function getStatusLabel(labels: Record<string, string>, status: string) {
 }
 
 function formatNoticeTitle(title: string, isUrgent: boolean) {
-  const titleWithoutUrgentLabel = title
-    .trim()
-    .replace(/^\[긴급\]\s*/u, '');
+  const titleWithoutUrgentLabel = title.trim().replace(/^\[긴급\]\s*/u, '');
 
   return isUrgent
     ? `[긴급] ${titleWithoutUrgentLabel}`

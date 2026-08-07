@@ -87,8 +87,8 @@ export default function PreGraduationScreen() {
     }, [loadScreen]),
   );
 
-  const myReservation = useMemo(
-    () => slots.find((slot) => slot.is_mine) ?? null,
+  const myReservations = useMemo(
+    () => slots.filter((slot) => slot.is_mine),
     [slots],
   );
   const selectedSlots = useMemo(
@@ -204,7 +204,8 @@ export default function PreGraduationScreen() {
             <View style={styles.guideTextArea}>
               <Text style={styles.guideTitle}>예비졸업사정 예약</Text>
               <Text style={styles.guideText}>
-                상담 시간은 1인당 20분이며, 한 번만 예약할 수 있습니다.
+                상담 시간은 1건당 20분이며, 필요한 경우 다른 시간도 추가로
+                예약할 수 있습니다.
               </Text>
             </View>
           </View>
@@ -231,28 +232,28 @@ export default function PreGraduationScreen() {
             </View>
           ) : (
             <>
-              {myReservation ? (
-                <View style={styles.myReservationCard}>
+              {myReservations.map((reservation) => (
+                <View
+                  key={reservation.reservation_id}
+                  style={styles.myReservationCard}
+                >
                   <View>
                     <Text style={styles.myReservationLabel}>내 예약</Text>
                     <Text style={styles.myReservationTime}>
-                      {getPreGraduationWeekdayLabel(
-                        myReservation.weekday,
-                        true,
-                      )}{' '}
-                      {myReservation.slot_start} ~ {myReservation.slot_end}
+                      {getPreGraduationWeekdayLabel(reservation.weekday, true)}{' '}
+                      {reservation.slot_start} ~ {reservation.slot_end}
                     </Text>
                   </View>
                   <Pressable
                     accessibilityRole="button"
                     disabled={isSubmitting}
-                    onPress={() => confirmCancellation(myReservation)}
+                    onPress={() => confirmCancellation(reservation)}
                     style={styles.cancelButton}
                   >
                     <Text style={styles.cancelButtonText}>예약 취소</Text>
                   </Pressable>
                 </View>
-              ) : null}
+              ))}
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>신청 요일</Text>
@@ -307,16 +308,12 @@ export default function PreGraduationScreen() {
                   {selectedSlots.map((slot) => {
                     const isOccupied = Boolean(slot.reservation_id);
                     const isDisabled =
-                      isSubmitting ||
-                      (isOccupied && !slot.is_mine) ||
-                      (Boolean(myReservation) && !slot.is_mine);
+                      isSubmitting || (isOccupied && !slot.is_mine);
                     const slotCaption = slot.is_mine
                       ? '내 예약'
                       : isOccupied
                         ? `${slot.student_name ?? '다른 학생'} 학생 예약`
-                        : myReservation
-                          ? '예약 완료됨'
-                          : '신청 가능';
+                        : '신청 가능';
 
                     return (
                       <Pressable
@@ -333,9 +330,7 @@ export default function PreGraduationScreen() {
                           styles.slotCard,
                           isOccupied && styles.slotCardOccupied,
                           slot.is_mine && styles.slotCardMine,
-                          isDisabled &&
-                            !isOccupied &&
-                            styles.slotCardDisabled,
+                          isDisabled && !isOccupied && styles.slotCardDisabled,
                           pressed && styles.pressed,
                         ]}
                       >

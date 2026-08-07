@@ -26,10 +26,8 @@ import {
 } from '../../services/push-notifications';
 
 export default function StudentSettingsScreen() {
-  const {
-    generalNotificationsEnabled,
-    setGeneralNotificationsEnabled,
-  } = useAppSettings();
+  const { generalNotificationsEnabled, setGeneralNotificationsEnabled } =
+    useAppSettings();
   const [isSaving, setIsSaving] = useState(false);
   const [notificationPermissionGranted, setNotificationPermissionGranted] =
     useState<boolean | null>(null);
@@ -264,14 +262,16 @@ function SettingRow({
         <Text style={styles.rowTitle}>{label}</Text>
         <Text style={styles.rowDescription}>{description}</Text>
       </View>
-      <Switch
-        disabled={disabled}
-        ios_backgroundColor={COLORS.disabled}
-        onValueChange={onValueChange}
-        thumbColor={COLORS.white}
-        trackColor={{ false: COLORS.disabled, true: COLORS.navy }}
-        value={value}
-      />
+      <View style={styles.switchWrap}>
+        <Switch
+          disabled={disabled}
+          ios_backgroundColor={COLORS.disabled}
+          onValueChange={onValueChange}
+          thumbColor={COLORS.white}
+          trackColor={{ false: COLORS.disabled, true: COLORS.navy }}
+          value={value}
+        />
+      </View>
     </View>
   );
 }
@@ -288,7 +288,12 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
-  headerSide: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerSide: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: { color: COLORS.text, fontSize: 19, fontWeight: '900' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: 20, paddingBottom: 48 },
@@ -315,6 +320,13 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   rowText: { flex: 1 },
+  switchWrap: {
+    width: 54,
+    minHeight: 54,
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   rowTitle: { color: COLORS.text, fontSize: 16, fontWeight: '800' },
   rowDescription: {
     marginTop: 6,

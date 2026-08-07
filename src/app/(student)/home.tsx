@@ -27,6 +27,7 @@ import MonthCalendar, {
   toDateKey,
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
+import { COLORS } from '../../constants/colors';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { getProfileAvatarSource } from '../../lib/profile-avatar';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -41,10 +42,7 @@ import {
   signOutUser,
   type StudentProfile,
 } from '../../services/auth';
-import {
-  formatNoticeTitle,
-  getPublishedNotices,
-} from '../../services/notices';
+import { formatNoticeTitle, getPublishedNotices } from '../../services/notices';
 import {
   getUnreadNotificationCount,
   subscribeToMyNotifications,
@@ -142,8 +140,9 @@ export default function StudentHomeScreen() {
     ApplicationStatusItem[]
   >([]);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [operatingHours, setOperatingHours] =
-    useState<OperatingHoursSettings>(DEFAULT_OPERATING_HOURS);
+  const [operatingHours, setOperatingHours] = useState<OperatingHoursSettings>(
+    DEFAULT_OPERATING_HOURS,
+  );
   const [homePopups, setHomePopups] = useState<HomePopup[]>([]);
   const [popupIndex, setPopupIndex] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -151,7 +150,16 @@ export default function StudentHomeScreen() {
   const [preGraduationSettings, setPreGraduationSettings] =
     useState<PreGraduationSettings>(DEFAULT_PRE_GRADUATION_SETTINGS);
 
-  const visibleNotices = notices.slice(0, Math.max(1, noticeCount));
+  const visibleNotices = useMemo(
+    () =>
+      [...notices]
+        .sort(
+          (left, right) =>
+            Number(Boolean(right.urgent)) - Number(Boolean(left.urgent)),
+        )
+        .slice(0, Math.max(1, noticeCount)),
+    [noticeCount, notices],
+  );
   const requestCounts = useMemo(
     () => getApplicationStageCounts(applicationItems),
     [applicationItems],
@@ -299,9 +307,7 @@ export default function StudentHomeScreen() {
       void getOperatingHoursSettings().then(setOperatingHours);
       void getPreGraduationSettings()
         .then(setPreGraduationSettings)
-        .catch(() =>
-          setPreGraduationSettings(DEFAULT_PRE_GRADUATION_SETTINGS),
-        );
+        .catch(() => setPreGraduationSettings(DEFAULT_PRE_GRADUATION_SETTINGS));
 
       if (!isSupabaseConfigured) {
         return;
@@ -390,10 +396,7 @@ export default function StudentHomeScreen() {
 
   const openPreGraduation = () => {
     if (!profile) {
-      Alert.alert(
-        '정보 확인 중',
-        '학생 정보를 확인한 뒤 다시 시도해 주세요.',
-      );
+      Alert.alert('정보 확인 중', '학생 정보를 확인한 뒤 다시 시도해 주세요.');
       return;
     }
 
@@ -448,9 +451,7 @@ export default function StudentHomeScreen() {
         setProfile(nextProfile);
         setApplicationItems(nextApplicationItems);
         setUnreadNotificationCount(nextUnreadCount);
-        setPreGraduationSettings(
-          await preGraduationSettingsPromise,
-        );
+        setPreGraduationSettings(await preGraduationSettingsPromise);
         setNotices(
           nextNotices.map((notice) => ({
             id: notice.id,
@@ -528,6 +529,13 @@ export default function StudentHomeScreen() {
         </View>
       </View>
 
+      <View style={styles.topOperationBar}>
+        <Text style={styles.topOperationIcon}>i</Text>
+        <Text numberOfLines={1} style={styles.topOperationText}>
+          {operatingHoursDisplay.title} · {operatingHoursDisplay.description}
+        </Text>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -581,7 +589,9 @@ export default function StudentHomeScreen() {
               </Text>
             </View>
             <View style={styles.profileNameRow}>
-              <Text style={styles.profileName}>{profile?.name ?? '홍길동'}</Text>
+              <Text style={styles.profileName}>
+                {profile?.name ?? '홍길동'}
+              </Text>
               <Text style={styles.studentNumber}>
                 ({profile?.student_number ?? '2022112736'})
               </Text>
@@ -757,10 +767,7 @@ export default function StudentHomeScreen() {
                   {notice.urgent ? (
                     <Image source={sirenIcon} style={styles.sirenIcon} />
                   ) : null}
-                  <Text
-                    numberOfLines={1}
-                    style={styles.noticeTitle}
-                  >
+                  <Text numberOfLines={1} style={styles.noticeTitle}>
                     {notice.title}
                   </Text>
                 </View>
@@ -770,7 +777,10 @@ export default function StudentHomeScreen() {
               </Pressable>
             ))}
           </View>
-          <Pressable onPress={() => router.push('/notices')} style={styles.noticeMore}>
+          <Pressable
+            onPress={() => router.push('/notices')}
+            style={styles.noticeMore}
+          >
             <Text style={styles.noticeMoreText}>공지사항 더보기</Text>
           </Pressable>
         </View>
@@ -918,12 +928,8 @@ export default function StudentHomeScreen() {
                 style={styles.homePopupImage}
               />
             ) : null}
-            <Text style={styles.homePopupTitle}>
-              {currentHomePopup?.title}
-            </Text>
-            <Text style={styles.homePopupBody}>
-              {currentHomePopup?.body}
-            </Text>
+            <Text style={styles.homePopupTitle}>{currentHomePopup?.title}</Text>
+            <Text style={styles.homePopupBody}>{currentHomePopup?.body}</Text>
             {currentHomePopup?.action_url ? (
               <Pressable
                 onPress={() => void openHomePopupLink()}
@@ -1023,10 +1029,7 @@ function RequestCount({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.requestCount,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.requestCount, pressed && styles.pressed]}
     >
       <View style={styles.requestNumberRow}>
         <Text style={styles.requestNumber}>{count}</Text>
@@ -1120,6 +1123,33 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  topOperationBar: {
+    minHeight: 38,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E8F2',
+    backgroundColor: '#F5F6FB',
+  },
+  topOperationIcon: {
+    width: 18,
+    height: 18,
+    color: COLORS.white,
+    fontSize: 11,
+    lineHeight: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+    borderRadius: 9,
+    backgroundColor: COLORS.navy,
+  },
+  topOperationText: {
+    flex: 1,
+    color: COLORS.navy,
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 12,
   },
   bellIcon: {
     width: 18,
@@ -1456,7 +1486,13 @@ const styles = StyleSheet.create({
   noticeList: {
     marginTop: 24,
   },
-  noticeMore: { height: 48, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#EEEEEE' },
+  noticeMore: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+  },
   noticeMoreText: { color: '#182365', fontSize: 13, fontWeight: '800' },
   homePopupBackdrop: {
     flex: 1,

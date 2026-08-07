@@ -45,13 +45,6 @@ export default function StudentRentalsScreen() {
         contentContainerStyle={styles.content}
         style={styles.scrollView}
       >
-        <View style={styles.guideCard}>
-          <Text style={styles.guideTitle}>필요한 대여 항목을 선택하세요.</Text>
-          <Text style={styles.guideText}>
-            기자재와 실습실의 신청 및 진행 상태를 각각 확인할 수 있습니다.
-          </Text>
-        </View>
-
         {RENTAL_MENUS.map((menu) => (
           <View key={menu.title} style={styles.card}>
             <View style={styles.iconBox}>
@@ -102,19 +95,6 @@ const styles = StyleSheet.create({
   headerTitle: { color: COLORS.text, fontSize: 19, fontWeight: '900' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: 20, paddingBottom: 48, gap: 15 },
-  guideCard: {
-    marginBottom: 3,
-    padding: 19,
-    borderRadius: 18,
-    backgroundColor: COLORS.navy,
-  },
-  guideTitle: { color: COLORS.white, fontSize: 17, fontWeight: '900' },
-  guideText: {
-    marginTop: 7,
-    color: '#D9DDEF',
-    fontSize: 12,
-    lineHeight: 19,
-  },
   card: {
     padding: 18,
     flexDirection: 'row',

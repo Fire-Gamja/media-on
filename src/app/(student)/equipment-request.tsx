@@ -4,15 +4,13 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
@@ -118,97 +116,99 @@ export default function EquipmentRequestScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
-            <PlatformHeaderIcon name="back" />
-          </Pressable>
-          <Text style={styles.headerTitle}>대여 신청</Text>
-          <View style={styles.headerSide} />
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} hitSlop={10}>
+          <PlatformHeaderIcon name="back" />
+        </Pressable>
+        <Text style={styles.headerTitle}>대여 신청</Text>
+        <View style={styles.headerSide} />
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={COLORS.navy} />
         </View>
-
-        {isLoading ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" color={COLORS.navy} />
+      ) : equipment ? (
+        <KeyboardAwareScrollView
+          bottomOffset={24}
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+        >
+          <View style={styles.equipmentCard}>
+            <Text style={styles.category}>{equipment.category}</Text>
+            <Text style={styles.name}>{equipment.name}</Text>
+            <Text style={styles.description}>
+              {equipment.description ?? '학부 기자재 대여 품목'}
+            </Text>
+            <Text style={styles.stock}>
+              보유 수량 {equipment.total_quantity}개
+            </Text>
           </View>
-        ) : equipment ? (
-          <>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.content}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={
-                Platform.OS === 'ios' ? 'interactive' : 'on-drag'
-              }
-              automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-            >
-              <View style={styles.equipmentCard}>
-                <Text style={styles.category}>{equipment.category}</Text>
-                <Text style={styles.name}>{equipment.name}</Text>
-                <Text style={styles.description}>
-                  {equipment.description ?? '학부 기자재 대여 품목'}
-                </Text>
-                <Text style={styles.stock}>보유 수량 {equipment.total_quantity}개</Text>
-              </View>
 
-              <Text style={styles.label}>신청 수량</Text>
-              <TextInput
-                value={quantity}
-                onChangeText={(value) => setQuantity(value.replace(/\D/g, ''))}
-                maxLength={2}
-                keyboardType="number-pad"
-                placeholder="1"
-                placeholderTextColor={COLORS.placeholder}
-                style={styles.input}
+          <Text style={styles.label}>신청 수량</Text>
+          <TextInput
+            value={quantity}
+            onChangeText={(value) => setQuantity(value.replace(/\D/g, ''))}
+            maxLength={2}
+            keyboardType="number-pad"
+            placeholder="1"
+            placeholderTextColor={COLORS.placeholder}
+            style={styles.input}
+          />
+
+          <View style={styles.dateRow}>
+            <View style={styles.dateField}>
+              <DateField
+                label="대여일"
+                value={pickupDate}
+                minimumDate={new Date()}
+                onChange={(value) => {
+                  setPickupDate(value);
+                  if (returnDate < value) setReturnDate(value);
+                }}
               />
-
-              <View style={styles.dateRow}>
-                <View style={styles.dateField}>
-                  <DateField label="대여일" value={pickupDate} minimumDate={new Date()} onChange={(value) => { setPickupDate(value); if (returnDate < value) setReturnDate(value); }} />
-                </View>
-                <View style={styles.dateField}>
-                  <DateField label="반납일" value={returnDate} minimumDate={parseDate(pickupDate)} onChange={setReturnDate} />
-                </View>
-              </View>
-
-              <Text style={[styles.label, styles.purposeLabel]}>사용 목적</Text>
-              <TextInput
-                value={purpose}
-                onChangeText={(value) =>
-                  setPurpose(maskProfanityInput(value))
-                }
-                maxLength={1000}
-                multiline
-                textAlignVertical="top"
-                placeholder="수업명, 행사명 등 사용 목적을 입력해 주세요"
-                placeholderTextColor={COLORS.placeholder}
-                style={styles.purposeInput}
-              />
-            </ScrollView>
-
-            <View style={styles.footer}>
-              <Pressable
-                disabled={isSubmitting}
-                onPress={() => void handleSubmit()}
-                style={({ pressed }) => [
-                  styles.submitButton,
-                  isSubmitting && styles.disabled,
-                  pressed && !isSubmitting && styles.pressed,
-                ]}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color={COLORS.white} />
-                ) : (
-                  <Text style={styles.submitText}>대여 신청</Text>
-                )}
-              </Pressable>
             </View>
-          </>
-        ) : null}
-      </KeyboardAvoidingView>
+            <View style={styles.dateField}>
+              <DateField
+                label="반납일"
+                value={returnDate}
+                minimumDate={parseDate(pickupDate)}
+                onChange={setReturnDate}
+              />
+            </View>
+          </View>
+
+          <Text style={[styles.label, styles.purposeLabel]}>사용 목적</Text>
+          <TextInput
+            value={purpose}
+            onChangeText={(value) => setPurpose(maskProfanityInput(value))}
+            maxLength={1000}
+            multiline
+            textAlignVertical="top"
+            placeholder="수업명, 행사명 등 사용 목적을 입력해 주세요"
+            placeholderTextColor={COLORS.placeholder}
+            style={styles.purposeInput}
+          />
+
+          <Pressable
+            disabled={isSubmitting}
+            onPress={() => void handleSubmit()}
+            style={({ pressed }) => [
+              styles.submitButton,
+              isSubmitting && styles.disabled,
+              pressed && !isSubmitting && styles.pressed,
+            ]}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.submitText}>대여 신청</Text>
+            )}
+          </Pressable>
+        </KeyboardAwareScrollView>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -244,27 +244,74 @@ function getDateKey(date: Date) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.surface },
-  flex: { flex: 1 },
-  header: { height: 64, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  header: {
+    height: 64,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
   backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 },
   headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
   headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 22, paddingBottom: 120 },
-  equipmentCard: { marginBottom: 26, padding: 19, borderRadius: 17, backgroundColor: COLORS.navy },
+  content: { padding: 22, paddingBottom: 32 },
+  equipmentCard: {
+    marginBottom: 26,
+    padding: 19,
+    borderRadius: 17,
+    backgroundColor: COLORS.navy,
+  },
   category: { color: '#D9DDEF', fontSize: 11, fontWeight: '700' },
   name: { marginTop: 7, color: COLORS.white, fontSize: 21, fontWeight: '900' },
   description: { marginTop: 8, color: '#D9DDEF', fontSize: 12, lineHeight: 19 },
-  stock: { marginTop: 12, color: COLORS.white, fontSize: 12, fontWeight: '800' },
-  label: { marginBottom: 9, color: COLORS.text, fontSize: 14, fontWeight: '800' },
-  input: { height: 56, paddingHorizontal: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 15 },
+  stock: {
+    marginTop: 12,
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  label: {
+    marginBottom: 9,
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  input: {
+    height: 56,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    color: COLORS.text,
+    fontSize: 15,
+  },
   dateRow: { marginTop: 23, flexDirection: 'row', gap: 10 },
   dateField: { flex: 1 },
   purposeLabel: { marginTop: 23 },
-  purposeInput: { minHeight: 150, padding: 15, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, backgroundColor: COLORS.surface, color: COLORS.text, fontSize: 14, lineHeight: 22 },
-  footer: { padding: 20, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface },
-  submitButton: { height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: COLORS.navy },
+  purposeInput: {
+    minHeight: 150,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    color: COLORS.text,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  submitButton: {
+    height: 56,
+    marginTop: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: COLORS.navy,
+  },
   submitText: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
   disabled: { opacity: 0.55 },
   pressed: { opacity: 0.7 },

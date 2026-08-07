@@ -71,15 +71,36 @@ export async function updateOperatingHoursSettings(input: {
   return data as OperatingHoursSettings;
 }
 
-export function formatOperatingHours(
-  settings: OperatingHoursSettings,
-) {
+export function formatOperatingHours(settings: OperatingHoursSettings) {
   return {
-    title:
-      settings.mode === 'vacation' ? '방학 중 운영시간' : '운영 시간',
+    title: settings.mode === 'vacation' ? '방학 중 운영시간' : '운영 시간',
     description: `평일 ${settings.start_time.slice(
       0,
       5,
     )} ~ ${settings.end_time.slice(0, 5)}ㆍ${settings.closed_note}`,
   };
+}
+
+export function isWithinOperatingHours(
+  settings: OperatingHoursSettings,
+  now = new Date(),
+) {
+  const koreaTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const weekday = koreaTime.getUTCDay();
+
+  if (weekday === 0 || weekday === 6) {
+    return false;
+  }
+
+  const currentMinutes =
+    koreaTime.getUTCHours() * 60 + koreaTime.getUTCMinutes();
+  const startMinutes = toMinutes(settings.start_time);
+  const endMinutes = toMinutes(settings.end_time);
+
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+}
+
+function toMinutes(value: string) {
+  const [hours = '0', minutes = '0'] = value.split(':');
+  return Number(hours) * 60 + Number(minutes);
 }
