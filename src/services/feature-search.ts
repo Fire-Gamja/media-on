@@ -1,5 +1,6 @@
 import type { Href } from 'expo-router';
 
+import { FREQUENTLY_ASKED_QUESTIONS } from '../content/frequently-asked-questions';
 import { supabase } from '../lib/supabase';
 
 export type FeatureSearchItem = {
@@ -8,7 +9,48 @@ export type FeatureSearchItem = {
   description: string;
   route: Href;
   keywords: string[];
+  searchTerms?: readonly string[];
 };
+
+const FAQ_SEARCH_ALIASES = [
+  '휴학',
+  '일반휴학',
+  '군휴학',
+  '복학',
+  '휴복학',
+  '학교 쉬기',
+  '다시 학교 다니기',
+  '자퇴',
+  '입대',
+  '입영',
+  '공결',
+  '결석',
+  '수강신청',
+  '강의시간표',
+  '이수학점',
+  '교양필수',
+  '필수과목',
+  '졸업',
+  '졸업요건',
+  '취업계',
+  '희망전공',
+  '전공변경',
+  '복수전공',
+  '이수구분',
+] as const;
+
+const FAQ_SEARCH_TERMS = Array.from(
+  new Set([
+    ...FAQ_SEARCH_ALIASES,
+    ...FREQUENTLY_ASKED_QUESTIONS.flatMap((item) => [
+      item.category,
+      item.question,
+      item.answer,
+      ...(item.keywords ?? []),
+      ...(item.links?.flatMap((link) => [link.label]) ?? []),
+    ]),
+  ]),
+);
 
 export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
   {
@@ -59,6 +101,7 @@ export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
     description: '학부 이용 중 자주 묻는 질문과 답변을 확인합니다.',
     route: '/frequently-asked-questions',
     keywords: ['FAQ', '자주 묻는 질문', '질문', '답변', '도움말'],
+    searchTerms: FAQ_SEARCH_TERMS,
   },
   {
     id: 'applications',
@@ -137,7 +180,7 @@ function calculateScore(item: FeatureSearchItem, query: string) {
   if (query.includes(title)) score += 35;
   if (description.includes(query)) score += 20;
 
-  item.keywords.forEach((keyword) => {
+  [...item.keywords, ...(item.searchTerms ?? [])].forEach((keyword) => {
     const normalizedKeyword = normalize(keyword);
     if (normalizedKeyword === query) score += 80;
     if (
@@ -152,5 +195,7 @@ function calculateScore(item: FeatureSearchItem, query: string) {
 }
 
 function normalize(value: string) {
-  return value.toLocaleLowerCase('ko-KR').replace(/[\s?.!,~_-]/g, '');
+  return value
+    .toLocaleLowerCase('ko-KR')
+    .replace(/[^0-9a-zA-Z가-힣ㄱ-ㅎㅏ-ㅣ]/g, '');
 }
