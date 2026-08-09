@@ -1330,6 +1330,7 @@ const styles = StyleSheet.create({
   },
   sectionTitleRow: {
     minHeight: 38,
+    paddingHorizontal: 4,
     paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1640,6 +1641,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     minHeight: 38,
+    paddingHorizontal: 4,
     paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
