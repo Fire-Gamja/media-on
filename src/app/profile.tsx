@@ -5,7 +5,7 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -53,6 +53,8 @@ const MAJORS = [
 const ENROLLMENT_STATUSES = ['재학', '휴학', '졸업', '제적·자퇴'] as const;
 type EditableProfileField = 'major' | 'status' | 'phone';
 
+const AVATAR_MODAL_DISMISS_FALLBACK_MS = 400;
+
 export default function ProfileScreen() {
   const { mustChangePassword } = useLocalSearchParams<{
     mustChangePassword?: string;
@@ -73,6 +75,10 @@ export default function ProfileScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isAvatarPickerVisible, setIsAvatarPickerVisible] = useState(false);
+  const pendingPhotoLibraryRef = useRef(false);
+  const photoLibraryFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [editingField, setEditingField] =
     useState<EditableProfileField | null>(null);
   const [showPasswordEditor, setShowPasswordEditor] = useState(false);
@@ -100,22 +106,42 @@ export default function ProfileScreen() {
     }
   }, [applyProfile]);
 
-  const handleAvatarPhotoUpload = async () => {
-    setIsAvatarPickerVisible(false);
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.75,
-    });
-    if (result.canceled || !supabase || !profile) return;
+  const launchAvatarPhotoLibrary = useCallback(async () => {
     try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert(
+          '사진 접근 권한 필요',
+          '내 사진을 등록하려면 기기 설정에서 사진 접근을 허용해 주세요.',
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.75,
+      });
+
+      if (result.canceled) return;
+
+      if (!supabase || !profile) {
+        throw new Error('프로필 정보를 확인하지 못했습니다.');
+      }
+
       setIsSaving(true);
-      const bytes = await (await fetch(result.assets[0].uri)).arrayBuffer();
+      const selectedPhoto = result.assets[0];
+      const bytes = await (await fetch(selectedPhoto.uri)).arrayBuffer();
       const path = `${profile.id}/avatar.jpg`;
       const { error } = await supabase.storage
         .from('profile-images')
-        .upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+        .upload(path, bytes, {
+          contentType: selectedPhoto.mimeType ?? 'image/jpeg',
+          upsert: true,
+        });
       if (error) throw error;
       const { data } = supabase.storage
         .from('profile-images')
@@ -128,7 +154,42 @@ export default function ProfileScreen() {
     } finally {
       setIsSaving(false);
     }
+  }, [applyProfile, profile]);
+
+  const openPendingPhotoLibrary = useCallback(() => {
+    if (!pendingPhotoLibraryRef.current) return;
+
+    pendingPhotoLibraryRef.current = false;
+    if (photoLibraryFallbackRef.current) {
+      clearTimeout(photoLibraryFallbackRef.current);
+      photoLibraryFallbackRef.current = null;
+    }
+
+    void launchAvatarPhotoLibrary();
+  }, [launchAvatarPhotoLibrary]);
+
+  const handleAvatarPhotoUpload = () => {
+    setIsAvatarPickerVisible(false);
+
+    if (Platform.OS === 'web') {
+      void launchAvatarPhotoLibrary();
+      return;
+    }
+
+    pendingPhotoLibraryRef.current = true;
+    photoLibraryFallbackRef.current = setTimeout(
+      openPendingPhotoLibrary,
+      AVATAR_MODAL_DISMISS_FALLBACK_MS,
+    );
   };
+
+  useEffect(() => {
+    return () => {
+      if (photoLibraryFallbackRef.current) {
+        clearTimeout(photoLibraryFallbackRef.current);
+      }
+    };
+  }, []);
 
   const handleAvatarPresetChange = async (preset: ProfileAvatarPreset) => {
     if (!profile || !supabase) return;
@@ -559,6 +620,7 @@ export default function ProfileScreen() {
 
       <Modal
         animationType="fade"
+        onDismiss={openPendingPhotoLibrary}
         onRequestClose={() => setIsAvatarPickerVisible(false)}
         transparent
         visible={isAvatarPickerVisible}
