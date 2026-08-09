@@ -132,6 +132,13 @@ export const FEATURE_SEARCH_ITEMS: FeatureSearchItem[] = [
     keywords: ['알림', '푸시', '메시지', '미확인'],
   },
   {
+    id: 'language-settings',
+    title: '언어 설정',
+    description: '앱에서 사용할 표시 언어를 변경합니다.',
+    route: '/language-settings',
+    keywords: ['언어', '한국어', '영어', '중국어', '일본어', '베트남어', '태국어'],
+  },
+  {
     id: 'settings',
     title: '설정',
     description: '일반 상태 알림 설정을 변경합니다.',

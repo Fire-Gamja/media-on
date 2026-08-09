@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { useAppSettings } from '../../context/app-settings-context';
+import { LANGUAGE_OPTIONS, translate } from '../../i18n/translations';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   disablePushForCurrentDevice,
@@ -26,8 +27,11 @@ import {
 } from '../../services/push-notifications';
 
 export default function StudentSettingsScreen() {
-  const { generalNotificationsEnabled, setGeneralNotificationsEnabled } =
-    useAppSettings();
+  const {
+    generalNotificationsEnabled,
+    language,
+    setGeneralNotificationsEnabled,
+  } = useAppSettings();
   const [isSaving, setIsSaving] = useState(false);
   const [notificationPermissionGranted, setNotificationPermissionGranted] =
     useState<boolean | null>(null);
@@ -129,6 +133,20 @@ export default function StudentSettingsScreen() {
         contentContainerStyle={styles.content}
         style={styles.scrollView}
       >
+        <Text style={styles.sectionLabel}>
+          {translate(language, 'language.title')}
+        </Text>
+        <View style={styles.card}>
+          <LinkRow
+            description={translate(language, 'settings.languageDescription')}
+            label={
+              LANGUAGE_OPTIONS.find((option) => option.code === language)
+                ?.nativeLabel ?? '한국어'
+            }
+            onPress={() => router.push('/language-settings')}
+          />
+        </View>
+
         <Text style={styles.sectionLabel}>알림</Text>
         <View style={styles.card}>
           <SettingRow

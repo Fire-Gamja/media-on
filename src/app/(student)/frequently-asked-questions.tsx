@@ -15,14 +15,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/common/AppIcon';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
+import { useAppSettings } from '../../context/app-settings-context';
 import {
   FREQUENTLY_ASKED_QUESTIONS,
   type FrequentlyAskedQuestion,
 } from '../../content/frequently-asked-questions';
+import { translate, translateFaqCategory } from '../../i18n/translations';
 
-const ALL_CATEGORIES = '전체';
+const ALL_CATEGORIES = '__all__';
 
 export default function FrequentlyAskedQuestionsScreen() {
+  const { language } = useAppSettings();
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
   const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
@@ -53,25 +56,21 @@ export default function FrequentlyAskedQuestionsScreen() {
     });
   }, [query, selectedCategory]);
 
-  const resultTitle = query.trim()
-    ? `검색 결과 ${visibleQuestions.length}개`
-    : selectedCategory === ALL_CATEGORIES
-      ? `전체 질문 ${visibleQuestions.length}개`
-      : `${selectedCategory} 관련 질문 ${visibleQuestions.length}개`;
-
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="dark" />
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="뒤로 가기"
+          accessibilityLabel={translate(language, 'common.back')}
           hitSlop={10}
           onPress={() => router.back()}
           style={styles.headerSide}
         >
           <PlatformHeaderIcon color={COLORS.navy} name="back" />
         </Pressable>
-        <Text style={styles.headerTitle}>자주 묻는 질문</Text>
+        <Text style={styles.headerTitle}>
+          {translate(language, 'faq.title')}
+        </Text>
         <View style={styles.headerSide} />
       </View>
 
@@ -81,11 +80,11 @@ export default function FrequentlyAskedQuestionsScreen() {
         style={styles.scrollView}
       >
         <View style={styles.searchBox}>
-          <AppIcon color={COLORS.text} name="search" size={21} />
+          <AppIcon color="#9EADC6" name="search" size={18} />
           <TextInput
             accessibilityLabel="자주 묻는 질문 검색"
             onChangeText={setQuery}
-            placeholder="예: 군휴학 신청"
+            placeholder={translate(language, 'faq.searchPlaceholder')}
             placeholderTextColor={COLORS.placeholder}
             returnKeyType="search"
             style={styles.searchInput}
@@ -109,17 +108,14 @@ export default function FrequentlyAskedQuestionsScreen() {
                 <Text
                   style={[styles.categoryText, selected && styles.categoryTextSelected]}
                 >
-                  {category}
+                  {category === ALL_CATEGORIES
+                    ? translate(language, 'faq.all')
+                    : translateFaqCategory(language, category)}
                 </Text>
               </Pressable>
             );
           })}
         </ScrollView>
-
-        <View style={styles.resultHeader}>
-          <Text style={styles.resultTitle}>{resultTitle}</Text>
-          <Text style={styles.resultHint}>질문을 누르면 답변이 펼쳐집니다.</Text>
-        </View>
 
         {visibleQuestions.length > 0 ? (
           <View style={styles.questionList}>
@@ -127,6 +123,7 @@ export default function FrequentlyAskedQuestionsScreen() {
               <QuestionItem
                 key={item.id}
                 item={item}
+                language={language}
                 onPress={() =>
                   setOpenQuestionId((current) =>
                     current === item.id ? null : item.id,
@@ -141,13 +138,13 @@ export default function FrequentlyAskedQuestionsScreen() {
             <AppIcon color={COLORS.placeholder} name="faq" size={42} />
             <Text style={styles.emptyTitle}>
               {FREQUENTLY_ASKED_QUESTIONS.length === 0
-                ? '자주 묻는 질문을 준비 중입니다.'
-                : '검색 결과가 없습니다.'}
+                ? translate(language, 'faq.preparing')
+                : translate(language, 'faq.noResults')}
             </Text>
             <Text style={styles.emptyDescription}>
               {FREQUENTLY_ASKED_QUESTIONS.length === 0
-                ? '질문과 답변이 확정되면 이곳에서 바로 확인할 수 있습니다.'
-                : '다른 검색어나 카테고리를 선택해 주세요.'}
+                ? translate(language, 'faq.preparingDescription')
+                : translate(language, 'faq.noResultsDescription')}
             </Text>
           </View>
         )}
@@ -158,10 +155,12 @@ export default function FrequentlyAskedQuestionsScreen() {
 
 function QuestionItem({
   item,
+  language,
   onPress,
   open,
 }: {
   item: FrequentlyAskedQuestion;
+  language: ReturnType<typeof useAppSettings>['language'];
   onPress: () => void;
   open: boolean;
 }) {
@@ -177,39 +176,38 @@ function QuestionItem({
       ]}
     >
       <View style={styles.questionHeader}>
-        <View style={[styles.questionBadge, open && styles.questionBadgeOpen]}>
-          <Text style={[styles.questionBadgeText, open && styles.questionBadgeTextOpen]}>
-            Q
-          </Text>
-        </View>
+        <Text style={styles.questionBadgeText}>Q</Text>
         <View style={styles.questionTextArea}>
-          <Text style={styles.questionCategory}>{item.category}</Text>
+          <Text style={styles.questionCategory}>
+            {translateFaqCategory(language, item.category)}
+          </Text>
           <Text style={styles.questionText}>{item.question}</Text>
         </View>
-        <Text style={[styles.chevron, open && styles.chevronOpen]}>
-          {open ? '⌃' : '⌄'}
-        </Text>
+        <Text style={styles.chevron}>{open ? '⌃' : '⌄'}</Text>
       </View>
       {open ? (
         <View style={styles.answerArea}>
-          <Text style={styles.answerText}>{item.answer}</Text>
-          {item.links?.map((link) => (
-            <Pressable
-              key={link.url}
-              accessibilityRole="link"
-              onPress={(event) => {
-                event.stopPropagation();
-                void Linking.openURL(link.url);
-              }}
-              style={({ pressed }) => [
-                styles.linkButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.linkText}>{link.label}</Text>
-              <Text style={styles.linkArrow}>›</Text>
-            </Pressable>
-          ))}
+          <Text style={styles.answerBadge}>A</Text>
+          <View style={styles.answerContent}>
+            <Text style={styles.answerText}>{item.answer}</Text>
+            {item.links?.map((link) => (
+              <Pressable
+                key={link.url}
+                accessibilityRole="link"
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void Linking.openURL(link.url);
+                }}
+                style={({ pressed }) => [
+                  styles.linkButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.linkText}>{link.label}</Text>
+                <Text style={styles.linkArrow}>›</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       ) : null}
     </Pressable>
@@ -223,11 +221,13 @@ function normalize(value: string) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.surface },
   header: {
-    height: 60,
-    paddingHorizontal: 16,
+    height: 56,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
     backgroundColor: COLORS.surface,
   },
   headerSide: {
@@ -238,79 +238,95 @@ const styles = StyleSheet.create({
   },
   headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
   scrollView: { flex: 1, backgroundColor: COLORS.surface },
-  content: { paddingHorizontal: 22, paddingTop: 22, paddingBottom: 52 },
+  content: { paddingHorizontal: 15, paddingTop: 18, paddingBottom: 52 },
   searchBox: {
-    height: 56,
-    paddingHorizontal: 16,
+    height: 44,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 16,
+    borderRadius: 24,
     backgroundColor: COLORS.surface,
   },
-  searchInput: { flex: 1, color: COLORS.text, fontSize: 15 },
-  categories: { gap: 8, paddingVertical: 20 },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontFamily: 'FreesentationRegular',
+    fontSize: 14,
+  },
+  categories: { gap: 8, paddingVertical: 16 },
   categoryButton: {
-    minHeight: 38,
-    paddingHorizontal: 15,
+    minHeight: 31,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 19,
-    backgroundColor: '#F0F2F7',
+    borderRadius: 16,
+    backgroundColor: '#F1F3F7',
   },
-  categorySelected: { backgroundColor: COLORS.navy },
-  categoryText: { color: COLORS.subText, fontSize: 12, fontWeight: '700' },
+  categorySelected: { backgroundColor: '#3550FF' },
+  categoryText: {
+    color: '#667085',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 12,
+  },
   categoryTextSelected: { color: COLORS.white, fontWeight: '800' },
-  resultHeader: { marginTop: 4, marginBottom: 12 },
-  resultTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
-  resultHint: { marginTop: 6, color: COLORS.subText, fontSize: 12 },
-  questionList: { gap: 6 },
+  questionList: { marginTop: 4 },
   questionCard: {
-    paddingHorizontal: 4,
-    paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#ECEEF4',
+    borderBottomColor: '#EDF0F4',
     backgroundColor: COLORS.surface,
   },
-  questionCardOpen: {
-    marginVertical: 4,
-    paddingHorizontal: 16,
-    borderBottomWidth: 0,
-    borderRadius: 18,
-    backgroundColor: COLORS.softNavy,
-  },
-  questionHeader: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  questionBadge: {
-    width: 36,
-    height: 36,
+  questionCardOpen: { backgroundColor: COLORS.surface },
+  questionHeader: {
+    minHeight: 62,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: COLORS.softNavy,
+    gap: 13,
   },
-  questionBadgeOpen: { backgroundColor: COLORS.navy },
-  questionBadgeText: { color: COLORS.navy, fontSize: 17, fontWeight: '900' },
-  questionBadgeTextOpen: { color: COLORS.white },
+  questionBadgeText: {
+    width: 14,
+    color: COLORS.navy,
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 13,
+  },
   questionTextArea: { flex: 1 },
-  questionCategory: { color: COLORS.navy, fontSize: 10, fontWeight: '800' },
+  questionCategory: {
+    color: '#667085',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 10,
+  },
   questionText: {
     marginTop: 4,
     color: COLORS.text,
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '800',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 13,
+    lineHeight: 18,
   },
-  chevron: { color: COLORS.subText, fontSize: 21, fontWeight: '700' },
-  chevronOpen: { color: COLORS.navy },
+  chevron: { color: COLORS.navy, fontSize: 15, fontWeight: '700' },
   answerArea: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(24, 35, 102, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    gap: 13,
+    backgroundColor: '#F7F7F7',
   },
-  answerText: { color: COLORS.text, fontSize: 14, lineHeight: 23 },
+  answerBadge: {
+    width: 14,
+    color: COLORS.navy,
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 13,
+  },
+  answerContent: { flex: 1 },
+  answerText: {
+    color: COLORS.text,
+    fontFamily: 'FreesentationRegular',
+    fontSize: 13,
+    lineHeight: 20,
+  },
   linkButton: {
     minHeight: 48,
     marginTop: 14,

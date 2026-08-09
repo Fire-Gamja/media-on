@@ -28,7 +28,9 @@ import MonthCalendar, {
   toDateKey,
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
+import { useAppSettings } from '../../context/app-settings-context';
 import { useNoticeSettings } from '../../context/notice-settings-context';
+import { translate, type TranslationKey } from '../../i18n/translations';
 import { getProfileAvatarSource } from '../../lib/profile-avatar';
 import { confirmRoomRequestNavigation } from '../../lib/room-request-confirmation';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -102,7 +104,7 @@ type QuickAction = {
     | 'assistant'
     | 'faq'
     | 'language';
-  title: string;
+  titleKey: TranslationKey;
   icon: ImageSourcePropType;
 };
 
@@ -116,42 +118,42 @@ type HomeNotice = {
 const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'notice',
-    title: '공지사항',
+    titleKey: 'home.notice',
     icon: homeIcons.fileText,
   },
   {
     id: 'equipment',
-    title: '기자재 대여',
+    titleKey: 'home.equipment',
     icon: homeIcons.tool,
   },
   {
     id: 'room',
-    title: '실습실 대여',
+    titleKey: 'home.room',
     icon: homeIcons.monitor,
   },
   {
     id: 'report',
-    title: '시설 신고',
+    titleKey: 'home.report',
     icon: homeIcons.toolbox,
   },
   {
     id: 'preGraduation',
-    title: '예비졸업사정',
+    titleKey: 'home.preGraduation',
     icon: homeIcons.bookOpen,
   },
   {
     id: 'assistant',
-    title: '조교 문의',
+    titleKey: 'home.assistant',
     icon: homeIcons.messageSquare,
   },
   {
     id: 'faq',
-    title: '자주 묻는 질문',
+    titleKey: 'home.faq',
     icon: homeIcons.helpCircle,
   },
   {
     id: 'language',
-    title: '언어 설정',
+    titleKey: 'home.language',
     icon: homeIcons.globe,
   },
 ];
@@ -178,6 +180,7 @@ const FALLBACK_NOTICES: HomeNotice[] = [
 export default function StudentHomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { language } = useAppSettings();
   const { noticeCount } = useNoticeSettings();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [notices, setNotices] = useState<HomeNotice[]>(FALLBACK_NOTICES);
@@ -471,7 +474,7 @@ export default function StudentHomeScreen() {
       report: '/facility-report',
       assistant: '/assistant-inquiry',
       faq: '/frequently-asked-questions',
-      language: '/settings',
+      language: '/language-settings',
     } as const;
 
     router.push(routes[action.id]);
@@ -820,7 +823,9 @@ export default function StudentHomeScreen() {
                     style={styles.quickIcon}
                   />
                 </View>
-                <Text style={styles.quickLabel}>{action.title}</Text>
+                <Text style={styles.quickLabel}>
+                  {translate(language, action.titleKey)}
+                </Text>
               </Pressable>
             ))}
           </View>

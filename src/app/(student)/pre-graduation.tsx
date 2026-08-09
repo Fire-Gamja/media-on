@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,9 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppIcon } from '../../components/common/AppIcon';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
+import { useAppSettings } from '../../context/app-settings-context';
+import {
+  type AppLanguage,
+  translate,
+  type TranslationKey,
+} from '../../i18n/translations';
 import {
   getAuthErrorMessage,
   getCurrentProfile,
@@ -25,15 +31,31 @@ import {
   DEFAULT_PRE_GRADUATION_SETTINGS,
   getPreGraduationSchedule,
   getPreGraduationSettings,
-  getPreGraduationWeekdayLabel,
-  PRE_GRADUATION_WEEKDAYS,
   reservePreGraduationSlot,
   type PreGraduationSettings,
   type PreGraduationSlot,
   type PreGraduationWeekday,
 } from '../../services/pre-graduation';
 
+const EVENT_DAYS: Record<PreGraduationWeekday, number> = {
+  1: 7,
+  2: 1,
+  3: 2,
+  4: 3,
+  5: 4,
+};
+
+const LANGUAGE_LOCALES: Record<AppLanguage, string> = {
+  ko: 'ko-KR',
+  en: 'en-US',
+  zh: 'zh-CN',
+  ja: 'ja-JP',
+  vi: 'vi-VN',
+  th: 'th-TH',
+};
+
 export default function PreGraduationScreen() {
+  const { language } = useAppSettings();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [settings, setSettings] = useState<PreGraduationSettings>(
     DEFAULT_PRE_GRADUATION_SETTINGS,
@@ -41,9 +63,13 @@ export default function PreGraduationScreen() {
   const [slots, setSlots] = useState<PreGraduationSlot[]>([]);
   const [selectedWeekday, setSelectedWeekday] =
     useState<PreGraduationWeekday>(1);
+  const [selectedSlot, setSelectedSlot] =
+    useState<PreGraduationSlot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
 
   const loadScreen = useCallback(async () => {
     try {
@@ -103,36 +129,40 @@ export default function PreGraduationScreen() {
         : settings.enabled_weekdays.length === 0
           ? '현재 신청 가능한 요일이 없습니다.'
           : null;
+  const canReserve = !errorMessage && !blockedMessage;
 
-  const confirmReservation = (slot: PreGraduationSlot) => {
-    const weekdayLabel = getPreGraduationWeekdayLabel(slot.weekday, true);
-
-    Alert.alert(
-      '예비졸업사정 예약',
-      `${weekdayLabel} ${slot.slot_start} ~ ${slot.slot_end} 시간으로 신청하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '신청',
-          onPress: () => void reserveSlot(slot),
-        },
-      ],
-    );
+  const selectWeekday = (weekday: PreGraduationWeekday) => {
+    setSelectedWeekday(weekday);
+    setSelectedSlot(null);
   };
 
-  const reserveSlot = async (slot: PreGraduationSlot) => {
+  const selectSlot = (slot: PreGraduationSlot) => {
+    if (slot.is_mine) {
+      confirmCancellation(slot);
+      return;
+    }
+
+    if (!slot.reservation_id) {
+      setSelectedSlot(slot);
+    }
+  };
+
+  const reserveSlot = async () => {
+    if (!selectedSlot) {
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       await reservePreGraduationSlot({
-        weekday: slot.weekday,
-        startTime: slot.slot_start,
+        weekday: selectedSlot.weekday,
+        startTime: selectedSlot.slot_start,
       });
+      setShowConfirmation(false);
       await loadScreen();
-      Alert.alert(
-        '신청 완료',
-        `${getPreGraduationWeekdayLabel(slot.weekday, true)} ${slot.slot_start} ~ ${slot.slot_end} 예약이 완료되었습니다.`,
-      );
+      setShowCompletion(true);
     } catch (error) {
+      setShowConfirmation(false);
       Alert.alert('신청 실패', getAuthErrorMessage(error));
       await loadScreen();
     } finally {
@@ -146,12 +176,12 @@ export default function PreGraduationScreen() {
     }
 
     Alert.alert(
-      '예약 취소',
-      `${getPreGraduationWeekdayLabel(slot.weekday, true)} ${slot.slot_start} 예약을 취소하시겠습니까?`,
+      translate(language, 'pre.cancelReservation'),
+      `${formatReservationDate(slot.weekday, language)} ${slot.slot_start} 예약을 취소하시겠습니까?`,
       [
         { text: '유지', style: 'cancel' },
         {
-          text: '예약 취소',
+          text: translate(language, 'pre.cancelReservation'),
           style: 'destructive',
           onPress: () => void cancelReservation(slot.reservation_id!),
         },
@@ -177,180 +207,182 @@ export default function PreGraduationScreen() {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="뒤로 가기"
+          accessibilityLabel={translate(language, 'common.back')}
           accessibilityRole="button"
           hitSlop={10}
           onPress={() => router.back()}
+          style={styles.headerSide}
         >
-          <PlatformHeaderIcon name="back" />
+          <PlatformHeaderIcon color={COLORS.text} name="back" />
         </Pressable>
-        <Text style={styles.headerTitle}>4학년 예비졸업사정</Text>
+        <Text style={styles.headerTitle}>
+          {translate(language, 'pre.title')}
+        </Text>
         <View style={styles.headerSide} />
       </View>
 
       {isLoading ? (
         <View style={styles.centered}>
-          <ActivityIndicator color={COLORS.navy} size="large" />
+          <ActivityIndicator color="#3550FF" size="large" />
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            canReserve && styles.contentWithButton,
+          ]}
+          showsVerticalScrollIndicator={false}
           style={styles.scrollView}
         >
-          <View style={styles.guideCard}>
-            <View style={styles.guideIcon}>
-              <AppIcon color={COLORS.white} name="graduation" size={34} />
-            </View>
-            <View style={styles.guideTextArea}>
-              <Text style={styles.guideTitle}>예비졸업사정 예약</Text>
-              <Text style={styles.guideText}>
-                상담 시간은 1건당 20분이며, 필요한 경우 다른 시간도 추가로
-                예약할 수 있습니다.
-              </Text>
-            </View>
-          </View>
-
           {errorMessage ? (
-            <View style={styles.stateCard}>
-              <Text style={styles.stateTitle}>정보를 불러오지 못했습니다.</Text>
-              <Text style={styles.stateText}>{errorMessage}</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => void loadScreen()}
-                style={styles.retryButton}
-              >
-                <Text style={styles.retryText}>다시 불러오기</Text>
-              </Pressable>
-            </View>
+            <StateCard
+              description={errorMessage}
+              onRetry={() => void loadScreen()}
+              title={translate(language, 'pre.loadFailed')}
+              language={language}
+            />
           ) : blockedMessage ? (
-            <View style={styles.stateCard}>
-              <View style={styles.lockIcon}>
-                <Text style={styles.lockText}>!</Text>
-              </View>
-              <Text style={styles.stateTitle}>현재 접근할 수 없습니다.</Text>
-              <Text style={styles.stateText}>{blockedMessage}</Text>
-            </View>
+            <StateCard
+              description={blockedMessage}
+              title={translate(language, 'pre.unavailable')}
+              language={language}
+            />
           ) : (
             <>
-              {myReservations.map((reservation) => (
-                <View
-                  key={reservation.reservation_id}
-                  style={styles.myReservationCard}
+              <Text style={styles.heroTitle}>
+                {translate(language, 'pre.heading')}
+              </Text>
+              <View style={styles.divider} />
+
+              {myReservations.length > 0 ? (
+                <ScrollView
+                  contentContainerStyle={styles.reservationList}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
                 >
-                  <View>
-                    <Text style={styles.myReservationLabel}>내 예약</Text>
-                    <Text style={styles.myReservationTime}>
-                      {getPreGraduationWeekdayLabel(reservation.weekday, true)}{' '}
-                      {reservation.slot_start} ~ {reservation.slot_end}
-                    </Text>
-                  </View>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={isSubmitting}
-                    onPress={() => confirmCancellation(reservation)}
-                    style={styles.cancelButton}
-                  >
-                    <Text style={styles.cancelButtonText}>예약 취소</Text>
-                  </Pressable>
-                </View>
-              ))}
+                  {myReservations.map((reservation) => (
+                    <Pressable
+                      key={reservation.reservation_id}
+                      accessibilityRole="button"
+                      disabled={isSubmitting}
+                      onPress={() => confirmCancellation(reservation)}
+                      style={styles.myReservation}
+                    >
+                      <Text style={styles.myReservationLabel}>
+                        {translate(language, 'pre.mine')}
+                      </Text>
+                      <Text style={styles.myReservationTime}>
+                        {formatReservationDate(
+                          reservation.weekday,
+                          language,
+                        )}{' '}
+                        {reservation.slot_start}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              ) : null}
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>신청 요일</Text>
-                <Text style={styles.sectionDescription}>
-                  관리자가 활성화한 요일만 선택할 수 있습니다.
+                <Text style={styles.sectionTitle}>
+                  {translate(language, 'pre.visitDate')}
                 </Text>
-                <View style={styles.weekdayRow}>
-                  {PRE_GRADUATION_WEEKDAYS.map((weekday) => {
-                    const isEnabled = settings.enabled_weekdays.includes(
-                      weekday.value,
-                    );
-                    const isSelected =
-                      selectedWeekday === weekday.value && isEnabled;
-
+                <ScrollView
+                  contentContainerStyle={styles.dateRow}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                >
+                  {settings.enabled_weekdays.map((weekday) => {
+                    const selected = weekday === selectedWeekday;
                     return (
                       <Pressable
-                        key={weekday.value}
-                        accessibilityRole="tab"
-                        accessibilityState={{
-                          disabled: !isEnabled,
-                          selected: isSelected,
-                        }}
-                        disabled={!isEnabled}
-                        onPress={() => setSelectedWeekday(weekday.value)}
+                        key={weekday}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selected }}
+                        onPress={() => selectWeekday(weekday)}
                         style={[
-                          styles.weekdayButton,
-                          !isEnabled && styles.weekdayButtonDisabled,
-                          isSelected && styles.weekdayButtonSelected,
+                          styles.dateCard,
+                          selected && styles.selectedCard,
                         ]}
                       >
                         <Text
                           style={[
-                            styles.weekdayText,
-                            !isEnabled && styles.weekdayTextDisabled,
-                            isSelected && styles.weekdayTextSelected,
+                            styles.dateDay,
+                            selected && styles.selectedText,
                           ]}
                         >
-                          {weekday.label}
+                          {EVENT_DAYS[weekday]}
+                          {language === 'ko' ? '일' : ''}
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.dateWeekday,
+                            selected && styles.selectedText,
+                          ]}
+                        >
+                          {translate(
+                            language,
+                            `weekday.${weekday}` as TranslationKey,
+                          )}
                         </Text>
                       </Pressable>
                     );
                   })}
-                </View>
+                </ScrollView>
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>예약 시간</Text>
-                <Text style={styles.sectionDescription}>
-                  10:20부터 16:20까지 20분 단위로 운영됩니다.
+                <Text style={styles.sectionTitle}>
+                  {translate(language, 'pre.visitTime')}
                 </Text>
                 <View style={styles.slotGrid}>
                   {selectedSlots.map((slot) => {
-                    const isOccupied = Boolean(slot.reservation_id);
-                    const isDisabled =
-                      isSubmitting || (isOccupied && !slot.is_mine);
-                    const slotCaption = slot.is_mine
-                      ? '내 예약'
-                      : isOccupied
-                        ? `${slot.student_name ?? '다른 학생'} 학생 예약`
-                        : '신청 가능';
+                    const occupied = Boolean(slot.reservation_id);
+                    const selected =
+                      selectedSlot?.weekday === slot.weekday &&
+                      selectedSlot.slot_start === slot.slot_start;
+                    const disabled =
+                      isSubmitting || (occupied && !slot.is_mine);
+                    const caption = slot.is_mine
+                      ? translate(language, 'pre.mine')
+                      : occupied
+                        ? `${slot.student_name ?? ''} ${translate(language, 'pre.booked')}`.trim()
+                        : translate(language, 'pre.available');
 
                     return (
                       <Pressable
                         key={`${slot.weekday}-${slot.slot_start}`}
-                        accessibilityLabel={`${slot.slot_start}부터 ${slot.slot_end}, ${slotCaption}`}
                         accessibilityRole="button"
-                        disabled={isDisabled}
-                        onPress={() =>
-                          slot.is_mine
-                            ? confirmCancellation(slot)
-                            : confirmReservation(slot)
-                        }
+                        accessibilityState={{ disabled, selected }}
+                        disabled={disabled}
+                        onPress={() => selectSlot(slot)}
                         style={({ pressed }) => [
                           styles.slotCard,
-                          isOccupied && styles.slotCardOccupied,
-                          slot.is_mine && styles.slotCardMine,
-                          isDisabled && !isOccupied && styles.slotCardDisabled,
+                          selected && styles.selectedCard,
+                          occupied && !slot.is_mine && styles.occupiedCard,
+                          slot.is_mine && styles.mySlotCard,
                           pressed && styles.pressed,
                         ]}
                       >
                         <Text
                           style={[
                             styles.slotTime,
-                            slot.is_mine && styles.slotTextMine,
+                            (selected || slot.is_mine) && styles.selectedText,
+                            occupied && !slot.is_mine && styles.occupiedText,
                           ]}
                         >
-                          {slot.slot_start} ~ {slot.slot_end}
+                          {slot.slot_start}
                         </Text>
                         <Text
                           numberOfLines={1}
                           style={[
                             styles.slotCaption,
-                            isOccupied && styles.slotCaptionOccupied,
-                            slot.is_mine && styles.slotTextMine,
+                            (selected || slot.is_mine) && styles.selectedText,
+                            occupied && !slot.is_mine && styles.occupiedText,
                           ]}
                         >
-                          {slotCaption}
+                          {caption}
                         </Text>
                       </Pressable>
                     );
@@ -361,257 +393,469 @@ export default function PreGraduationScreen() {
           )}
         </ScrollView>
       )}
+
+      {!isLoading && canReserve ? (
+        <View style={styles.bottomBar}>
+          <Pressable
+            accessibilityRole="button"
+            disabled={!selectedSlot || isSubmitting}
+            onPress={() => setShowConfirmation(true)}
+            style={({ pressed }) => [
+              styles.nextButton,
+              (!selectedSlot || isSubmitting) && styles.nextButtonDisabled,
+              pressed && selectedSlot && styles.pressed,
+            ]}
+          >
+            <Text style={styles.nextText}>
+              {translate(language, 'pre.next')}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <ReservationConfirmationModal
+        isSubmitting={isSubmitting}
+        language={language}
+        onCancel={() => setShowConfirmation(false)}
+        onConfirm={() => void reserveSlot()}
+        slot={selectedSlot}
+        visible={showConfirmation}
+      />
+
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setShowCompletion(false)}
+        transparent
+        visible={showCompletion}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.completionModal}>
+            <Text style={styles.completionText}>
+              {translate(language, 'pre.complete')}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setShowCompletion(false);
+                setSelectedSlot(null);
+              }}
+              style={({ pressed }) => [
+                styles.completionButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.completionButtonText}>
+                {translate(language, 'pre.ok')}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
+function StateCard({
+  description,
+  language,
+  onRetry,
+  title,
+}: {
+  description: string;
+  language: AppLanguage;
+  onRetry?: () => void;
+  title: string;
+}) {
+  return (
+    <View style={styles.stateCard}>
+      <View style={styles.stateIcon}>
+        <Text style={styles.stateIconText}>!</Text>
+      </View>
+      <Text style={styles.stateTitle}>{title}</Text>
+      <Text style={styles.stateDescription}>{description}</Text>
+      {onRetry ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onRetry}
+          style={styles.retryButton}
+        >
+          <Text style={styles.retryText}>
+            {translate(language, 'pre.retry')}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function ReservationConfirmationModal({
+  isSubmitting,
+  language,
+  onCancel,
+  onConfirm,
+  slot,
+  visible,
+}: {
+  isSubmitting: boolean;
+  language: AppLanguage;
+  onCancel: () => void;
+  onConfirm: () => void;
+  slot: PreGraduationSlot | null;
+  visible: boolean;
+}) {
+  if (!slot) {
+    return null;
+  }
+
+  return (
+    <Modal
+      animationType="fade"
+      onRequestClose={onCancel}
+      transparent
+      visible={visible}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.confirmationModal}>
+          <View style={styles.confirmationContent}>
+            <View style={styles.datePill}>
+              <Text style={styles.datePillText}>
+                {formatReservationDate(slot.weekday, language)}{' '}
+                <Text style={styles.datePillTime}>{slot.slot_start}</Text>
+              </Text>
+            </View>
+            <Text style={styles.confirmationQuestion}>
+              {translate(language, 'pre.confirmQuestion')}
+            </Text>
+          </View>
+          <View style={styles.confirmationActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSubmitting}
+              onPress={onCancel}
+              style={styles.noButton}
+            >
+              <Text style={styles.noButtonText}>
+                {translate(language, 'pre.no')}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSubmitting}
+              onPress={onConfirm}
+              style={styles.yesButton}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <Text style={styles.yesButtonText}>
+                  {translate(language, 'pre.yes')}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function formatReservationDate(
+  weekday: PreGraduationWeekday,
+  language: AppLanguage,
+) {
+  const date = new Date(2026, 8, EVENT_DAYS[weekday]);
+  return new Intl.DateTimeFormat(LANGUAGE_LOCALES[language], {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(date);
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
+  safeArea: { flex: 1, backgroundColor: COLORS.surface },
   header: {
-    height: 64,
-    paddingHorizontal: 20,
+    height: 56,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#F0F0F0',
     backgroundColor: COLORS.surface,
   },
+  headerSide: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: {
-    color: COLORS.text,
+    flex: 1,
+    color: '#2D2D2D',
     fontFamily: 'FreesentationExtraBold',
     fontSize: 20,
+    textAlign: 'center',
   },
-  headerSide: {
-    width: 24,
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  scrollView: { flex: 1, backgroundColor: COLORS.surface },
+  content: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 48 },
+  contentWithButton: { paddingBottom: 118 },
+  heroTitle: {
+    color: '#1A1D20',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 18,
+    lineHeight: 26,
   },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
+  divider: { height: 1, marginTop: 20, backgroundColor: '#ECEFF3' },
+  reservationList: { gap: 8, paddingTop: 18 },
+  myReservation: {
+    minWidth: 174,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#C9D2FF',
+    borderRadius: 10,
+    backgroundColor: '#F2F6FF',
   },
-  scrollView: {
-    flex: 1,
-    backgroundColor: COLORS.background,
+  myReservationLabel: {
+    color: '#3550FF',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 11,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 48,
+  myReservationTime: {
+    marginTop: 4,
+    color: '#1A1D20',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 13,
   },
-  guideCard: {
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 18,
-    backgroundColor: COLORS.navy,
-  },
-  guideIcon: {
-    width: 50,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-  },
-  guideTextArea: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  guideTitle: {
-    color: COLORS.white,
+  section: { marginTop: 20 },
+  sectionTitle: {
+    color: '#1A1D20',
     fontFamily: 'FreesentationExtraBold',
     fontSize: 18,
   },
-  guideText: {
-    marginTop: 6,
-    color: '#D9DDEF',
-    fontFamily: 'FreesentationRegular',
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  stateCard: {
-    marginTop: 20,
-    padding: 28,
+  dateRow: { gap: 8, paddingTop: 14, paddingRight: 4 },
+  dateCard: {
+    width: 77,
+    height: 84,
     alignItems: 'center',
-    borderRadius: 18,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
+  },
+  selectedCard: { borderColor: '#3550FF', backgroundColor: '#F2F6FF' },
+  dateDay: {
+    color: '#868E96',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 15,
+  },
+  dateWeekday: {
+    maxWidth: 69,
+    marginTop: 6,
+    color: '#ADB5BD',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 11,
+  },
+  selectedText: { color: '#3550FF' },
+  slotGrid: {
+    marginTop: 14,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+  },
+  slotCard: {
+    width: '31.4%',
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    borderRadius: 8,
     backgroundColor: COLORS.surface,
   },
-  lockIcon: {
+  occupiedCard: { backgroundColor: '#F8F9FA' },
+  mySlotCard: { borderColor: '#3550FF', backgroundColor: '#F2F6FF' },
+  slotTime: {
+    color: '#1A1D20',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 14,
+  },
+  slotCaption: {
+    maxWidth: '92%',
+    marginTop: 4,
+    color: '#ADB5BD',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 10,
+  },
+  occupiedText: { color: '#ADB5BD' },
+  bottomBar: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    left: 0,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E9ECEF',
+    backgroundColor: COLORS.surface,
+  },
+  nextButton: {
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 26,
+    backgroundColor: '#3550FF',
+  },
+  nextButtonDisabled: { backgroundColor: '#23348F' },
+  nextText: {
+    color: COLORS.white,
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 16,
+  },
+  stateCard: {
+    minHeight: 280,
+    padding: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: '#F8F9FA',
+  },
+  stateIcon: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
-    backgroundColor: COLORS.softNavy,
+    backgroundColor: '#EEF1FF',
   },
-  lockText: {
-    color: COLORS.navy,
+  stateIconText: {
+    color: '#3550FF',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 23,
+    fontSize: 21,
   },
   stateTitle: {
     marginTop: 14,
-    color: COLORS.text,
+    color: '#1A1D20',
     fontFamily: 'FreesentationExtraBold',
     fontSize: 17,
     textAlign: 'center',
   },
-  stateText: {
+  stateDescription: {
     marginTop: 8,
-    color: COLORS.subText,
+    color: '#667085',
     fontFamily: 'FreesentationRegular',
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
   },
   retryButton: {
-    minWidth: 130,
     height: 44,
     marginTop: 20,
+    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: COLORS.navy,
+    borderRadius: 22,
+    backgroundColor: '#3550FF',
   },
   retryText: {
     color: COLORS.white,
     fontFamily: 'FreesentationSemiBold',
     fontSize: 14,
   },
-  myReservationCard: {
-    marginTop: 20,
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#C7CDEB',
-    borderRadius: 16,
-    backgroundColor: '#EEF0FA',
-  },
-  myReservationLabel: {
-    color: COLORS.navy,
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 12,
-  },
-  myReservationTime: {
-    marginTop: 5,
-    color: COLORS.text,
-    fontFamily: 'FreesentationExtraBold',
-    fontSize: 16,
-  },
-  cancelButton: {
-    height: 38,
-    paddingHorizontal: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    backgroundColor: COLORS.surface,
-  },
-  cancelButtonText: {
-    color: COLORS.error,
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 12,
-  },
-  section: {
-    marginTop: 24,
-  },
-  sectionTitle: {
-    color: COLORS.text,
-    fontFamily: 'FreesentationExtraBold',
-    fontSize: 18,
-  },
-  sectionDescription: {
-    marginTop: 5,
-    color: COLORS.subText,
-    fontFamily: 'FreesentationRegular',
-    fontSize: 13,
-  },
-  weekdayRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  weekdayButton: {
+  modalOverlay: {
     flex: 1,
-    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  confirmationModal: {
+    width: 282,
+    overflow: 'hidden',
+    borderRadius: 16,
     backgroundColor: COLORS.surface,
   },
-  weekdayButtonDisabled: {
-    borderColor: '#ECEEF3',
-    backgroundColor: '#ECEEF3',
+  confirmationContent: {
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 22,
+    alignItems: 'center',
   },
-  weekdayButtonSelected: {
-    borderColor: COLORS.navy,
-    backgroundColor: COLORS.navy,
-  },
-  weekdayText: {
-    color: COLORS.text,
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 15,
-  },
-  weekdayTextDisabled: {
-    color: COLORS.disabledText,
-  },
-  weekdayTextSelected: {
-    color: COLORS.white,
-  },
-  slotGrid: {
-    marginTop: 14,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  slotCard: {
-    width: '48%',
-    minHeight: 70,
+  datePill: {
     paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#EFEFEF',
+    borderRadius: 50,
+    backgroundColor: '#F6F6F6',
+  },
+  datePillText: {
+    color: '#808080',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 14,
+  },
+  datePillTime: { color: '#111111', fontFamily: 'FreesentationSemiBold' },
+  confirmationQuestion: {
+    marginTop: 10,
+    color: '#111111',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  confirmationActions: { height: 42, flexDirection: 'row' },
+  noButton: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#EAEAEA',
   },
-  slotCardOccupied: {
-    borderColor: '#E3E5EA',
-    backgroundColor: '#ECEEF2',
+  noButtonText: {
+    color: '#666666',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 14,
   },
-  slotCardMine: {
-    borderColor: COLORS.navy,
-    backgroundColor: COLORS.navy,
+  yesButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3550FF',
   },
-  slotCardDisabled: {
-    opacity: 0.48,
-  },
-  slotTime: {
-    color: COLORS.text,
+  yesButtonText: {
+    color: COLORS.white,
     fontFamily: 'FreesentationSemiBold',
     fontSize: 14,
   },
-  slotCaption: {
-    maxWidth: '100%',
-    marginTop: 6,
-    color: COLORS.success,
+  completionModal: {
+    width: '100%',
+    maxWidth: 330,
+    padding: 16,
+    paddingTop: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+  },
+  completionText: {
+    color: '#111111',
     fontFamily: 'FreesentationRegular',
-    fontSize: 11,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
   },
-  slotCaptionOccupied: {
-    color: COLORS.subText,
+  completionButton: {
+    height: 44,
+    marginTop: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: '#3550FF',
   },
-  slotTextMine: {
+  completionButtonText: {
     color: COLORS.white,
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 14,
   },
-  pressed: {
-    opacity: 0.7,
-  },
+  pressed: { opacity: 0.7 },
 });

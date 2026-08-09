@@ -1,15 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import {
+  type AppLanguage,
+  isAppLanguage,
+} from '../i18n/translations';
 import { supabase } from '../lib/supabase';
 
 export type AppSettings = {
   generalNotificationsEnabled: boolean;
+  language: AppLanguage;
 };
 
 const STORAGE_KEY = '@media-on/app-settings';
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   generalNotificationsEnabled: true,
+  language: 'ko',
 };
 
 export async function getStoredAppSettings(): Promise<AppSettings> {
@@ -24,6 +30,7 @@ export async function getStoredAppSettings(): Promise<AppSettings> {
     return {
       generalNotificationsEnabled:
         parsed.generalNotificationsEnabled !== false,
+      language: isAppLanguage(parsed.language) ? parsed.language : 'ko',
     };
   } catch {
     await AsyncStorage.removeItem(STORAGE_KEY);
@@ -60,6 +67,7 @@ export async function getMyAppSettings(): Promise<AppSettings> {
 
   const settings = {
     generalNotificationsEnabled: data.general_notifications_enabled,
+    language: localSettings.language,
   } satisfies AppSettings;
 
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
@@ -79,5 +87,9 @@ export async function updateMyAppSettings(settings: AppSettings) {
     }
   }
 
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
+
+export async function storeAppSettings(settings: AppSettings) {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }

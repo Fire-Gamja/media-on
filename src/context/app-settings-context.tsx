@@ -9,16 +9,19 @@ import {
 } from 'react';
 import { Appearance } from 'react-native';
 
+import { type AppLanguage } from '../i18n/translations';
 import {
   type AppSettings,
   DEFAULT_APP_SETTINGS,
   getMyAppSettings,
+  storeAppSettings,
   updateMyAppSettings,
 } from '../services/app-settings';
 
 type AppSettingsContextValue = AppSettings & {
   isLoaded: boolean;
   setGeneralNotificationsEnabled: (enabled: boolean) => Promise<void>;
+  setLanguage: (language: AppLanguage) => Promise<void>;
   refreshSettings: () => Promise<void>;
 };
 
@@ -57,6 +60,19 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
     }
   }, [settings]);
 
+  const saveLanguage = useCallback(async (language: AppLanguage) => {
+    const previous = settings;
+    const next = { ...settings, language };
+    setSettings(next);
+
+    try {
+      await storeAppSettings(next);
+    } catch (error) {
+      setSettings(previous);
+      throw error;
+    }
+  }, [settings]);
+
   const value = useMemo<AppSettingsContextValue>(
     () => ({
       ...settings,
@@ -64,8 +80,9 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       refreshSettings,
       setGeneralNotificationsEnabled: (generalNotificationsEnabled) =>
         saveSettings({ ...settings, generalNotificationsEnabled }),
+      setLanguage: saveLanguage,
     }),
-    [isLoaded, refreshSettings, saveSettings, settings],
+    [isLoaded, refreshSettings, saveLanguage, saveSettings, settings],
   );
 
   return (
