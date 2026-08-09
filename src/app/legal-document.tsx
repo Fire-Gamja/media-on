@@ -46,7 +46,7 @@ export default function LegalDocumentScreen() {
         contentContainerStyle={styles.content}
         style={styles.scrollView}
       >
-        <View style={styles.summaryCard}>
+        <View style={styles.summary}>
           <Text style={styles.documentTitle}>{document.title}</Text>
           <Text style={styles.versionText}>
             버전 {document.version} · 시행 {document.effectiveDate}
@@ -71,7 +71,7 @@ export default function LegalDocumentScreen() {
           </View>
         ))}
 
-        <View style={styles.contactCard}>
+        <View style={styles.contact}>
           <Text style={styles.contactTitle}>문의</Text>
           <Text style={styles.contactText}>{DEPARTMENT_CONTACT.address}</Text>
           <Pressable
@@ -121,33 +121,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
   },
-  scrollView: { flex: 1, backgroundColor: COLORS.background },
+  scrollView: { flex: 1, backgroundColor: COLORS.surface },
   content: { padding: 20, paddingBottom: 56 },
-  summaryCard: {
-    padding: 22,
-    borderRadius: 20,
-    backgroundColor: COLORS.navy,
+  summary: {
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  documentTitle: { color: COLORS.white, fontSize: 21, fontWeight: '900' },
+  documentTitle: { color: COLORS.text, fontSize: 21, fontWeight: '900' },
   versionText: {
     marginTop: 7,
-    color: '#D9DDEF',
+    color: COLORS.subText,
     fontSize: 12,
     fontWeight: '700',
   },
   introduction: {
     marginTop: 17,
-    color: COLORS.white,
+    color: COLORS.subText,
     fontSize: 14,
     lineHeight: 22,
   },
   section: {
-    marginTop: 14,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
+    paddingVertical: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   sectionTitle: {
     marginBottom: 11,
@@ -178,11 +175,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 21,
   },
-  contactCard: {
-    marginTop: 18,
-    padding: 20,
-    borderRadius: 18,
-    backgroundColor: COLORS.softNavy,
+  contact: {
+    paddingTop: 22,
   },
   contactTitle: { color: COLORS.navy, fontSize: 15, fontWeight: '900' },
   contactText: {

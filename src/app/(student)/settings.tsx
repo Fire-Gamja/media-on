@@ -189,7 +189,7 @@ export default function StudentSettingsScreen() {
         </View>
 
         <Text style={styles.sectionLabel}>서비스 및 개인정보</Text>
-        <View style={styles.serviceList}>
+        <View style={styles.card}>
           <LinkRow
             description="버전 2026-08-06"
             label="서비스 이용약관"
@@ -337,14 +337,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 16,
-    backgroundColor: COLORS.surface,
-  },
-  serviceList: {
-    marginBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
   row: {
