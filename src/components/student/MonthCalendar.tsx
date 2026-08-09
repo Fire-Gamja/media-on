@@ -1,4 +1,10 @@
+import { Image as SvgImage } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+const calendarIcons = {
+  previous: require('../../../assets/figma/student-v2/calendar-chevron-left.svg'),
+  next: require('../../../assets/figma/student-v2/calendar-chevron-right.svg'),
+} as const;
 
 type MonthCalendarProps = {
   month: Date;
@@ -42,7 +48,11 @@ export default function MonthCalendar({
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.monthButtonText}>‹</Text>
+            <SvgImage
+              contentFit="contain"
+              source={calendarIcons.previous}
+              style={styles.monthButtonIcon}
+            />
           </Pressable>
         ) : (
           <View style={styles.monthButton} />
@@ -63,7 +73,11 @@ export default function MonthCalendar({
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.monthButtonText}>›</Text>
+            <SvgImage
+              contentFit="contain"
+              source={calendarIcons.next}
+              style={styles.monthButtonIcon}
+            />
           </Pressable>
         ) : (
           <View style={styles.monthButton} />
@@ -106,6 +120,7 @@ export default function MonthCalendar({
               <View
                 style={[
                   styles.dateCircle,
+                  hasEvent && styles.dateCircleEvent,
                   isToday && styles.dateCircleToday,
                   isSelected && styles.dateCircleSelected,
                 ]}
@@ -176,65 +191,66 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   monthHeader: {
-    height: 36,
+    height: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   monthButton: {
-    width: 36,
-    height: 36,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  monthButtonText: {
-    color: '#5C5C5C',
-    fontFamily: 'FreesentationRegular',
-    fontSize: 25,
-    lineHeight: 29,
+  monthButtonIcon: {
+    width: 16,
+    height: 16,
   },
   monthTitle: {
-    color: '#2D2D2D',
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 13,
+    color: '#1E2024',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 15,
   },
   weekRow: {
-    marginTop: 8,
+    marginTop: 24,
     flexDirection: 'row',
   },
   weekday: {
     width: `${100 / 7}%`,
     color: '#6B7280',
-    fontFamily: 'FreesentationRegular',
+    fontFamily: 'FreesentationSemiBold',
     fontSize: 11,
     textAlign: 'center',
   },
   grid: {
-    marginTop: 8,
+    marginTop: 18,
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   cell: {
     width: `${100 / 7}%`,
-    height: 44,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dateCircle: {
     width: 28,
-    height: 28,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
   },
   dateCircleSelected: {
-    backgroundColor: '#182365',
+    backgroundColor: '#3550FF',
   },
   dateCircleToday: {
-    backgroundColor: '#E8EBF8',
+    backgroundColor: '#EBF0FF',
+  },
+  dateCircleEvent: {
+    backgroundColor: '#EBF0FF',
   },
   dateText: {
-    color: '#2D2D2D',
+    color: '#1E2024',
     fontFamily: 'FreesentationRegular',
     fontSize: 11,
   },
@@ -243,7 +259,7 @@ const styles = StyleSheet.create({
     fontFamily: 'FreesentationSemiBold',
   },
   dateTextToday: {
-    color: '#182365',
+    color: '#3550FF',
     fontFamily: 'FreesentationSemiBold',
   },
   otherMonth: {
@@ -253,20 +269,16 @@ const styles = StyleSheet.create({
     color: '#FF6464',
   },
   saturday: {
-    color: '#087FF5',
+    color: '#3550FF',
   },
   eventDot: {
-    width: 3,
-    height: 3,
-    marginTop: 1,
-    borderRadius: 2,
-    backgroundColor: 'transparent',
+    display: 'none',
   },
   eventDotVisible: {
-    backgroundColor: '#F0A274',
+    display: 'none',
   },
   eventDotSelected: {
-    backgroundColor: '#FFFFFF',
+    display: 'none',
   },
   pressed: {
     opacity: 0.6,

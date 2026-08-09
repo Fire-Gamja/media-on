@@ -1,4 +1,5 @@
 import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { Image as SvgImage } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,7 +28,6 @@ import MonthCalendar, {
   toDateKey,
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
-import { COLORS } from '../../constants/colors';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { getProfileAvatarSource } from '../../lib/profile-avatar';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -67,13 +67,42 @@ import {
   type PreGraduationSettings,
 } from '../../services/pre-graduation';
 
-const settingsIcon = require('../../../assets/figma/student/settings.png');
-const menuIcon = require('../../../assets/figma/student/menu.png');
 const sirenIcon = require('../../../assets/figma/student/siren.png');
 
+const homeIcons = {
+  bell: require('../../../assets/figma/student-v2/bell.svg'),
+  bookOpen: require('../../../assets/figma/student-v2/book-open.svg'),
+  chevronRight: require('../../../assets/figma/student-v2/chervron-right.svg'),
+  clock: require('../../../assets/figma/student-v2/clock.svg'),
+  fileText: require('../../../assets/figma/student-v2/file-text.svg'),
+  globe: require('../../../assets/figma/student-v2/globe.svg'),
+  helpCircle: require('../../../assets/figma/student-v2/help-circle.svg'),
+  instagram: require('../../../assets/figma/student-v2/instagram.svg'),
+  logo: require('../../../assets/figma/student-v2/logo.svg'),
+  menu: require('../../../assets/figma/student-v2/menu-settings.svg'),
+  messageSquare: require('../../../assets/figma/student-v2/message-square.svg'),
+  monitor: require('../../../assets/figma/student-v2/monitor.svg'),
+  noticeBanner: require('../../../assets/figma/student-v2/notice-banner-icon.svg'),
+  search: require('../../../assets/figma/student-v2/search.svg'),
+  settings: require('../../../assets/figma/student-v2/settings.svg'),
+  settingsSmall: require('../../../assets/figma/student-v2/settings-icon.svg'),
+  tool: require('../../../assets/figma/student-v2/tool.svg'),
+  toolbox: require('../../../assets/figma/student-v2/toolbox.svg'),
+  xCircle: require('../../../assets/figma/student-v2/x-circle.svg'),
+} as const;
+
 type QuickAction = {
-  id: 'notice' | 'rental' | 'report' | 'assistant' | 'faq';
+  id:
+    | 'notice'
+    | 'equipment'
+    | 'room'
+    | 'report'
+    | 'preGraduation'
+    | 'assistant'
+    | 'faq'
+    | 'language';
   title: string;
+  icon: ImageSourcePropType;
 };
 
 type HomeNotice = {
@@ -87,22 +116,42 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'notice',
     title: '공지사항',
+    icon: homeIcons.fileText,
   },
   {
-    id: 'rental',
-    title: '대여',
+    id: 'equipment',
+    title: '기자재 대여',
+    icon: homeIcons.tool,
+  },
+  {
+    id: 'room',
+    title: '실습실 대여',
+    icon: homeIcons.monitor,
   },
   {
     id: 'report',
     title: '시설 신고',
+    icon: homeIcons.toolbox,
+  },
+  {
+    id: 'preGraduation',
+    title: '예비졸업사정',
+    icon: homeIcons.bookOpen,
   },
   {
     id: 'assistant',
     title: '조교 문의',
+    icon: homeIcons.messageSquare,
   },
   {
     id: 'faq',
     title: '자주 묻는 질문',
+    icon: homeIcons.helpCircle,
+  },
+  {
+    id: 'language',
+    title: '언어 설정',
+    icon: homeIcons.globe,
   },
 ];
 
@@ -147,6 +196,10 @@ export default function StudentHomeScreen() {
   const [popupIndex, setPopupIndex] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showStudentId, setShowStudentId] = useState(false);
+  const [isOperatingNoticeHidden, setIsOperatingNoticeHidden] =
+    useState(false);
+  const [isPreGraduationNoticeHidden, setIsPreGraduationNoticeHidden] =
+    useState(false);
   const [preGraduationSettings, setPreGraduationSettings] =
     useState<PreGraduationSettings>(DEFAULT_PRE_GRADUATION_SETTINGS);
 
@@ -168,11 +221,29 @@ export default function StudentHomeScreen() {
     () => formatOperatingHours(operatingHours),
     [operatingHours],
   );
+  const isPreGraduationOpen =
+    profile?.grade === 4 &&
+    preGraduationSettings.access_enabled &&
+    preGraduationSettings.enabled_weekdays.length > 0;
+  const isPreGraduationDay =
+    isPreGraduationOpen &&
+    preGraduationSettings.enabled_weekdays.some(
+      (weekday) => weekday === new Date().getDay(),
+    );
   const eventDates = useMemo(
-    () => new Set(schedules.map((schedule) => schedule.startDate)),
-    [schedules],
+    () => {
+      const dates = new Set(schedules.map((schedule) => schedule.startDate));
+      if (isPreGraduationDay) {
+        dates.add(getLocalDateKey());
+      }
+      return dates;
+    }, [isPreGraduationDay, schedules],
   );
   const currentHomePopup = homePopups[popupIndex] ?? null;
+  const selectedSchedule = schedules.find((schedule) => {
+    const targetDate = selectedDate ?? getLocalDateKey();
+    return schedule.startDate <= targetDate && schedule.endDate >= targetDate;
+  });
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -383,12 +454,19 @@ export default function StudentHomeScreen() {
   };
 
   const handleQuickAction = (action: QuickAction) => {
+    if (action.id === 'preGraduation') {
+      openPreGraduation();
+      return;
+    }
+
     const routes = {
       notice: '/notices',
-      rental: '/rentals',
+      equipment: '/equipment',
+      room: '/rooms',
       report: '/facility-report',
       assistant: '/assistant-inquiry',
       faq: '/frequently-asked-questions',
+      language: '/settings',
     } as const;
 
     router.push(routes[action.id]);
@@ -485,7 +563,12 @@ export default function StudentHomeScreen() {
       <StatusBar style="dark" />
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>홈</Text>
+        <SvgImage
+          accessibilityLabel="MEDIA ON"
+          contentFit="contain"
+          source={homeIcons.logo}
+          style={styles.headerLogo}
+        />
         <View style={styles.headerActions}>
           <Pressable
             accessibilityRole="button"
@@ -497,7 +580,11 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon color="#2D2D2D" name="bell" size={26} />
+            <SvgImage
+              contentFit="contain"
+              source={homeIcons.bell}
+              style={styles.headerIcon}
+            />
             {unreadNotificationCount > 0 ? (
               <View style={styles.notificationDot} />
             ) : null}
@@ -512,7 +599,11 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon color="#2D2D2D" name="search" size={26} />
+            <SvgImage
+              contentFit="contain"
+              source={homeIcons.search}
+              style={styles.headerIcon}
+            />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -524,16 +615,13 @@ export default function StudentHomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <AppIcon color="#2D2D2D" name="settings" size={26} />
+            <SvgImage
+              contentFit="contain"
+              source={homeIcons.settings}
+              style={styles.headerIcon}
+            />
           </Pressable>
         </View>
-      </View>
-
-      <View style={styles.topOperationBar}>
-        <Text style={styles.topOperationIcon}>i</Text>
-        <Text numberOfLines={1} style={styles.topOperationText}>
-          {operatingHoursDisplay.title} · {operatingHoursDisplay.description}
-        </Text>
       </View>
 
       <ScrollView
@@ -549,6 +637,57 @@ export default function StudentHomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.noticeBanners}>
+          {!isOperatingNoticeHidden ? (
+            <View style={styles.noticeBanner}>
+              <SvgImage
+                contentFit="contain"
+                source={homeIcons.noticeBanner}
+                style={styles.noticeBannerInfo}
+              />
+              <Text numberOfLines={1} style={styles.noticeBannerText}>
+                {operatingHoursDisplay.title} ·{' '}
+                {operatingHoursDisplay.description.replace('ㆍ', ' · ')}
+              </Text>
+              <Pressable
+                accessibilityLabel="운영시간 안내 닫기"
+                hitSlop={8}
+                onPress={() => setIsOperatingNoticeHidden(true)}
+              >
+                <SvgImage
+                  contentFit="contain"
+                  source={homeIcons.xCircle}
+                  style={styles.noticeBannerClose}
+                />
+              </Pressable>
+            </View>
+          ) : null}
+          {isPreGraduationDay && !isPreGraduationNoticeHidden ? (
+            <View style={[styles.noticeBanner, styles.preGraduationNotice]}>
+              <View style={styles.preGraduationNoticeInfo}>
+                <Text style={styles.preGraduationNoticeInfoText}>i</Text>
+              </View>
+              <Text
+                numberOfLines={1}
+                style={[styles.noticeBannerText, styles.preGraduationNoticeText]}
+              >
+                오늘은 예비졸업사정 예약일입니다. 오전 10:20에 시작됩니다.
+              </Text>
+              <Pressable
+                accessibilityLabel="예비졸업사정 안내 닫기"
+                hitSlop={8}
+                onPress={() => setIsPreGraduationNoticeHidden(true)}
+              >
+                <SvgImage
+                  contentFit="contain"
+                  source={homeIcons.xCircle}
+                  style={styles.noticeBannerClose}
+                />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+
         <SectionTitle
           action={
             <Pressable
@@ -559,7 +698,11 @@ export default function StudentHomeScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Image source={settingsIcon} style={styles.settingsIcon} />
+              <SvgImage
+                contentFit="contain"
+                source={homeIcons.settingsSmall}
+                style={styles.settingsIcon}
+              />
               <Text style={styles.profileEditText}>정보 변경</Text>
             </Pressable>
           }
@@ -582,10 +725,10 @@ export default function StudentHomeScreen() {
             <View style={styles.profileBadge}>
               <Text style={styles.profileBadgeText}>
                 {profile
-                  ? `${profile.grade}학년ㆍ${formatEnrollmentStatus(
+                  ? `${profile.grade}학년 · ${formatEnrollmentStatus(
                       profile.enrollment_status,
                     )}`
-                  : '2학년ㆍ재학생'}
+                  : '4학년 · 재학생'}
               </Text>
             </View>
             <View style={styles.profileNameRow}>
@@ -597,8 +740,7 @@ export default function StudentHomeScreen() {
               </Text>
             </View>
             <Text style={styles.profileDepartment}>
-              미디어콘텐츠학부ㆍ
-              {formatMajor(profile?.major ?? '영상미디어전공')}
+              미디어콘텐츠학부 · {profile?.major ?? '멀티미디어전공'}
             </Text>
           </View>
         </Pressable>
@@ -617,7 +759,6 @@ export default function StudentHomeScreen() {
               }
               tone="pending"
             />
-            <View style={styles.requestDivider} />
             <RequestCount
               count={requestCounts.processing}
               label="처리 중"
@@ -629,7 +770,6 @@ export default function StudentHomeScreen() {
               }
               tone="processing"
             />
-            <View style={styles.requestDivider} />
             <RequestCount
               count={requestCounts.completed}
               label="진행 완료"
@@ -645,7 +785,16 @@ export default function StudentHomeScreen() {
         </View>
 
         <View style={styles.sectionGap}>
-          <SectionTitle title="빠른 메뉴" />
+          <SectionTitle
+            action={
+              <SvgImage
+                contentFit="contain"
+                source={homeIcons.menu}
+                style={styles.sectionMenuIcon}
+              />
+            }
+            title="빠른 메뉴"
+          />
           <View style={styles.quickMenu}>
             {QUICK_ACTIONS.map((action) => (
               <Pressable
@@ -658,7 +807,11 @@ export default function StudentHomeScreen() {
                 ]}
               >
                 <View style={styles.quickIconBox}>
-                  <AppIcon color="#182366" name={action.id} size={34} />
+                  <SvgImage
+                    contentFit="contain"
+                    source={action.icon}
+                    style={styles.quickIcon}
+                  />
                 </View>
                 <Text style={styles.quickLabel}>{action.title}</Text>
               </Pressable>
@@ -675,71 +828,30 @@ export default function StudentHomeScreen() {
           ]}
         >
           <View style={styles.instagramLogo}>
-            <AppIcon color="#C13584" name="instagram" size={30} />
+            <SvgImage
+              contentFit="contain"
+              source={homeIcons.instagram}
+              style={styles.instagramIcon}
+            />
           </View>
           <View style={styles.instagramBannerText}>
             <Text style={styles.instagramBannerTitle}>
               미디어콘텐츠학부 Instagram
             </Text>
             <Text style={styles.instagramBannerDescription}>
-              행사와 학부 소식을 빠르게 확인해 보세요.
+              학부와 학교 소식을 빠르게 확인해 보세요.
             </Text>
           </View>
-          <Text style={styles.instagramChevron}>›</Text>
+          <SvgImage
+            contentFit="contain"
+            source={homeIcons.chevronRight}
+            style={styles.instagramChevron}
+          />
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={openPreGraduation}
-          style={({ pressed }) => [
-            styles.preGraduationBanner,
-            pressed && styles.pressed,
-          ]}
-        >
-          <View style={styles.preGraduationLogo}>
-            <AppIcon color="#182365" name="graduation" size={28} />
-          </View>
-          <View style={styles.preGraduationBannerText}>
-            <Text style={styles.preGraduationBannerTitle}>
-              4학년 예비졸업사정
-            </Text>
-            <Text style={styles.preGraduationBannerDescription}>
-              요일과 시간을 선택해 예비졸업사정을 예약하세요.
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.preGraduationStatus,
-              profile?.grade === 4 &&
-              preGraduationSettings.access_enabled &&
-              preGraduationSettings.enabled_weekdays.length > 0
-                ? styles.preGraduationStatusOpen
-                : styles.preGraduationStatusClosed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.preGraduationStatusText,
-                profile?.grade === 4 &&
-                preGraduationSettings.access_enabled &&
-                preGraduationSettings.enabled_weekdays.length > 0
-                  ? styles.preGraduationStatusTextOpen
-                  : styles.preGraduationStatusTextClosed,
-              ]}
-            >
-              {profile?.grade === 4 &&
-              preGraduationSettings.access_enabled &&
-              preGraduationSettings.enabled_weekdays.length > 0
-                ? '신청 가능'
-                : '접근 제한'}
-            </Text>
-          </View>
-          <Text style={styles.preGraduationChevron}>›</Text>
-        </Pressable>
-
-        <View style={styles.cardSection}>
+        <View style={styles.noticeSection}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>학과 공지사항</Text>
+            <Text style={styles.cardTitle}>학부 공지사항</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="공지사항 표시 설정"
@@ -747,77 +859,74 @@ export default function StudentHomeScreen() {
               onPress={() => router.push('/notice-settings')}
               style={({ pressed }) => [pressed && styles.pressed]}
             >
-              <Image source={menuIcon} style={styles.menuIcon} />
+              <SvgImage
+                contentFit="contain"
+                source={homeIcons.menu}
+                style={styles.menuIcon}
+              />
             </Pressable>
           </View>
 
-          <View style={styles.noticeList}>
-            {visibleNotices.map((notice, index) => (
-              <Pressable
-                key={notice.id}
-                accessibilityRole="button"
-                onPress={() => router.push(`/notices/${notice.id}`)}
-                style={({ pressed }) => [
-                  styles.noticeRow,
-                  index < visibleNotices.length - 1 && styles.noticeDivider,
-                  pressed && styles.noticePressed,
-                ]}
-              >
-                <View style={styles.noticeTitleArea}>
-                  {notice.urgent ? (
-                    <Image source={sirenIcon} style={styles.sirenIcon} />
-                  ) : null}
-                  <Text numberOfLines={1} style={styles.noticeTitle}>
-                    {notice.title}
+          <View style={styles.noticeCard}>
+            <View style={styles.noticeList}>
+              {visibleNotices.map((notice) => (
+                <Pressable
+                  key={notice.id}
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/notices/${notice.id}`)}
+                  style={({ pressed }) => [
+                    styles.noticeRow,
+                    pressed && styles.noticePressed,
+                  ]}
+                >
+                  <View style={styles.noticeTitleArea}>
+                    {notice.urgent ? (
+                      <Image source={sirenIcon} style={styles.sirenIcon} />
+                    ) : null}
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.noticeTitle,
+                        notice.urgent && styles.noticeTitleUrgent,
+                      ]}
+                    >
+                      {notice.title}
+                    </Text>
+                  </View>
+                  <Text style={styles.noticeDate}>
+                    {formatNoticeDate(notice.publishedAt)}
                   </Text>
-                </View>
-                <Text style={styles.noticeDate}>
-                  {formatNoticeDate(notice.publishedAt)}
-                </Text>
-              </Pressable>
-            ))}
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              onPress={() => router.push('/notices')}
+              style={styles.noticeMore}
+            >
+              <Text style={styles.noticeMoreText}>공지사항 전체보기</Text>
+            </Pressable>
           </View>
-          <Pressable
-            onPress={() => router.push('/notices')}
-            style={styles.noticeMore}
-          >
-            <Text style={styles.noticeMoreText}>공지사항 더보기</Text>
-          </Pressable>
         </View>
 
-        <View style={styles.calendarCard}>
+        <View style={styles.scheduleSection}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>일정</Text>
-            <View style={styles.calendarHeaderActions}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  const today = new Date();
-                  setVisibleMonth(
-                    new Date(today.getFullYear(), today.getMonth(), 1),
-                  );
-                  setSelectedDate(toDateKey(today));
-                }}
-                style={({ pressed }) => [
-                  styles.todayButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.todayText}>오늘</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  router.push({
-                    pathname: '/schedule',
-                    params: { date: toDateKey(new Date()) },
-                  })
-                }
-                style={({ pressed }) => [pressed && styles.pressed]}
-              >
-                <Image source={menuIcon} style={styles.menuIcon} />
-              </Pressable>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({
+                  pathname: '/schedule',
+                  params: { date: toDateKey(new Date()) },
+                })
+              }
+              style={({ pressed }) => [pressed && styles.pressed]}
+            >
+              <SvgImage
+                contentFit="contain"
+                source={homeIcons.menu}
+                style={styles.menuIcon}
+              />
+            </Pressable>
           </View>
 
           <View style={styles.calendarBody}>
@@ -829,13 +938,36 @@ export default function StudentHomeScreen() {
               selectedDate={selectedDate}
               showMonthControls
             />
+            {isPreGraduationDay || selectedSchedule ? (
+              <View style={styles.calendarEvent}>
+                <View style={styles.calendarEventBar} />
+                <View style={styles.calendarEventText}>
+                  <Text style={styles.calendarEventTitle}>
+                    {isPreGraduationDay
+                      ? '4학년 예비졸업사정'
+                      : selectedSchedule?.title}
+                  </Text>
+                  <Text style={styles.calendarEventTime}>
+                    {isPreGraduationDay
+                      ? '10:20'
+                      : selectedSchedule?.allDay
+                        ? '하루 종일'
+                        : selectedSchedule?.startTime}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.operationWrap}>
           <View style={styles.operationCard}>
             <View style={styles.operationIcon}>
-              <Text style={styles.operationIconText}>i</Text>
+              <SvgImage
+                contentFit="contain"
+                source={homeIcons.clock}
+                style={styles.operationIconImage}
+              />
             </View>
             <View style={styles.operationTextArea}>
               <Text style={styles.operationTitle}>
@@ -1031,27 +1163,25 @@ function RequestCount({
       onPress={onPress}
       style={({ pressed }) => [styles.requestCount, pressed && styles.pressed]}
     >
+      <Text style={styles.requestLabel}>{label}</Text>
       <View style={styles.requestNumberRow}>
-        <Text style={styles.requestNumber}>{count}</Text>
-        <Text style={styles.requestUnit}>건</Text>
-      </View>
-      <View
-        style={[
-          styles.requestBadge,
-          tone === 'pending' && styles.requestBadgePending,
-          tone === 'processing' && styles.requestBadgeProcessing,
-          tone === 'completed' && styles.requestBadgeCompleted,
-        ]}
-      >
         <Text
           style={[
-            styles.requestBadgeText,
-            tone === 'pending' && styles.requestTextPending,
-            tone === 'processing' && styles.requestTextProcessing,
-            tone === 'completed' && styles.requestTextCompleted,
+            styles.requestNumber,
+            tone === 'processing' && styles.requestNumberProcessing,
+            tone === 'completed' && styles.requestNumberCompleted,
           ]}
         >
-          {label}
+          {count}
+        </Text>
+        <Text
+          style={[
+            styles.requestUnit,
+            tone === 'processing' && styles.requestNumberProcessing,
+            tone === 'completed' && styles.requestNumberCompleted,
+          ]}
+        >
+          건
         </Text>
       </View>
     </Pressable>
@@ -1097,150 +1227,164 @@ function getHomePopupStorageKey(popup: HomePopup) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FEFEFF',
   },
   header: {
     height: 56,
-    paddingLeft: 24,
-    paddingRight: 8,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#EAECEF',
     backgroundColor: '#FFFFFF',
   },
-  headerTitle: {
-    color: '#2D2D2D',
-    fontFamily: 'FreesentationExtraBold',
-    fontSize: 24,
+  headerLogo: {
+    width: 24,
+    height: 24,
   },
   headerActions: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   headerButton: {
-    width: 36,
-    height: 36,
+    width: 22,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topOperationBar: {
-    minHeight: 38,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E8F2',
-    backgroundColor: '#F5F6FB',
-  },
-  topOperationIcon: {
-    width: 18,
-    height: 18,
-    color: COLORS.white,
-    fontSize: 11,
-    lineHeight: 18,
-    fontWeight: '900',
-    textAlign: 'center',
-    borderRadius: 9,
-    backgroundColor: COLORS.navy,
-  },
-  topOperationText: {
-    flex: 1,
-    color: COLORS.navy,
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 12,
-  },
-  bellIcon: {
-    width: 18,
-    height: 20,
-    resizeMode: 'contain',
-  },
-  searchIcon: {
-    width: 18,
-    height: 18,
-    resizeMode: 'contain',
+  headerIcon: {
+    width: 22,
+    height: 22,
   },
   notificationDot: {
     position: 'absolute',
     top: 3,
-    right: 4,
+    right: -1,
     width: 6,
     height: 6,
     borderWidth: 1,
     borderColor: '#FFFFFF',
     borderRadius: 3,
-    backgroundColor: '#182365',
+    backgroundColor: '#3550FF',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#FEFEFF',
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: 100,
   },
-  sectionTitleRow: {
-    height: 23,
-    paddingHorizontal: 4,
+  noticeBanners: {
+    marginBottom: 8,
+    gap: 8,
+  },
+  noticeBanner: {
+    minHeight: 36,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 8,
+    backgroundColor: '#EEF2FF',
+  },
+  noticeBannerInfo: {
+    width: 16,
+    height: 16,
+  },
+  noticeBannerText: {
+    flex: 1,
+    color: '#3550FF',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 11,
+  },
+  noticeBannerClose: {
+    width: 12,
+    height: 12,
+  },
+  preGraduationNotice: {
+    backgroundColor: '#FFF5E5',
+  },
+  preGraduationNoticeInfo: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#ED8C24',
+  },
+  preGraduationNoticeInfoText: {
+    color: '#FFFFFF',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  preGraduationNoticeText: {
+    color: '#B2660D',
+  },
+  sectionTitleRow: {
+    minHeight: 38,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   sectionTitle: {
-    color: '#000000',
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 20,
+    color: '#1E2024',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 18,
   },
   profileEdit: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 5,
   },
   settingsIcon: {
-    width: 12,
-    height: 12,
-    resizeMode: 'contain',
+    width: 14,
+    height: 14,
   },
   profileEditText: {
-    color: '#9C9C9C',
+    color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
-    fontSize: 14,
+    fontSize: 12,
   },
   profileCard: {
-    minHeight: 102,
-    marginTop: 8,
+    minHeight: 88,
+    marginTop: 2,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
+    borderColor: '#EAECEF',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
   },
   profileAvatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     resizeMode: 'cover',
     backgroundColor: '#F0F0F0',
   },
   profileTextArea: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   profileBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 30,
-    backgroundColor: 'rgba(184, 184, 184, 0.2)',
+    borderRadius: 4,
+    backgroundColor: '#F5F6FA',
   },
   profileBadgeText: {
-    color: '#182365',
-    fontFamily: 'FreesentationRegular',
+    color: '#50545E',
+    fontFamily: 'FreesentationExtraBold',
     fontSize: 10,
   },
   profileNameRow: {
@@ -1249,60 +1393,66 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   profileName: {
-    color: '#000000',
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 18,
+    color: '#1E2024',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 16,
   },
   studentNumber: {
-    color: '#000000',
+    color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
     fontSize: 12,
   },
   profileDepartment: {
-    color: '#5C5C5C',
+    color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
-    fontSize: 12,
+    fontSize: 11,
   },
   sectionGap: {
-    marginTop: 20,
+    marginTop: 8,
   },
   requestSummary: {
-    height: 96,
-    marginTop: 8,
-    padding: 20,
+    minHeight: 107,
+    marginTop: 2,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     borderWidth: 1,
-    borderColor: '#F2F2F2',
+    borderColor: '#EAECEF',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
   },
   requestCount: {
     flex: 1,
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: 70,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#F5F6FA',
+  },
+  requestLabel: {
+    color: '#50545E',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 12,
   },
   requestNumberRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 1,
   },
   requestNumber: {
     color: '#000000',
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 19,
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 18,
   },
   requestUnit: {
-    color: '#5C5C5C',
-    fontFamily: 'FreesentationRegular',
+    color: '#000000',
+    fontFamily: 'FreesentationExtraBold',
     fontSize: 14,
   },
-  requestDivider: {
-    width: 1,
-    height: 56,
-    marginHorizontal: 16,
-    backgroundColor: '#E5E5EA',
-  },
+  requestNumberProcessing: { color: '#3550FF' },
+  requestNumberCompleted: { color: '#A9A9A9' },
   requestBadge: {
     width: '100%',
     height: 28,
@@ -1333,72 +1483,84 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   quickMenu: {
-    marginTop: 16,
+    marginTop: 4,
+    paddingHorizontal: 0,
+    paddingVertical: 16,
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    rowGap: 20,
+    borderWidth: 1,
+    borderColor: '#EAECEF',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
   },
   quickAction: {
-    flex: 1,
+    width: '25%',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   quickIconBox: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    borderWidth: 1,
+    borderColor: '#EAECEF',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
   },
   quickIcon: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
   },
   quickLabel: {
-    color: '#2D2D2D',
+    color: '#50545E',
     fontFamily: 'FreesentationRegular',
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
+  sectionMenuIcon: {
+    width: 18,
+    height: 4,
+  },
   instagramBanner: {
-    minHeight: 78,
-    marginTop: 20,
-    padding: 16,
+    minHeight: 72,
+    marginTop: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
   },
   instagramLogo: {
-    width: 46,
-    height: 46,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: '#F6EAF4',
   },
   instagramBannerText: {
     flex: 1,
-    marginLeft: 13,
+    marginLeft: 12,
   },
   instagramBannerTitle: {
-    color: '#2D2D2D',
-    fontFamily: 'FreesentationSemiBold',
-    fontSize: 15,
+    color: '#1E2024',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 14,
   },
   instagramBannerDescription: {
-    marginTop: 5,
-    color: '#777777',
+    marginTop: 2,
+    color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
     fontSize: 11,
   },
   instagramChevron: {
     marginLeft: 8,
-    color: '#8C8C8C',
-    fontSize: 24,
+    width: 14,
+    height: 14,
+  },
+  instagramIcon: {
+    width: 22,
+    height: 22,
   },
   preGraduationBanner: {
     minHeight: 78,
@@ -1461,39 +1623,46 @@ const styles = StyleSheet.create({
     color: '#8C8C8C',
     fontSize: 24,
   },
-  cardSection: {
-    marginTop: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+  noticeSection: {
+    marginTop: 8,
   },
   cardHeader: {
+    minHeight: 38,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   cardTitle: {
-    color: '#000000',
+    color: '#1E2024',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 20,
+    fontSize: 18,
   },
   menuIcon: {
-    width: 20,
-    height: 20,
-    resizeMode: 'contain',
+    width: 18,
+    height: 4,
+  },
+  noticeCard: {
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#EAECEF',
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
   },
   noticeList: {
-    marginTop: 24,
+    gap: 4,
   },
   noticeMore: {
-    height: 48,
+    minHeight: 32,
+    paddingTop: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
   },
-  noticeMoreText: { color: '#182365', fontSize: 13, fontWeight: '800' },
+  noticeMoreText: {
+    color: '#000000',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 12,
+  },
   homePopupBackdrop: {
     flex: 1,
     padding: 28,
@@ -1635,17 +1804,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   noticeRow: {
-    minHeight: 35,
+    minHeight: 28,
+    paddingVertical: 4,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-  },
-  noticeDivider: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   noticePressed: {
     opacity: 0.55,
@@ -1654,102 +1818,115 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   sirenIcon: {
-    width: 20,
-    height: 20,
+    width: 10,
+    height: 10,
     resizeMode: 'contain',
   },
   noticeTitle: {
     flex: 1,
-    color: '#000000',
+    color: '#1E2024',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 13,
+  },
+  noticeTitleUrgent: {
     fontFamily: 'FreesentationSemiBold',
-    fontSize: 16,
   },
   noticeDate: {
-    marginTop: 2,
-    color: '#8C8C8C',
+    color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
     fontSize: 12,
   },
-  calendarCard: {
-    marginTop: 20,
+  scheduleSection: {
+    marginTop: 8,
+  },
+  calendarBody: {
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 24,
+    borderWidth: 1,
+    borderColor: '#EAECEF',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
   },
-  calendarHeaderActions: {
+  calendarEvent: {
+    marginTop: 16,
+    paddingTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#EAECEF',
   },
-  todayButton: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderWidth: 0.5,
-    borderColor: '#000000',
-    borderRadius: 30,
+  calendarEventBar: {
+    width: 4,
+    height: 32,
+    borderRadius: 2,
+    backgroundColor: '#3550FF',
   },
-  todayText: {
-    color: '#000000',
+  calendarEventText: {
+    flex: 1,
+    gap: 2,
+  },
+  calendarEventTitle: {
+    color: '#1E2024',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 13,
+  },
+  calendarEventTime: {
+    color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
-    fontSize: 14,
-  },
-  calendarBody: {
-    marginTop: 24,
+    fontSize: 11,
   },
   operationWrap: {
-    marginTop: 20,
+    marginTop: 16,
   },
   operationCard: {
-    minHeight: 78,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    minHeight: 64,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 12,
     borderRadius: 16,
-    backgroundColor: '#E9EBF8',
+    backgroundColor: '#EBF0FF',
   },
   operationIcon: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: '#172364',
+    borderRadius: 16,
+    backgroundColor: '#3550FF',
   },
-  operationIconText: {
-    color: '#FFFFFF',
-    fontFamily: 'FreesentationRegular',
-    fontSize: 24,
+  operationIconImage: {
+    width: 16,
+    height: 16,
   },
   operationTextArea: {
     flex: 1,
-    gap: 5,
+    gap: 2,
   },
   operationTitle: {
-    color: '#000000',
+    color: '#1E2024',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 16,
+    fontSize: 13,
   },
   operationText: {
-    color: '#606060',
+    color: '#50545E',
     fontFamily: 'FreesentationRegular',
     fontSize: 12,
   },
   floatingInquiry: {
     position: 'absolute',
     zIndex: 10,
-    right: 20,
-    width: 54,
-    height: 54,
+    right: 17,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 27,
-    backgroundColor: '#182365',
+    borderRadius: 24,
+    backgroundColor: '#141E46',
     elevation: 6,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 3 },
