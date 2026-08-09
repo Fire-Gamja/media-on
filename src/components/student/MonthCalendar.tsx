@@ -32,6 +32,9 @@ export default function MonthCalendar({
   showMonthControls = false,
 }: MonthCalendarProps) {
   const cells = createCalendarCells(month);
+  const weeks = Array.from({ length: 6 }, (_, weekIndex) =>
+    cells.slice(weekIndex * 7, weekIndex * 7 + 7),
+  );
   const todayKey = toDateKey(new Date());
 
   return (
@@ -100,54 +103,57 @@ export default function MonthCalendar({
       </View>
 
       <View style={styles.grid}>
-        {cells.map((cell, index) => {
-          const weekday = index % 7;
-          const isSelected = selectedDate === cell.dateKey;
-          const isToday = todayKey === cell.dateKey;
-          const hasEvent = eventDates?.has(cell.dateKey) === true;
+        {weeks.map((week) => (
+          <View key={week[0].dateKey} style={styles.dateRow}>
+            {week.map((cell, weekday) => {
+              const isSelected = selectedDate === cell.dateKey;
+              const isToday = todayKey === cell.dateKey;
+              const hasEvent = eventDates?.has(cell.dateKey) === true;
 
-          return (
-            <Pressable
-              key={`${cell.dateKey}-${index}`}
-              accessibilityRole={onSelectDate ? 'button' : undefined}
-              disabled={!onSelectDate}
-              onPress={() => onSelectDate?.(cell.dateKey)}
-              style={({ pressed }) => [
-                styles.cell,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View
-                style={[
-                  styles.dateCircle,
-                  hasEvent && styles.dateCircleEvent,
-                  isToday && styles.dateCircleToday,
-                  isSelected && styles.dateCircleSelected,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dateText,
-                    !cell.isCurrentMonth && styles.otherMonth,
-                    weekday === 0 && styles.sunday,
-                    weekday === 6 && styles.saturday,
-                    isToday && styles.dateTextToday,
-                    isSelected && styles.dateTextSelected,
+              return (
+                <Pressable
+                  key={cell.dateKey}
+                  accessibilityRole={onSelectDate ? 'button' : undefined}
+                  disabled={!onSelectDate}
+                  onPress={() => onSelectDate?.(cell.dateKey)}
+                  style={({ pressed }) => [
+                    styles.cell,
+                    pressed && styles.pressed,
                   ]}
                 >
-                  {cell.date.getDate()}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.eventDot,
-                  hasEvent && styles.eventDotVisible,
-                  isSelected && hasEvent && styles.eventDotSelected,
-                ]}
-              />
-            </Pressable>
-          );
-        })}
+                  <View
+                    style={[
+                      styles.dateCircle,
+                      hasEvent && styles.dateCircleEvent,
+                      isToday && styles.dateCircleToday,
+                      isSelected && styles.dateCircleSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dateText,
+                        !cell.isCurrentMonth && styles.otherMonth,
+                        weekday === 0 && styles.sunday,
+                        weekday === 6 && styles.saturday,
+                        isToday && styles.dateTextToday,
+                        isSelected && styles.dateTextSelected,
+                      ]}
+                    >
+                      {cell.date.getDate()}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.eventDot,
+                      hasEvent && styles.eventDotVisible,
+                      isSelected && hasEvent && styles.eventDotSelected,
+                    ]}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -216,7 +222,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   weekday: {
-    width: `${100 / 7}%`,
+    flex: 1,
     color: '#6B7280',
     fontFamily: 'FreesentationSemiBold',
     fontSize: 11,
@@ -224,11 +230,12 @@ const styles = StyleSheet.create({
   },
   grid: {
     marginTop: 18,
+  },
+  dateRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
   },
   cell: {
-    width: `${100 / 7}%`,
+    flex: 1,
     height: 32,
     alignItems: 'center',
     justifyContent: 'center',

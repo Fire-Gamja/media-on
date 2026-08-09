@@ -745,9 +745,11 @@ export default function StudentHomeScreen() {
           </View>
         </Pressable>
 
-        <View style={styles.sectionGap}>
-          <SectionTitle title="내 신청 현황" />
-          <View style={styles.requestSummary}>
+        <View style={styles.requestSummary}>
+          <View style={styles.requestSummaryTitleRow}>
+            <Text style={styles.requestSummaryTitle}>내 신청 현황</Text>
+          </View>
+          <View style={styles.requestCountRow}>
             <RequestCount
               count={requestCounts.pending}
               label="신청 대기"
@@ -784,7 +786,7 @@ export default function StudentHomeScreen() {
           </View>
         </View>
 
-        <View style={styles.sectionGap}>
+        <View style={styles.mainSection}>
           <SectionTitle
             action={
               <SvgImage
@@ -1354,7 +1356,7 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     minHeight: 88,
-    marginTop: 2,
+    marginTop: 12,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1407,20 +1409,30 @@ const styles = StyleSheet.create({
     fontFamily: 'FreesentationRegular',
     fontSize: 11,
   },
-  sectionGap: {
-    marginTop: 8,
+  mainSection: {
+    marginTop: 16,
   },
   requestSummary: {
-    minHeight: 107,
-    marginTop: 2,
+    marginTop: 12,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     borderWidth: 1,
     borderColor: '#EAECEF',
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
+  },
+  requestSummaryTitleRow: {
+    paddingVertical: 8,
+  },
+  requestSummaryTitle: {
+    color: '#1E2024',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 18,
+  },
+  requestCountRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   requestCount: {
     flex: 1,
@@ -1483,7 +1495,7 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
   },
   quickMenu: {
-    marginTop: 4,
+    marginTop: 12,
     paddingHorizontal: 0,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -1624,7 +1636,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   noticeSection: {
-    marginTop: 8,
+    marginTop: 16,
   },
   cardHeader: {
     minHeight: 38,
@@ -1643,6 +1655,7 @@ const styles = StyleSheet.create({
     height: 4,
   },
   noticeCard: {
+    marginTop: 12,
     padding: 16,
     borderWidth: 1,
     borderColor: '#EAECEF',
@@ -1840,9 +1853,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   scheduleSection: {
-    marginTop: 8,
+    marginTop: 16,
   },
   calendarBody: {
+    marginTop: 12,
     paddingHorizontal: 16,
     paddingVertical: 24,
     borderWidth: 1,
