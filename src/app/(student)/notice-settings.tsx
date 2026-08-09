@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: COLORS.text,
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '800',
   },
   closeButton: {

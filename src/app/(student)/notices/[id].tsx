@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.surface },
   header: { height: 64, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: COLORS.border },
   backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   headerSide: { width: 40 },
   stateBox: { flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.background },
   errorTitle: { color: COLORS.error, fontSize: 14, textAlign: 'center' },

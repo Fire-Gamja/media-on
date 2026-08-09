@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   addButton: {
     minWidth: 44,
     height: 36,

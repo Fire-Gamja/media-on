@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { color: COLORS.text, fontSize: 19, fontWeight: '900' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: 20, paddingBottom: 48 },
   sectionLabel: {

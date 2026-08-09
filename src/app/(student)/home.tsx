@@ -30,6 +30,7 @@ import MonthCalendar, {
 import { AppIcon } from '../../components/common/AppIcon';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { getProfileAvatarSource } from '../../lib/profile-avatar';
+import { confirmRoomRequestNavigation } from '../../lib/room-request-confirmation';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
   type ApplicationStage,
@@ -459,10 +460,14 @@ export default function StudentHomeScreen() {
       return;
     }
 
+    if (action.id === 'room') {
+      confirmRoomRequestNavigation(() => router.push('/rooms'));
+      return;
+    }
+
     const routes = {
       notice: '/notices',
       equipment: '/equipment',
-      room: '/rooms',
       report: '/facility-report',
       assistant: '/assistant-inquiry',
       faq: '/frequently-asked-questions',

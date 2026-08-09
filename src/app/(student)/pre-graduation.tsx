@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: COLORS.text,
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 18,
+    fontSize: 20,
   },
   headerSide: {
     width: 24,

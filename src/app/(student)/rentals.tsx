@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/common/AppIcon';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
+import { confirmRoomRequestNavigation } from '../../lib/room-request-confirmation';
 
 const RENTAL_MENUS = [
   {
@@ -38,18 +38,7 @@ export default function StudentRentalsScreen() {
       return;
     }
 
-    Alert.alert('통합정보시스템에 신청하셨나요?', undefined, [
-      {
-        text: '아니오',
-        style: 'cancel',
-        onPress: () =>
-          Alert.alert(
-            '신청 안내',
-            '통합정보시스템에서 신청 후 해당 기능을 사용해 주세요.',
-          ),
-      },
-      { text: '예', onPress: () => router.push('/rooms') },
-    ]);
+    confirmRoomRequestNavigation(() => router.push('/rooms'));
   };
 
   return (
@@ -119,7 +108,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { color: COLORS.text, fontSize: 19, fontWeight: '900' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: 20, paddingBottom: 48, gap: 15 },
   card: {

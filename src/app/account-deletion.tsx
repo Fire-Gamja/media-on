@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '900' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
   stateBox: {
     flex: 1,
     alignItems: 'center',

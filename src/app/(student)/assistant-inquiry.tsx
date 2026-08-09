@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   historyText: {
     width: 48,
     color: COLORS.navy,

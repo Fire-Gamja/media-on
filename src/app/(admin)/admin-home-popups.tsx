@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   headerSide: { width: 40 },
   loading: {
     flex: 1,

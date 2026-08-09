@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#2D2D2D',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 24,
+    fontSize: 20,
   },
   scrollView: {
     flex: 1,

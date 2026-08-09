@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     fontSize: 38,
     lineHeight: 40,
   },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   headerSide: { width: 40 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   chatScreen: { flex: 1, backgroundColor: COLORS.background },

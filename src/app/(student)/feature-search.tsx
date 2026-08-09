@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon, type AppIconName } from '../../components/common/AppIcon';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
+import { confirmRoomRequestNavigation } from '../../lib/room-request-confirmation';
 import {
   type FeatureSearchItem,
   logFeatureSearch,
@@ -29,6 +30,12 @@ export default function FeatureSearchScreen() {
 
   const handleSelect = (item: FeatureSearchItem) => {
     void logFeatureSearch(query || item.title, item.id);
+
+    if (item.route === '/rooms') {
+      confirmRoomRequestNavigation(() => router.push('/rooms'));
+      return;
+    }
+
     router.push(item.route);
   };
 
@@ -178,7 +185,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: COLORS.text,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
   },
   headerSide: {

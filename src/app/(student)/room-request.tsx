@@ -16,6 +16,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { InlineDropdown } from '../../components/common/InlineDropdown';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import MonthCalendar, {
   fromDateKey,
@@ -94,6 +95,10 @@ export default function RoomRequestScreen() {
 
   const selectedRoom =
     rooms.find((room) => room.id === selectedRoomId) ?? null;
+  const roomDropdownOptions = useMemo(
+    () => rooms.map((room) => ({ label: room.name, value: room.id })),
+    [rooms],
+  );
   const { startTimeOptions, endTimeOptions } = useMemo(
     () =>
       createClassTimeOptions(
@@ -212,47 +217,18 @@ export default function RoomRequestScreen() {
             keyboardShouldPersistTaps="handled"
             style={styles.scrollView}
           >
-            <FieldGroup label="강의실">
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setIsRoomSelectOpen((current) => !current)}
-                style={({ pressed }) => [
-                  styles.selectField,
-                  isRoomSelectOpen && styles.selectFieldOpen,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.fieldValue}>
-                  {selectedRoom?.name ?? '강의실을 선택해 주세요'}
-                </Text>
-                <ExpoImage
-                  contentFit="contain"
-                  source={icons.chevronDown}
-                  style={styles.chevronIcon}
-                />
-              </Pressable>
-              {isRoomSelectOpen ? (
-                <View style={styles.selectOptions}>
-                  {rooms.map((room) => (
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{
-                        selected: room.id === selectedRoomId,
-                      }}
-                      key={room.id}
-                      onPress={() => selectRoom(room)}
-                      style={({ pressed }) => [
-                        styles.selectOption,
-                        room.id === selectedRoomId && styles.selectedOption,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Text style={styles.optionText}>{room.name}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-            </FieldGroup>
+            <InlineDropdown
+              isOpen={isRoomSelectOpen}
+              label="강의실"
+              onSelect={(roomId) => {
+                const room = rooms.find((candidate) => candidate.id === roomId);
+                if (room) selectRoom(room);
+              }}
+              onToggle={() => setIsRoomSelectOpen((current) => !current)}
+              options={roomDropdownOptions}
+              placeholder="강의실을 선택해 주세요"
+              selectedValue={selectedRoomId || null}
+            />
 
             <View style={styles.dateGroup}>
               <View style={styles.twoColumnRow}>
@@ -753,7 +729,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#1A2035',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 18,
+    fontSize: 20,
   },
   historyText: {
     color: '#1B2256',
@@ -784,10 +760,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
   },
-  selectFieldOpen: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-  },
   fieldValue: {
     flexShrink: 1,
     color: '#333D4B',
@@ -796,29 +768,6 @@ const styles = StyleSheet.create({
   },
   chevronIcon: { width: 14, height: 14 },
   calendarIcon: { width: 16, height: 16 },
-  selectOptions: {
-    marginTop: -12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderColor: '#E4E9F0',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  selectOption: {
-    minHeight: 42,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F2F4F7',
-  },
-  selectedOption: { backgroundColor: '#F5F6FA' },
-  optionText: {
-    color: '#333D4B',
-    fontFamily: 'FreesentationRegular',
-    fontSize: 14,
-  },
   dateGroup: { gap: 8 },
   twoColumnRow: { flexDirection: 'row', gap: 12 },
   columnField: { flex: 1, gap: 12 },

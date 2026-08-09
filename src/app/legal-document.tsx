@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     maxWidth: '72%',
     color: COLORS.text,
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '900',
   },
   scrollView: { flex: 1, backgroundColor: COLORS.background },

@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#1A2035',
     fontFamily: 'FreesentationSemiBold',
-    fontSize: 18,
+    fontSize: 20,
     textAlign: 'center',
   },
   scrollView: {

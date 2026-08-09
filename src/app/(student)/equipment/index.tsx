@@ -16,6 +16,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { InlineDropdown } from '../../../components/common/InlineDropdown';
 import { PlatformHeaderIcon } from '../../../components/common/PlatformHeaderIcon';
 import MonthCalendar, {
   fromDateKey,
@@ -120,6 +121,11 @@ export default function EquipmentScreen() {
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
+
+  const equipmentDropdownOptions = useMemo(
+    () => items.map((item) => ({ label: item.name, value: item.id })),
+    [items],
+  );
 
   const updateLine = useCallback(
     (lineIndex: number, patch: Partial<RentalLine>) => {
@@ -368,55 +374,26 @@ export default function EquipmentScreen() {
                       </View>
                     ) : null}
 
-                    <FieldGroup label="기자재">
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() =>
-                          setOpenEquipmentIndex((current) =>
-                            current === lineIndex ? null : lineIndex,
-                          )
-                        }
-                        style={({ pressed }) => [
-                          styles.selectField,
-                          openEquipmentIndex === lineIndex &&
-                            styles.selectFieldOpen,
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <Text style={styles.fieldValue}>
-                          {selectedItem?.name ?? '기자재를 선택해 주세요'}
-                        </Text>
-                        <ExpoImage
-                          contentFit="contain"
-                          source={icons.chevronDown}
-                          style={styles.chevronIcon}
-                        />
-                      </Pressable>
-                      {openEquipmentIndex === lineIndex ? (
-                        <View style={styles.selectOptions}>
-                          {items.map((item) => (
-                            <Pressable
-                              key={item.id}
-                              onPress={() => {
-                                updateLine(lineIndex, {
-                                  equipmentId: item.id,
-                                  quantity: 1,
-                                });
-                                setOpenEquipmentIndex(null);
-                              }}
-                              style={({ pressed }) => [
-                                styles.selectOption,
-                                item.id === line.equipmentId &&
-                                  styles.selectedOption,
-                                pressed && styles.pressed,
-                              ]}
-                            >
-                              <Text style={styles.optionText}>{item.name}</Text>
-                            </Pressable>
-                          ))}
-                        </View>
-                      ) : null}
-                    </FieldGroup>
+                    <InlineDropdown
+                      accessibilityLabel={`기자재 ${lineIndex + 1} 선택`}
+                      isOpen={openEquipmentIndex === lineIndex}
+                      label="기자재"
+                      onSelect={(equipmentId) => {
+                        updateLine(lineIndex, {
+                          equipmentId,
+                          quantity: 1,
+                        });
+                        setOpenEquipmentIndex(null);
+                      }}
+                      onToggle={() =>
+                        setOpenEquipmentIndex((current) =>
+                          current === lineIndex ? null : lineIndex,
+                        )
+                      }
+                      options={equipmentDropdownOptions}
+                      placeholder="기자재를 선택해 주세요"
+                      selectedValue={selectedItem?.id ?? null}
+                    />
 
                     <View style={styles.dateGroup}>
                       <View style={styles.dateRow}>
@@ -874,7 +851,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#1A2035',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 18,
+    fontSize: 20,
   },
   historyText: {
     color: '#1B2256',
@@ -980,36 +957,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
   },
-  selectFieldOpen: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   fieldValue: {
     color: '#333D4B',
     fontFamily: 'FreesentationSemiBold',
     fontSize: 14,
   },
   chevronIcon: { width: 14, height: 14 },
-  selectOptions: {
-    marginTop: -12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderColor: '#E4E9F0',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    backgroundColor: '#F5F5F5',
-  },
-  selectOption: {
-    minHeight: 40,
-    paddingHorizontal: 12,
-    justifyContent: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#E4E4E7',
-  },
-  selectedOption: { backgroundColor: '#EEF1FF' },
-  optionText: {
-    color: '#333D4B',
-    fontFamily: 'FreesentationRegular',
-    fontSize: 14,
-  },
   dateGroup: { gap: 8 },
   dateRow: { flexDirection: 'row', gap: 12 },
   dateField: { flex: 1, gap: 12 },

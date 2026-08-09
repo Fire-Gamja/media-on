@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.surface },
   header: { height: 64, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: COLORS.border },
   backText: { width: 40, color: COLORS.navy, fontSize: 38, lineHeight: 40 },
-  headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+  headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
   addButton: { minWidth: 44, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: COLORS.navy },
   addText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
   scrollView: { flex: 1, backgroundColor: COLORS.background },
