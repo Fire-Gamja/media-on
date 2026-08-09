@@ -18,8 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { useAppSettings } from '../../context/app-settings-context';
-import { LANGUAGE_OPTIONS, translate } from '../../i18n/translations';
-import { getAuthErrorMessage } from '../../services/auth';
+import { getAuthErrorMessage, signOutUser } from '../../services/auth';
 import {
   disablePushForCurrentDevice,
   getNotificationPermissionGranted,
@@ -29,7 +28,6 @@ import {
 export default function StudentSettingsScreen() {
   const {
     generalNotificationsEnabled,
-    language,
     setGeneralNotificationsEnabled,
   } = useAppSettings();
   const [isSaving, setIsSaving] = useState(false);
@@ -113,6 +111,20 @@ export default function StudentSettingsScreen() {
     }
   };
 
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          await signOutUser();
+          router.replace('/login');
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -133,20 +145,6 @@ export default function StudentSettingsScreen() {
         contentContainerStyle={styles.content}
         style={styles.scrollView}
       >
-        <Text style={styles.sectionLabel}>
-          {translate(language, 'language.title')}
-        </Text>
-        <View style={styles.card}>
-          <LinkRow
-            description={translate(language, 'settings.languageDescription')}
-            label={
-              LANGUAGE_OPTIONS.find((option) => option.code === language)
-                ?.nativeLabel ?? '한국어'
-            }
-            onPress={() => router.push('/language-settings')}
-          />
-        </View>
-
         <Text style={styles.sectionLabel}>알림</Text>
         <View style={styles.card}>
           <SettingRow
@@ -228,6 +226,17 @@ export default function StudentSettingsScreen() {
             <Text style={styles.savingText}>설정을 저장하는 중입니다.</Text>
           </View>
         ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleLogout}
+          style={({ pressed }) => [
+            styles.logoutButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.logoutText}>로그아웃</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -313,26 +322,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900' },
-  scrollView: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingBottom: 48 },
+  scrollView: { flex: 1, backgroundColor: COLORS.surface },
+  content: { padding: 16, paddingBottom: 48 },
   sectionLabel: {
-    marginTop: 7,
-    marginBottom: 9,
-    marginLeft: 4,
-    color: COLORS.subText,
-    fontSize: 13,
-    fontWeight: '800',
+    marginTop: 10,
+    marginBottom: 10,
+    color: '#8E95A3',
+    fontSize: 14,
+    fontWeight: '700',
   },
   card: {
-    marginBottom: 22,
-    paddingHorizontal: 18,
+    marginBottom: 16,
+    paddingHorizontal: 15,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: COLORS.surface,
   },
   row: {
-    minHeight: 92,
+    minHeight: 76,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 18,
@@ -363,7 +371,7 @@ const styles = StyleSheet.create({
   permissionTextOn: { color: COLORS.navy },
   divider: { height: 1, backgroundColor: COLORS.border },
   linkRow: {
-    minHeight: 84,
+    minHeight: 72,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -379,4 +387,15 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   savingText: { color: COLORS.subText, fontSize: 12 },
+  logoutButton: {
+    minHeight: 70,
+    marginTop: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutText: {
+    color: '#A2A2A2',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 15,
+  },
 });

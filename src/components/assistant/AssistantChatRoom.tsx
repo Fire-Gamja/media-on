@@ -3,6 +3,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -39,6 +40,10 @@ type Props = {
   status: AssistantInquiryStatus;
   canStartChat?: boolean;
   header?: ReactNode;
+  initialMessage?: Pick<
+    AssistantMessage,
+    'content' | 'created_at' | 'sender_id'
+  >;
   onStatusChange?: (status: AssistantInquiryStatus) => void;
 };
 
@@ -47,6 +52,7 @@ export function AssistantChatRoom({
   status,
   canStartChat = false,
   header,
+  initialMessage,
   onStatusChange,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -59,10 +65,32 @@ export function AssistantChatRoom({
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const listRef =
     useRef<ComponentRef<typeof KeyboardChatScrollView>>(null);
+  const visibleMessages = useMemo<AssistantMessage[]>(
+    () =>
+      initialMessage
+        ? [
+            {
+              id: `inquiry-${inquiryId}`,
+              inquiry_id: inquiryId,
+              ...initialMessage,
+            },
+            ...messages,
+          ]
+        : messages,
+    [inquiryId, initialMessage, messages],
+  );
 
   useEffect(() => {
     setLiveStatus(status);
   }, [status]);
+
+  const updateStatus = useCallback(
+    (nextStatus: AssistantInquiryStatus) => {
+      setLiveStatus(nextStatus);
+      onStatusChange?.(nextStatus);
+    },
+    [onStatusChange],
+  );
 
   const mergeMessages = useCallback((incoming: AssistantMessage[]) => {
     setMessages((current) => {
@@ -120,12 +148,7 @@ export function AssistantChatRoom({
       unsubscribeMessages();
       unsubscribeStatus();
     };
-  }, [inquiryId, mergeMessages, refreshMessages]);
-
-  const updateStatus = (nextStatus: AssistantInquiryStatus) => {
-    setLiveStatus(nextStatus);
-    onStatusChange?.(nextStatus);
-  };
+  }, [inquiryId, mergeMessages, refreshMessages, updateStatus]);
 
   const send = async () => {
     if (!draft.trim() || isSending || liveStatus !== 'in_progress') return;
@@ -212,29 +235,53 @@ export function AssistantChatRoom({
         onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
       >
         {header ? <View style={styles.header}>{header}</View> : null}
-        {messages.length === 0 ? (
+        <Text style={styles.dayLabel}>오늘</Text>
+        {visibleMessages.length === 0 ? (
           <Text style={styles.empty}>
             상담이 시작되면 이곳에서 실시간으로 대화할 수 있습니다.
           </Text>
         ) : (
-          messages.map((item) => {
+          visibleMessages.map((item, index) => {
             const mine = item.sender_id === userId;
+            const isInquiryMessage = item.id === `inquiry-${inquiryId}`;
 
             return (
-              <View
-                key={item.id}
-                style={[styles.bubble, mine ? styles.mine : styles.theirs]}
-              >
-                <Text style={[styles.message, mine && styles.mineText]}>
-                  {item.content}
-                </Text>
-                <Text style={[styles.time, mine && styles.mineTime]}>
-                  {formatTime(item.created_at)}
-                </Text>
+              <View key={item.id}>
+                <View style={mine ? styles.messageRight : styles.messageLeft}>
+                  <View
+                    style={[
+                      styles.bubble,
+                      mine ? styles.mine : styles.theirs,
+                    ]}
+                  >
+                    <Text style={[styles.message, mine && styles.mineText]}>
+                      {item.content}
+                    </Text>
+                  </View>
+                  <Text style={[styles.time, mine && styles.mineTime]}>
+                    {formatTime(item.created_at)}
+                  </Text>
+                </View>
+                {isInquiryMessage ? (
+                  <View style={styles.receiptWrap}>
+                    <View style={[styles.bubble, styles.theirs]}>
+                      <Text style={styles.message}>
+                        접수가 완료되었습니다. 관리자가 채팅을 시작하면 문의를 확인합니다.
+                      </Text>
+                    </View>
+                    <Text style={styles.time}>{formatTime(item.created_at)}</Text>
+                  </View>
+                ) : null}
+                {index === 0 && liveStatus !== 'submitted' ? (
+                  <Text style={styles.statusDivider}>상담을 시작합니다.</Text>
+                ) : null}
               </View>
             );
           })
         )}
+        {liveStatus === 'answered' ? (
+          <Text style={styles.statusDivider}>상담을 종료합니다.</Text>
+        ) : null}
       </KeyboardChatScrollView>
 
       {liveStatus === 'submitted' ? (
@@ -286,7 +333,7 @@ export function AssistantChatRoom({
               }
               multiline
               maxLength={5000}
-              placeholder="메시지를 입력하세요"
+              placeholder="메시지를 입력해 주세요."
               placeholderTextColor={COLORS.placeholder}
               keyboardAppearance="light"
               selectionColor={COLORS.navy}
@@ -306,23 +353,25 @@ export function AssistantChatRoom({
                 (!draft.trim() || isSending) && styles.disabled,
               ]}
             >
-              <Text style={styles.sendText}>전송</Text>
+              <Text style={styles.sendText}>➤</Text>
             </Pressable>
           </View>
-          <Pressable
-            disabled={isChangingStatus}
-            onPress={endChat}
-            style={[
-              styles.endButton,
-              isChangingStatus && styles.disabled,
-            ]}
-          >
-            {isChangingStatus ? (
-              <ActivityIndicator color={COLORS.error} />
-            ) : (
-              <Text style={styles.endButtonText}>상담 종료</Text>
-            )}
-          </Pressable>
+          {canStartChat ? (
+            <Pressable
+              disabled={isChangingStatus}
+              onPress={endChat}
+              style={[
+                styles.endButton,
+                isChangingStatus && styles.disabled,
+              ]}
+            >
+              {isChangingStatus ? (
+                <ActivityIndicator color={COLORS.error} />
+              ) : (
+                <Text style={styles.endButtonText}>상담 종료</Text>
+              )}
+            </Pressable>
+          ) : null}
         </KeyboardStickyView>
       )}
     </View>
@@ -342,15 +391,33 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   chatScroll: { flex: 1 },
   loading: { margin: 40 },
-  list: { flexGrow: 1, padding: 18, paddingBottom: 24, gap: 10 },
-  header: { marginBottom: 16 },
-  bubble: { maxWidth: '80%', padding: 12, borderRadius: 16 },
-  mine: { alignSelf: 'flex-end', backgroundColor: COLORS.navy },
-  theirs: { alignSelf: 'flex-start', backgroundColor: '#EEF0F6' },
+  list: { flexGrow: 1, paddingHorizontal: 14, paddingBottom: 24 },
+  header: { marginBottom: 12 },
+  dayLabel: {
+    marginVertical: 14,
+    color: '#9AA1B2',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  messageRight: { alignItems: 'flex-end', marginBottom: 12 },
+  messageLeft: { alignItems: 'flex-start', marginBottom: 12 },
+  receiptWrap: { alignItems: 'flex-start', marginBottom: 12 },
+  bubble: { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16 },
+  mine: { alignSelf: 'flex-end', backgroundColor: '#3550FF' },
+  theirs: { alignSelf: 'flex-start', backgroundColor: '#F1F2F6' },
   message: { color: COLORS.text, fontSize: 14, lineHeight: 20 },
   mineText: { color: COLORS.white },
-  time: { marginTop: 5, color: COLORS.subText, fontSize: 10 },
-  mineTime: { color: '#D9DDEF' },
+  time: { marginTop: 4, color: '#A8AEBC', fontSize: 10 },
+  mineTime: { color: '#A8AEBC' },
+  statusDivider: {
+    marginHorizontal: -14,
+    marginVertical: 12,
+    paddingVertical: 8,
+    color: '#2D2D2D',
+    fontSize: 10,
+    textAlign: 'center',
+    backgroundColor: '#EDEDED',
+  },
   empty: {
     marginTop: 50,
     paddingHorizontal: 16,
@@ -361,12 +428,11 @@ const styles = StyleSheet.create({
   },
   chatFooter: { backgroundColor: COLORS.surface },
   composer: {
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
   input: {
@@ -375,29 +441,28 @@ const styles = StyleSheet.create({
     minHeight: 46,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    backgroundColor: '#F1F2F6',
     color: COLORS.text,
     fontSize: 14,
     lineHeight: 20,
   },
   send: {
     height: 46,
-    paddingHorizontal: 17,
+    width: 46,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: COLORS.navy,
+    borderRadius: 23,
+    backgroundColor: '#3550FF',
   },
-  sendText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  sendText: { color: COLORS.white, fontSize: 18, fontWeight: '800' },
   disabled: { opacity: 0.45 },
   waiting: {
-    padding: 18,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.softNavy,
+    marginHorizontal: 14,
+    marginVertical: 12,
+    padding: 14,
+    borderRadius: 24,
+    backgroundColor: '#F1F2F6',
   },
   waitingText: {
     color: COLORS.subText,
@@ -436,13 +501,14 @@ const styles = StyleSheet.create({
   },
   endButtonText: { color: COLORS.error, fontSize: 14, fontWeight: '800' },
   closed: {
-    padding: 18,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: '#EAF8F0',
+    marginHorizontal: 14,
+    marginVertical: 12,
+    padding: 14,
+    borderRadius: 24,
+    backgroundColor: '#F1F2F6',
   },
   closedText: {
-    color: COLORS.success,
+    color: '#A7ADBA',
     fontSize: 13,
     fontWeight: '800',
     textAlign: 'center',

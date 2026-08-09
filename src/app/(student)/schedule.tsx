@@ -120,20 +120,9 @@ export default function StudentScheduleScreen() {
             <PlatformHeaderIcon name="back" />
           </Pressable>
 
-          <Text style={styles.headerTitle}>일정등록</Text>
+          <Text style={styles.headerTitle}>일정 등록</Text>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="홈으로 이동"
-            hitSlop={8}
-            onPress={() => router.replace('/home')}
-            style={({ pressed }) => [
-              styles.headerIconButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <PlatformHeaderIcon name="home" />
-          </Pressable>
+          <View style={styles.headerIconButton} />
         </View>
 
         <ScrollView

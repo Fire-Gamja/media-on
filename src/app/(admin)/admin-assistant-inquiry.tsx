@@ -16,7 +16,6 @@ import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import {
   getAdminAssistantInquiry,
-  getAssistantCategoryLabel,
   getAssistantStatusLabel,
   type AdminAssistantInquiry,
   type AssistantInquiryStatus,
@@ -68,6 +67,11 @@ export default function AdminAssistantInquiryScreen() {
         <View style={styles.chatScreen}>
           <AssistantChatRoom
             canStartChat
+            initialMessage={{
+              content: inquiry.content,
+              created_at: inquiry.created_at,
+              sender_id: inquiry.requester_id,
+            }}
             header={
               <>
                 <View style={styles.studentCard}>
@@ -86,19 +90,6 @@ export default function AdminAssistantInquiryScreen() {
                   </View>
                 </View>
 
-                <View style={styles.inquiryCard}>
-                  <Text style={styles.category}>
-                    {getAssistantCategoryLabel(inquiry.category)}
-                  </Text>
-                  <Text style={styles.title}>{inquiry.title}</Text>
-                  <Text style={styles.date}>
-                    {formatDate(inquiry.created_at)} 문의
-                  </Text>
-                  <View style={styles.contentSection}>
-                    <Text style={styles.sectionLabel}>문의 내용</Text>
-                    <Text style={styles.bodyText}>{inquiry.content}</Text>
-                  </View>
-                </View>
                 <Text style={styles.chatTitle}>실시간 상담</Text>
                 <Text style={styles.chatDescription}>
                   채팅 시작 후 학생과 실시간으로 대화할 수 있습니다.
@@ -113,16 +104,6 @@ export default function AdminAssistantInquiryScreen() {
       ) : null}
     </SafeAreaView>
   );
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }
 
 const styles = StyleSheet.create({

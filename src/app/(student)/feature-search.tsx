@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppIcon, type AppIconName } from '../../components/common/AppIcon';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { confirmRoomRequestNavigation } from '../../lib/room-request-confirmation';
@@ -23,13 +22,29 @@ import {
 } from '../../services/feature-search';
 
 const searchIcon = require('../../../assets/figma/student/search.png');
+const RECOMMENDED_SEARCHES = [
+  '공지',
+  '복학',
+  '학부 소식',
+  '대여',
+  '장비',
+  '고장',
+  '휴학',
+  '기자재',
+  '실습실',
+  '카메라',
+] as const;
 
 export default function FeatureSearchScreen() {
   const [query, setQuery] = useState('');
-  const results = useMemo(() => searchFeatures(query), [query]);
+  const trimmedQuery = query.trim();
+  const results = useMemo(
+    () => (trimmedQuery ? searchFeatures(trimmedQuery) : []),
+    [trimmedQuery],
+  );
 
   const handleSelect = (item: FeatureSearchItem) => {
-    void logFeatureSearch(query || item.title, item.id);
+    void logFeatureSearch(trimmedQuery || item.title, item.id);
 
     if (item.route === '/rooms') {
       confirmRoomRequestNavigation(() => router.push('/rooms'));
@@ -44,273 +59,202 @@ export default function FeatureSearchScreen() {
       <StatusBar style="dark" />
       <View style={styles.header}>
         <Pressable
+          accessibilityLabel="뒤로 가기"
           accessibilityRole="button"
           hitSlop={10}
           onPress={() => router.back()}
+          style={styles.backButton}
         >
           <PlatformHeaderIcon name="back" />
         </Pressable>
-        <Text style={styles.headerTitle}>기능 검색</Text>
-        <View style={styles.headerSide} />
-      </View>
-
-      <View style={styles.searchArea}>
-        <View style={styles.searchBox}>
-          <Image source={searchIcon} style={styles.searchIcon} />
-          <TextInput
-            autoFocus
-            autoCapitalize="none"
-            autoCorrect={false}
-            onChangeText={setQuery}
-            onSubmitEditing={() => void logFeatureSearch(query)}
-            placeholder="무엇을 찾고 계신가요?"
-            placeholderTextColor={COLORS.placeholder}
-            returnKeyType="search"
-            style={styles.input}
-            value={query}
-          />
-          {query ? (
-            <Pressable
-              accessibilityLabel="검색어 지우기"
-              hitSlop={8}
-              onPress={() => setQuery('')}
-            >
-              <Text style={styles.clear}>×</Text>
-            </Pressable>
-          ) : null}
-        </View>
-        <Text style={styles.guide}>
-          “휴학을 하고 싶은데 어떻게 하지?”처럼 문장으로 검색해도 돼요.
-        </Text>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.resultTitle}>
-          {query.trim() ? '연관 기능' : '전체 기능'}
-        </Text>
-        {results.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>연관 기능을 찾지 못했습니다.</Text>
-            <Text style={styles.emptyText}>
-              다른 단어로 검색하거나 조교 문의를 이용해 주세요.
+        <Text style={styles.pageTitle}>무엇을{`\n`}찾고 계신가요?</Text>
+
+        <View style={styles.searchRow}>
+          <TextInput
+            autoCapitalize="none"
+            autoCorrect={false}
+            onChangeText={setQuery}
+            onSubmitEditing={() => void logFeatureSearch(trimmedQuery)}
+            placeholder="검색어를 입력하세요."
+            placeholderTextColor="#A8A8A8"
+            returnKeyType="search"
+            style={styles.input}
+            value={query}
+          />
+          <Image source={searchIcon} style={styles.searchIcon} />
+        </View>
+
+        {!trimmedQuery ? (
+          <>
+            <Text style={styles.guide}>
+              “휴학을 하고 싶은데 어떻게 하지?”처럼 문장으로 검색해도 돼요.
             </Text>
-            <Pressable
-              onPress={() =>
-                handleSelect({
-                  id: 'assistant-inquiry-fallback',
-                  title: '조교 문의',
-                  description: '',
-                  route: '/assistant-inquiry',
-                  keywords: [],
-                })
-              }
-              style={styles.inquiryButton}
-            >
-              <Text style={styles.inquiryButtonText}>조교 문의로 이동</Text>
-            </Pressable>
-          </View>
+            <Text style={styles.sectionTitle}>추천 검색어</Text>
+            <View style={styles.chipList}>
+              {RECOMMENDED_SEARCHES.map((keyword) => (
+                <Pressable
+                  key={keyword}
+                  accessibilityRole="button"
+                  onPress={() => setQuery(keyword)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.chipText}>{keyword}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
         ) : (
-          <View style={styles.list}>
-            {results.map((item) => (
-              <Pressable
-                key={item.id}
-                accessibilityRole="button"
-                onPress={() => handleSelect(item)}
-                style={({ pressed }) => [
-                  styles.card,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.iconBox}>
-                  <AppIcon name={getFeatureIcon(item.id)} size={28} />
-                </View>
-                <View style={styles.cardText}>
-                  <Text style={styles.title}>{item.title}</Text>
-                  <Text style={styles.description}>{item.description}</Text>
-                  <View style={styles.keywordRow}>
-                    {item.keywords.slice(0, 3).map((keyword) => (
-                      <Text key={keyword} style={styles.keyword}>
-                        {keyword}
-                      </Text>
-                    ))}
-                  </View>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
-            ))}
-          </View>
+          <>
+            <Text style={styles.sectionTitle}>검색 결과</Text>
+            {results.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyTitle}>검색 결과가 없습니다.</Text>
+                <Text style={styles.emptyText}>
+                  다른 검색어를 입력하거나 조교 문의를 이용해 주세요.
+                </Text>
+                <Pressable
+                  onPress={() =>
+                    handleSelect({
+                      id: 'assistant-inquiry-fallback',
+                      title: '조교 문의',
+                      description: '',
+                      route: '/assistant-inquiry',
+                      keywords: [],
+                    })
+                  }
+                  style={styles.inquiryButton}
+                >
+                  <Text style={styles.inquiryButtonText}>조교 문의로 이동</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.resultList}>
+                {results.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    accessibilityRole="button"
+                    onPress={() => handleSelect(item)}
+                    style={({ pressed }) => [
+                      styles.resultRow,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.resultName}>{item.title}</Text>
+                    <Text numberOfLines={2} style={styles.resultDescription}>
+                      {item.description}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function getFeatureIcon(id: string): AppIconName {
-  if (id.includes('equipment')) return 'equipment';
-  if (id.includes('room')) return 'room';
-  if (id.includes('facility')) return 'report';
-  if (
-    id.includes('assistant') ||
-    id.includes('leave') ||
-    id.includes('profile')
-  ) {
-    return 'assistant';
-  }
-  return 'notice';
-}
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
+  safeArea: { flex: 1, backgroundColor: COLORS.surface },
   header: {
     height: 64,
     paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingBottom: 48,
+  },
+  pageTitle: {
+    marginTop: 12,
+    color: '#171717',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 28,
+    lineHeight: 38,
+  },
+  searchRow: {
+    height: 52,
+    marginTop: 40,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backText: {
-    width: 40,
-    color: COLORS.navy,
-    fontSize: 38,
-    lineHeight: 40,
-  },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  headerSide: {
-    width: 40,
-  },
-  searchArea: {
-    padding: 18,
-    paddingBottom: 14,
-    backgroundColor: COLORS.surface,
-  },
-  searchBox: {
-    height: 54,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    backgroundColor: COLORS.background,
-  },
-  searchIcon: {
-    width: 19,
-    height: 19,
-    resizeMode: 'contain',
+    borderBottomColor: '#DADADA',
   },
   input: {
     flex: 1,
-    height: 54,
-    marginLeft: 11,
+    height: 52,
+    paddingHorizontal: 0,
     color: COLORS.text,
+    fontFamily: 'FreesentationRegular',
     fontSize: 15,
   },
-  clear: {
-    color: COLORS.subText,
-    fontSize: 25,
-  },
+  searchIcon: { width: 24, height: 24, resizeMode: 'contain' },
   guide: {
     marginTop: 10,
-    color: COLORS.subText,
+    color: '#9A9A9A',
+    fontFamily: 'FreesentationRegular',
     fontSize: 12,
     lineHeight: 18,
   },
-  scrollView: {
-    flex: 1,
-    backgroundColor: COLORS.background,
+  sectionTitle: {
+    marginTop: 28,
+    marginBottom: 16,
+    color: '#3E3E3E',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 15,
   },
-  content: {
-    padding: 18,
-    paddingBottom: 40,
-  },
-  resultTitle: {
-    marginBottom: 13,
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  list: {
-    gap: 12,
-  },
-  card: {
-    minHeight: 112,
-    padding: 16,
-    flexDirection: 'row',
+  chipList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    minHeight: 38,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 18,
+    borderColor: '#DADADA',
+    borderRadius: 20,
     backgroundColor: COLORS.surface,
   },
-  iconBox: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: COLORS.softNavy,
+  chipText: {
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 14,
   },
-  cardText: {
-    flex: 1,
-    marginLeft: 14,
+  resultList: { borderTopWidth: 1, borderTopColor: '#EEEEEE' },
+  resultRow: {
+    paddingVertical: 17,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
   },
-  title: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '800',
+  resultName: {
+    color: '#171717',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 15,
   },
-  description: {
+  resultDescription: {
     marginTop: 5,
-    color: COLORS.subText,
+    color: '#777777',
+    fontFamily: 'FreesentationRegular',
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 17,
   },
-  keywordRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 5,
-  },
-  keyword: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    color: COLORS.navy,
-    fontSize: 10,
-    fontWeight: '700',
-    borderRadius: 8,
-    backgroundColor: COLORS.softNavy,
-  },
-  chevron: {
-    marginLeft: 8,
-    color: COLORS.subText,
-    fontSize: 25,
-  },
-  empty: {
-    minHeight: 300,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: COLORS.surface,
-  },
-  emptyTitle: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '800',
-  },
+  empty: { paddingVertical: 56, alignItems: 'center' },
+  emptyTitle: { color: COLORS.text, fontSize: 16, fontWeight: '800' },
   emptyText: {
     marginTop: 9,
     color: COLORS.subText,
@@ -325,14 +269,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: COLORS.navy,
+    backgroundColor: '#3550FF',
   },
-  inquiryButtonText: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  pressed: {
-    opacity: 0.68,
-  },
+  inquiryButtonText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
+  pressed: { opacity: 0.65 },
 });

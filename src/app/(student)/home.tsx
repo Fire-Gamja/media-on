@@ -42,7 +42,6 @@ import {
 } from '../../services/application-status';
 import {
   getCurrentProfile,
-  signOutUser,
   type StudentProfile,
 } from '../../services/auth';
 import { formatNoticeTitle, getPublishedNotices } from '../../services/notices';
@@ -552,20 +551,6 @@ export default function StudentHomeScreen() {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: async () => {
-          await signOutUser();
-          router.replace('/login');
-        },
-      },
-    ]);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
@@ -992,16 +977,6 @@ export default function StudentHomeScreen() {
           </View>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={handleLogout}
-          style={({ pressed }) => [
-            styles.logoutButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </Pressable>
       </ScrollView>
 
       <Pressable

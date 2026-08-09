@@ -38,18 +38,19 @@ import {
   changeCurrentPassword,
   getAuthErrorMessage,
   getCurrentProfile,
+  signOutUser,
   type StudentProfile,
   updateCurrentAvatarUrl,
   updateCurrentProfile,
 } from '../services/auth';
 
-const GRADES = [1, 2, 3, 4] as const;
 const MAJORS = [
   '영상미디어전공',
   '멀티미디어전공',
   '전공 미정',
 ] as const;
 const ENROLLMENT_STATUSES = ['재학', '휴학', '졸업', '제적·자퇴'] as const;
+type EditableProfileField = 'major' | 'status' | 'phone';
 
 export default function ProfileScreen() {
   const { mustChangePassword } = useLocalSearchParams<{
@@ -71,6 +72,9 @@ export default function ProfileScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isAvatarPickerVisible, setIsAvatarPickerVisible] = useState(false);
+  const [editingField, setEditingField] =
+    useState<EditableProfileField | null>(null);
+  const [showPasswordEditor, setShowPasswordEditor] = useState(false);
 
   const applyProfile = useCallback((nextProfile: StudentProfile) => {
     setProfile(nextProfile);
@@ -172,17 +176,12 @@ export default function ProfileScreen() {
     );
   }, [newPassword]);
 
-  const handleGradeSelect = (nextGrade: number) => {
-    setGrade(nextGrade);
-
-    if (nextGrade === 1) {
-      setMajor('전공 미정');
-    } else if (major === '전공 미정') {
-      setMajor('영상미디어전공');
-    }
-  };
-
   const handleBack = () => {
+    if (showPasswordEditor) {
+      setShowPasswordEditor(false);
+      return;
+    }
+
     if (isPasswordChangeRequired) {
       Alert.alert(
         '비밀번호 변경 필요',
@@ -192,6 +191,27 @@ export default function ProfileScreen() {
     }
 
     router.back();
+  };
+
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '로그아웃하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          await signOutUser();
+          router.replace('/login');
+        },
+      },
+    ]);
+  };
+
+  const closeProfileEditor = () => {
+    if (profile) {
+      applyProfile(profile);
+    }
+    setEditingField(null);
   };
 
   const handleSave = async () => {
@@ -230,6 +250,7 @@ export default function ProfileScreen() {
         phoneNumber,
       });
       applyProfile(updatedProfile);
+      setEditingField(null);
       Alert.alert('저장 완료', '내 정보가 변경되었습니다.');
     } catch (error) {
       Alert.alert('저장 실패', getAuthErrorMessage(error));
@@ -281,6 +302,8 @@ export default function ProfileScreen() {
         router.replace(
           profile.role === 'admin' ? '/admin-home' : '/home',
         );
+      } else {
+        setShowPasswordEditor(false);
       }
     } catch (error) {
       Alert.alert('변경 실패', getAuthErrorMessage(error));
@@ -308,7 +331,11 @@ export default function ProfileScreen() {
             <PlatformHeaderIcon name="back" />
           </Pressable>
           <Text style={styles.headerTitle}>
-            {isPasswordChangeRequired ? '새 비밀번호 설정' : '내 정보'}
+            {isPasswordChangeRequired
+              ? '새 비밀번호 설정'
+              : showPasswordEditor
+                ? '비밀번호 변경'
+                : '내 정보'}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -344,86 +371,172 @@ export default function ProfileScreen() {
             automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.profileCard}>
-              <Image
-                source={getProfileAvatarSource(avatarUrl)}
-                style={styles.avatarImage}
-              />
-              <Pressable
-                disabled={isSaving}
-                onPress={() => setIsAvatarPickerVisible(true)}
-                style={({ pressed }) => [
-                  styles.avatarChangeButton,
-                  isSaving && styles.disabled,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.avatarChange}>프로필 사진 변경</Text>
-              </Pressable>
-              <Text style={styles.profileName}>{profile.name}</Text>
-              <Text style={styles.profileNumber}>
-                {profile.student_number}
-              </Text>
-              <View style={styles.roleBadge}>
-                <Text style={styles.roleText}>
-                  {profile.role === 'admin' ? '관리자 계정' : '학생 계정'}
+            {isPasswordChangeRequired || showPasswordEditor ? (
+              <View style={styles.passwordContent}>
+                {isPasswordChangeRequired ? (
+                  <View style={styles.requiredBanner}>
+                    <Text style={styles.requiredBannerTitle}>
+                      임시 비밀번호로 로그인했습니다
+                    </Text>
+                    <Text style={styles.requiredBannerText}>
+                      새 비밀번호를 설정하면 홈 화면으로 이동합니다.
+                    </Text>
+                  </View>
+                ) : null}
+                <Text style={styles.passwordGuide}>
+                  안전한 서비스를 이용하기 위해 비밀번호를 변경해 주세요.
                 </Text>
+                <FormField
+                  label={isPasswordChangeRequired ? '임시 비밀번호' : '현재 비밀번호'}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="현재 비밀번호"
+                />
+                <FormField
+                  label="새 비밀번호"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="영문·숫자 포함 8자 이상"
+                  errorMessage={
+                    newPassword.length > 0 && !newPasswordIsValid
+                      ? '영문과 숫자를 포함해 8자 이상 입력해 주세요.'
+                      : undefined
+                  }
+                />
+                <FormField
+                  label="새 비밀번호 확인"
+                  value={newPasswordConfirm}
+                  onChangeText={setNewPasswordConfirm}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholder="새 비밀번호를 다시 입력해 주세요"
+                  errorMessage={
+                    newPasswordConfirm.length > 0 &&
+                    newPassword !== newPasswordConfirm
+                      ? '새 비밀번호가 일치하지 않습니다.'
+                      : undefined
+                  }
+                />
+                <PrimaryButton
+                  title="변경하기"
+                  loading={isChangingPassword}
+                  onPress={() => void handleChangePassword()}
+                />
               </View>
-            </View>
+            ) : (
+              <>
+                <View style={styles.profileCard}>
+                  <Image
+                    source={getProfileAvatarSource(avatarUrl)}
+                    style={styles.avatarImage}
+                  />
+                  <Pressable
+                    disabled={isSaving}
+                    onPress={() => setIsAvatarPickerVisible(true)}
+                    style={({ pressed }) => [
+                      styles.avatarChangeButton,
+                      isSaving && styles.disabled,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={styles.avatarChange}>프로필 사진 변경</Text>
+                  </Pressable>
+                  <Text style={styles.profileName}>{profile.name}</Text>
+                </View>
 
-            {isPasswordChangeRequired ? (
-              <View style={styles.requiredBanner}>
-                <Text style={styles.requiredBannerTitle}>
-                  임시 비밀번호로 로그인했습니다
-                </Text>
-                <Text style={styles.requiredBannerText}>
-                  아래에서 새 비밀번호를 설정하면 홈 화면으로 이동합니다.
-                </Text>
-              </View>
-            ) : null}
+                <View style={styles.profileDivider} />
+                <View style={styles.infoSection}>
+                  <Text style={styles.sectionTitle}>기본 정보</Text>
+                  <ProfileInfoRow label="이름" value={profile.name} />
+                  <ProfileInfoRow label="학번" value={profile.student_number} />
+                  <ProfileInfoRow label="학년" value={`${profile.grade}학년`} />
+                  <ProfileInfoRow
+                    editable
+                    label="전공"
+                    onEdit={() => setEditingField('major')}
+                    value={major}
+                  />
+                  <ProfileInfoRow
+                    editable
+                    label="학적 상태"
+                    onEdit={() => setEditingField('status')}
+                    value={enrollmentStatus}
+                  />
+                  <ProfileInfoRow
+                    editable
+                    label="휴대폰번호"
+                    onEdit={() => setEditingField('phone')}
+                    value={phoneNumber}
+                  />
+                </View>
 
-            {!isPasswordChangeRequired ? (
-              <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>기본 정보</Text>
-              <Text style={styles.sectionDescription}>
-                학번과 계정 권한은 관리자 확인 항목으로 직접 변경할 수
-                없습니다.
-              </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setShowPasswordEditor(true)}
+                  style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+                >
+                  <Text style={styles.menuText}>비밀번호 변경</Text>
+                  <Text style={styles.menuChevron}>›</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/account-deletion')}
+                  style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+                >
+                  <Text style={styles.deleteMenuText}>회원 탈퇴</Text>
+                  <Text style={styles.menuChevron}>›</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleLogout}
+                  style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed]}
+                >
+                  <Text style={styles.logoutText}>로그아웃</Text>
+                </Pressable>
+              </>
+            )}
+          </ScrollView>
+        )}
+      </KeyboardAvoidingView>
 
-              <FormField
-                label="이름"
-                value={name}
-                onChangeText={setName}
-                maxLength={30}
-                placeholder="이름을 입력해 주세요"
-              />
-
-              <View style={styles.readOnlyField}>
-                <Text style={styles.readOnlyLabel}>학번</Text>
-                <Text style={styles.readOnlyValue}>
-                  {profile.student_number}
-                </Text>
-              </View>
-
+      <Modal
+        animationType="slide"
+        onRequestClose={closeProfileEditor}
+        transparent
+        visible={editingField !== null}
+      >
+        <View style={styles.editModalBackdrop}>
+          <Pressable
+            accessibilityLabel="정보 수정 닫기"
+            onPress={closeProfileEditor}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.editSheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.editSheetTitle}>
+              {editingField === 'major'
+                ? '전공'
+                : editingField === 'status'
+                  ? '학적 상태'
+                  : '휴대폰번호'}
+            </Text>
+            {editingField === 'major' ? (
               <SelectionGroup
-                label="학년"
-                options={GRADES.map((value) => ({
-                  label: `${value}학년`,
-                  value,
-                }))}
-                selectedValue={grade}
-                onSelect={handleGradeSelect}
-              />
-
-              <SelectionGroup
-                label="전공"
+                label=""
                 options={MAJORS.map((value) => ({ label: value, value }))}
                 selectedValue={major}
                 onSelect={setMajor}
               />
-
+            ) : editingField === 'status' ? (
               <SelectionGroup
-                label="학적 상태"
+                label=""
                 options={ENROLLMENT_STATUSES.map((value) => ({
                   label: value,
                   value,
@@ -431,88 +544,24 @@ export default function ProfileScreen() {
                 selectedValue={enrollmentStatus}
                 onSelect={setEnrollmentStatus}
               />
-
+            ) : (
               <FormField
-                label="휴대전화번호"
+                label="휴대폰번호"
                 value={phoneNumber}
-                onChangeText={(value) =>
-                  setPhoneNumber(formatPhoneNumber(value))
-                }
+                onChangeText={(value) => setPhoneNumber(formatPhoneNumber(value))}
                 keyboardType="phone-pad"
                 maxLength={13}
                 placeholder="010-0000-0000"
               />
-
-              <PrimaryButton
-                title="내 정보 저장"
-                loading={isSaving}
-                onPress={() => void handleSave()}
-              />
-              </View>
-            ) : null}
-
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>비밀번호 변경</Text>
-              <Text style={styles.sectionDescription}>
-                {isPasswordChangeRequired
-                  ? '관리자에게 안내받은 임시 비밀번호를 입력해 주세요.'
-                  : '본인 확인을 위해 현재 비밀번호를 먼저 입력해 주세요.'}
-              </Text>
-
-              <FormField
-                label={
-                  isPasswordChangeRequired
-                    ? '임시 비밀번호'
-                    : '현재 비밀번호'
-                }
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder="현재 비밀번호"
-              />
-
-              <FormField
-                label="새 비밀번호"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder="영문·숫자 포함 8자 이상"
-                errorMessage={
-                  newPassword.length > 0 && !newPasswordIsValid
-                    ? '영문과 숫자를 포함해 8자 이상 입력해 주세요.'
-                    : undefined
-                }
-              />
-
-              <FormField
-                label="새 비밀번호 확인"
-                value={newPasswordConfirm}
-                onChangeText={setNewPasswordConfirm}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder="새 비밀번호를 다시 입력해 주세요"
-                errorMessage={
-                  newPasswordConfirm.length > 0 &&
-                  newPassword !== newPasswordConfirm
-                    ? '새 비밀번호가 일치하지 않습니다.'
-                    : undefined
-                }
-              />
-
-              <PrimaryButton
-                title="비밀번호 변경"
-                loading={isChangingPassword}
-                onPress={() => void handleChangePassword()}
-              />
-            </View>
-          </ScrollView>
-        )}
-      </KeyboardAvoidingView>
+            )}
+            <PrimaryButton
+              title="선택 완료"
+              loading={isSaving}
+              onPress={() => void handleSave()}
+            />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="fade"
@@ -595,6 +644,37 @@ export default function ProfileScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+function ProfileInfoRow({
+  editable = false,
+  label,
+  onEdit,
+  value,
+}: {
+  editable?: boolean;
+  label: string;
+  onEdit?: () => void;
+  value: string;
+}) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text numberOfLines={1} style={styles.infoValue}>
+        {value}
+      </Text>
+      {editable ? (
+        <Pressable
+          accessibilityLabel={`${label} 수정`}
+          accessibilityRole="button"
+          onPress={onEdit}
+          style={styles.editChip}
+        >
+          <Text style={styles.editChipText}>수정</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
@@ -699,19 +779,17 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   content: {
-    padding: 20,
     paddingBottom: 56,
   },
   profileCard: {
-    padding: 24,
+    paddingVertical: 24,
     alignItems: 'center',
-    borderRadius: 20,
-    backgroundColor: COLORS.navy,
+    backgroundColor: COLORS.surface,
   },
-  avatarImage: { width: 82, height: 82, alignSelf: 'center', borderRadius: 41 },
+  avatarImage: { width: 100, height: 100, alignSelf: 'center', borderRadius: 50 },
   avatarChangeButton: {
     minHeight: 36,
     marginTop: 12,
@@ -719,12 +797,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.38)',
+    borderColor: '#D5D5D5',
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#EFEFEF',
   },
   avatarChange: {
-    color: COLORS.white,
+    color: '#2D2D2D',
     fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
@@ -821,8 +899,8 @@ const styles = StyleSheet.create({
   },
   profileName: {
     marginTop: 14,
-    color: COLORS.white,
-    fontSize: 23,
+    color: '#171717',
+    fontSize: 24,
     fontWeight: '800',
   },
   profileNumber: {
@@ -871,8 +949,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: COLORS.text,
-    fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 24,
   },
   sectionDescription: {
     marginTop: 7,
@@ -976,5 +1054,88 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
+  },
+  profileDivider: { height: 8, backgroundColor: '#FAFAFA' },
+  infoSection: { paddingHorizontal: 20, paddingVertical: 24 },
+  infoRow: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoLabel: {
+    width: 104,
+    color: '#9D9D9D',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 18,
+  },
+  infoValue: {
+    flex: 1,
+    color: '#171717',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 18,
+  },
+  editChip: {
+    marginLeft: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#F2F2F2',
+  },
+  editChipText: {
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 13,
+  },
+  menuRow: {
+    minHeight: 58,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  menuText: { color: '#171717', fontSize: 18 },
+  deleteMenuText: { color: '#C70000', fontSize: 18 },
+  menuChevron: { color: '#171717', fontSize: 27 },
+  logoutButton: {
+    minHeight: 76,
+    marginTop: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutText: { color: '#A3A3A3', fontSize: 14 },
+  passwordContent: { padding: 20 },
+  passwordGuide: {
+    marginBottom: 26,
+    color: '#666666',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  editModalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  editSheet: {
+    padding: 20,
+    paddingBottom: 28,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    backgroundColor: COLORS.surface,
+  },
+  sheetHandle: {
+    width: 30,
+    height: 5,
+    alignSelf: 'center',
+    borderRadius: 3,
+    backgroundColor: '#626262',
+  },
+  editSheetTitle: {
+    marginVertical: 20,
+    color: '#171717',
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 });

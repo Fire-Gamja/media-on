@@ -988,6 +988,11 @@ function RecordDetail({
       <View style={styles.chatDetail}>
         <AssistantChatRoom
           canStartChat
+          initialMessage={{
+            content: inquiry.content,
+            created_at: inquiry.created_at,
+            sender_id: inquiry.requester_id,
+          }}
           header={
             <>
               <DetailHeader
@@ -996,10 +1001,6 @@ function RecordDetail({
                 status={getAssistantStatusLabel(inquiry.status)}
                 title={inquiry.title}
               />
-              <View style={styles.detailSection}>
-                <Text style={styles.detailSectionLabel}>문의 내용</Text>
-                <Text style={styles.detailBody}>{inquiry.content}</Text>
-              </View>
               <View style={styles.inlineActions}>
                 <DangerButton
                   disabled={isProcessing}

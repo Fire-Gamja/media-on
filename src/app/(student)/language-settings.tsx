@@ -127,13 +127,10 @@ export default function LanguageSettingsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#D4D4D4',
+    backgroundColor: COLORS.surface,
   },
   panel: {
     flex: 1,
-    overflow: 'hidden',
-    borderRadius: 36,
     backgroundColor: COLORS.surface,
   },
   header: {
