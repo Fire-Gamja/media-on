@@ -7,7 +7,6 @@ import {
   Alert,
   BackHandler,
   Image,
-  type ImageSourcePropType,
   Modal,
   Linking,
   Platform,
@@ -20,7 +19,6 @@ import {
 } from 'react-native';
 import {
   SafeAreaView,
-  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
 import MonthCalendar, {
@@ -29,9 +27,15 @@ import MonthCalendar, {
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
 import { BottomSheetModal } from '../../components/common/BottomSheetModal';
+import { StudentBottomNavigation } from '../../components/student/StudentBottomNavigation';
+import {
+  QUICK_MENU_ITEM_BY_ID,
+  type QuickMenuId,
+  type QuickMenuItem,
+} from '../../constants/student-quick-menu';
 import { useAppSettings } from '../../context/app-settings-context';
 import { useNoticeSettings } from '../../context/notice-settings-context';
-import { translate, type TranslationKey } from '../../i18n/translations';
+import { translate } from '../../i18n/translations';
 import { getProfileAvatarSource } from '../../lib/profile-avatar';
 import { confirmRoomRequestNavigation } from '../../lib/room-request-confirmation';
 import { isSupabaseConfigured } from '../../lib/supabase';
@@ -69,6 +73,7 @@ import {
   getPreGraduationSettings,
   type PreGraduationSettings,
 } from '../../services/pre-graduation';
+import { getQuickMenuIds } from '../../services/quick-menu';
 
 const sirenIcon = require('../../../assets/figma/student/siren.png');
 
@@ -81,6 +86,8 @@ const homeIcons = {
   globe: require('../../../assets/figma/student-v2/globe.svg'),
   helpCircle: require('../../../assets/figma/student-v2/help-circle.svg'),
   instagram: require('../../../assets/figma/student-v2/instagram.svg'),
+  website: require('../../../assets/figma/student-v2/website.svg'),
+  youtube: require('../../../assets/figma/student-v2/youtube.svg'),
   logo: require('../../../assets/figma/student-v2/logo.svg'),
   menu: require('../../../assets/figma/student-v2/menu-settings.svg'),
   messageSquare: require('../../../assets/figma/student-v2/message-square.svg'),
@@ -94,69 +101,12 @@ const homeIcons = {
   xCircle: require('../../../assets/figma/student-v2/x-circle.svg'),
 } as const;
 
-type QuickAction = {
-  id:
-    | 'notice'
-    | 'equipment'
-    | 'room'
-    | 'report'
-    | 'preGraduation'
-    | 'assistant'
-    | 'faq'
-    | 'language';
-  titleKey: TranslationKey;
-  icon: ImageSourcePropType;
-};
-
 type HomeNotice = {
   id: string;
   title: string;
   publishedAt: string;
   urgent?: boolean;
 };
-
-const QUICK_ACTIONS: QuickAction[] = [
-  {
-    id: 'notice',
-    titleKey: 'home.notice',
-    icon: homeIcons.fileText,
-  },
-  {
-    id: 'equipment',
-    titleKey: 'home.equipment',
-    icon: homeIcons.tool,
-  },
-  {
-    id: 'room',
-    titleKey: 'home.room',
-    icon: homeIcons.monitor,
-  },
-  {
-    id: 'report',
-    titleKey: 'home.report',
-    icon: homeIcons.toolbox,
-  },
-  {
-    id: 'preGraduation',
-    titleKey: 'home.preGraduation',
-    icon: homeIcons.bookOpen,
-  },
-  {
-    id: 'assistant',
-    titleKey: 'home.assistant',
-    icon: homeIcons.messageSquare,
-  },
-  {
-    id: 'faq',
-    titleKey: 'home.faq',
-    icon: homeIcons.helpCircle,
-  },
-  {
-    id: 'language',
-    titleKey: 'home.language',
-    icon: homeIcons.globe,
-  },
-];
 
 const FALLBACK_NOTICES: HomeNotice[] = [
   {
@@ -178,7 +128,6 @@ const FALLBACK_NOTICES: HomeNotice[] = [
 ];
 
 export default function StudentHomeScreen() {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { language } = useAppSettings();
   const { noticeCount } = useNoticeSettings();
@@ -206,6 +155,7 @@ export default function StudentHomeScreen() {
     useState(false);
   const [preGraduationSettings, setPreGraduationSettings] =
     useState<PreGraduationSettings>(DEFAULT_PRE_GRADUATION_SETTINGS);
+  const [quickMenuIds, setQuickMenuIds] = useState<QuickMenuId[]>([]);
 
   const visibleNotices = useMemo(
     () =>
@@ -228,20 +178,27 @@ export default function StudentHomeScreen() {
   const isPreGraduationOpen =
     profile?.grade === 4 &&
     preGraduationSettings.access_enabled &&
-    preGraduationSettings.enabled_weekdays.length > 0;
+    preGraduationSettings.enabled_dates.length > 0;
   const isPreGraduationDay =
     isPreGraduationOpen &&
-    preGraduationSettings.enabled_weekdays.some(
-      (weekday) => weekday === new Date().getDay(),
-    );
+    preGraduationSettings.enabled_dates.includes(getLocalDateKey());
+  const displayedDate = selectedDate ?? getLocalDateKey();
+  const hasDisplayedPreGraduation =
+    isPreGraduationOpen &&
+    preGraduationSettings.enabled_dates.includes(displayedDate);
+  const quickActions = useMemo(
+    () => quickMenuIds.flatMap((id) => {
+      const item = QUICK_MENU_ITEM_BY_ID.get(id);
+      return item ? [item] : [];
+    }),
+    [quickMenuIds],
+  );
   const eventDates = useMemo(
     () => {
       const dates = new Set(schedules.map((schedule) => schedule.startDate));
-      if (isPreGraduationDay) {
-        dates.add(getLocalDateKey());
-      }
+      preGraduationSettings.enabled_dates.forEach((date) => dates.add(date));
       return dates;
-    }, [isPreGraduationDay, schedules],
+    }, [preGraduationSettings.enabled_dates, schedules],
   );
   const currentHomePopup = homePopups[popupIndex] ?? null;
   const selectedSchedule = schedules.find((schedule) => {
@@ -379,6 +336,7 @@ export default function StudentHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void getStudentSchedules().then(setSchedules);
+      void getQuickMenuIds().then(setQuickMenuIds);
       void getOperatingHoursSettings().then(setOperatingHours);
       void getPreGraduationSettings()
         .then(setPreGraduationSettings)
@@ -404,18 +362,11 @@ export default function StudentHomeScreen() {
     }, []),
   );
 
-  const openInstagram = async () => {
-    const url =
-      process.env.EXPO_PUBLIC_INSTAGRAM_URL?.trim() ||
-      'https://www.instagram.com/swu_mediacontents/';
-
+  const openDepartmentLink = async (url: string, label: string) => {
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert(
-        '인스타그램 열기 실패',
-        '브라우저에서 학부 인스타그램을 열지 못했습니다.',
-      );
+      Alert.alert(`${label} 열기 실패`, `브라우저에서 학부 ${label}을 열지 못했습니다.`);
     }
   };
 
@@ -457,7 +408,7 @@ export default function StudentHomeScreen() {
     }
   };
 
-  const handleQuickAction = (action: QuickAction) => {
+  const handleQuickAction = (action: QuickMenuItem) => {
     if (action.id === 'preGraduation') {
       openPreGraduation();
       return;
@@ -475,6 +426,7 @@ export default function StudentHomeScreen() {
       assistant: '/assistant-inquiry',
       faq: '/frequently-asked-questions',
       language: '/language-settings',
+      timetable: '/timetable',
     } as const;
 
     router.push(routes[action.id]);
@@ -496,7 +448,7 @@ export default function StudentHomeScreen() {
 
     if (
       !preGraduationSettings.access_enabled ||
-      preGraduationSettings.enabled_weekdays.length === 0
+      preGraduationSettings.enabled_dates.length === 0
     ) {
       Alert.alert(
         '신청 기간 아님',
@@ -665,7 +617,7 @@ export default function StudentHomeScreen() {
                 numberOfLines={1}
                 style={[styles.noticeBannerText, styles.preGraduationNoticeText]}
               >
-                오늘은 예비졸업사정 예약일입니다. 오전 10:20에 시작됩니다.
+                오늘은 예비졸업사정 예약일입니다. 오전 10:00에 시작됩니다.
               </Text>
               <Pressable
                 accessibilityLabel="예비졸업사정 안내 닫기"
@@ -697,10 +649,10 @@ export default function StudentHomeScreen() {
                 source={homeIcons.settingsSmall}
                 style={styles.settingsIcon}
               />
-              <Text style={styles.profileEditText}>정보 변경</Text>
+              <Text style={styles.profileEditText}>{translate(language, 'home.editInfo')}</Text>
             </Pressable>
           }
-          title="내 정보"
+          title={translate(language, 'home.myInfo')}
         />
 
         <Pressable
@@ -730,7 +682,7 @@ export default function StudentHomeScreen() {
                 {profile?.name ?? '홍길동'}
               </Text>
               <Text style={styles.studentNumber}>
-                ({profile?.student_number ?? '2022112736'})
+                ({profile?.student_number ?? '학번 미확인'})
               </Text>
             </View>
             <Text style={styles.profileDepartment}>
@@ -741,12 +693,12 @@ export default function StudentHomeScreen() {
 
         <View style={styles.requestSummary}>
           <View style={styles.requestSummaryTitleRow}>
-            <Text style={styles.requestSummaryTitle}>내 신청 현황</Text>
+            <Text style={styles.requestSummaryTitle}>{translate(language, 'home.applicationStatus')}</Text>
           </View>
           <View style={styles.requestCountRow}>
             <RequestCount
               count={requestCounts.pending}
-              label="신청 대기"
+              label={translate(language, 'home.pending')}
               onPress={() =>
                 router.push({
                   pathname: '/application-status',
@@ -757,7 +709,7 @@ export default function StudentHomeScreen() {
             />
             <RequestCount
               count={requestCounts.processing}
-              label="처리 중"
+              label={translate(language, 'home.processing')}
               onPress={() =>
                 router.push({
                   pathname: '/application-status',
@@ -768,7 +720,7 @@ export default function StudentHomeScreen() {
             />
             <RequestCount
               count={requestCounts.completed}
-              label="진행 완료"
+              label={translate(language, 'home.completed')}
               onPress={() =>
                 router.push({
                   pathname: '/application-status',
@@ -783,16 +735,19 @@ export default function StudentHomeScreen() {
         <View style={styles.mainSection}>
           <SectionTitle
             action={
-              <SvgImage
-                contentFit="contain"
-                source={homeIcons.menu}
-                style={styles.sectionMenuIcon}
-              />
+              <Pressable
+                accessibilityLabel="빠른 메뉴 편집"
+                hitSlop={8}
+                onPress={() => router.push('/quick-menu-edit')}
+                style={({ pressed }) => [styles.menuTouchTarget, pressed && styles.pressed]}
+              >
+                <SvgImage contentFit="contain" source={homeIcons.menu} style={styles.sectionMenuIcon} />
+              </Pressable>
             }
-            title="빠른 메뉴"
+            title={translate(language, 'home.quickMenu')}
           />
           <View style={styles.quickMenu}>
-            {QUICK_ACTIONS.map((action) => (
+            {quickActions.map((action) => (
               <Pressable
                 key={action.id}
                 accessibilityRole="button"
@@ -817,45 +772,55 @@ export default function StudentHomeScreen() {
           </View>
         </View>
 
-        <Pressable
-          accessibilityRole="link"
-          onPress={openInstagram}
-          style={({ pressed }) => [
-            styles.instagramBanner,
-            pressed && styles.pressed,
-          ]}
-        >
-          <View style={styles.instagramLogo}>
-            <SvgImage
-              contentFit="contain"
-              source={homeIcons.instagram}
-              style={styles.instagramIcon}
-            />
-          </View>
-          <View style={styles.instagramBannerText}>
-            <Text style={styles.instagramBannerTitle}>
-              미디어콘텐츠학부 Instagram
-            </Text>
-            <Text style={styles.instagramBannerDescription}>
-              학부와 학교 소식을 빠르게 확인해 보세요.
-            </Text>
-          </View>
-          <SvgImage
-            contentFit="contain"
-            source={homeIcons.chevronRight}
-            style={styles.instagramChevron}
-          />
-        </Pressable>
+        {[
+          {
+            key: 'instagram',
+            title: translate(language, 'home.instagramTitle'),
+            description: translate(language, 'home.instagramDescription'),
+            icon: homeIcons.instagram,
+            url: process.env.EXPO_PUBLIC_INSTAGRAM_URL?.trim() || 'https://www.instagram.com/swu_mediacontents/',
+          },
+          {
+            key: 'website',
+            title: translate(language, 'home.websiteTitle'),
+            description: translate(language, 'home.websiteDescription'),
+            icon: homeIcons.website,
+            url: process.env.EXPO_PUBLIC_DEPARTMENT_WEBSITE_URL?.trim() || 'https://www.seowon.ac.kr/multimedia/index.do',
+          },
+          {
+            key: 'youtube',
+            title: translate(language, 'home.youtubeTitle'),
+            description: translate(language, 'home.youtubeDescription'),
+            icon: homeIcons.youtube,
+            url: process.env.EXPO_PUBLIC_DEPARTMENT_YOUTUBE_URL?.trim() || 'https://www.youtube.com/@%EB%AF%B8%EB%94%94%EC%96%B4%EC%BD%98%ED%85%90%EC%B8%A0%ED%95%99%EB%B6%80',
+          },
+        ].map((link) => (
+          <Pressable
+            key={link.key}
+            accessibilityRole="link"
+            onPress={() => void openDepartmentLink(link.url, link.title)}
+            style={({ pressed }) => [styles.instagramBanner, pressed && styles.pressed]}
+          >
+            <View style={styles.instagramLogo}>
+              <SvgImage contentFit="contain" source={link.icon} style={styles.instagramIcon} />
+            </View>
+            <View style={styles.instagramBannerText}>
+              <Text style={styles.instagramBannerTitle}>{link.title}</Text>
+              <Text style={styles.instagramBannerDescription}>{link.description}</Text>
+            </View>
+            <SvgImage contentFit="contain" source={homeIcons.chevronRight} style={styles.instagramChevron} />
+          </Pressable>
+        ))}
 
         <View style={styles.noticeSection}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>학부 공지사항</Text>
+            <Text style={styles.cardTitle}>{translate(language, 'home.departmentNotices')}</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="공지사항 표시 설정"
               hitSlop={8}
               onPress={() => router.push('/notice-settings')}
-              style={({ pressed }) => [pressed && styles.pressed]}
+              style={({ pressed }) => [styles.menuTouchTarget, pressed && styles.pressed]}
             >
               <SvgImage
                 contentFit="contain"
@@ -901,23 +866,25 @@ export default function StudentHomeScreen() {
               onPress={() => router.push('/notices')}
               style={styles.noticeMore}
             >
-              <Text style={styles.noticeMoreText}>공지사항 전체보기</Text>
+              <Text style={styles.noticeMoreText}>{translate(language, 'home.viewAllNotices')}</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.scheduleSection}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>일정</Text>
+            <Text style={styles.cardTitle}>{translate(language, 'home.schedule')}</Text>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="일정 등록"
+              hitSlop={10}
               onPress={() =>
                 router.push({
                   pathname: '/schedule',
                   params: { date: toDateKey(new Date()) },
                 })
               }
-              style={({ pressed }) => [pressed && styles.pressed]}
+              style={({ pressed }) => [styles.menuTouchTarget, pressed && styles.pressed]}
             >
               <SvgImage
                 contentFit="contain"
@@ -936,20 +903,20 @@ export default function StudentHomeScreen() {
               selectedDate={selectedDate}
               showMonthControls
             />
-            {isPreGraduationDay || selectedSchedule ? (
+            {hasDisplayedPreGraduation || selectedSchedule ? (
               <View style={styles.calendarEvent}>
                 <View style={styles.calendarEventBar} />
                 <View style={styles.calendarEventText}>
                   <Text style={styles.calendarEventTitle}>
-                    {isPreGraduationDay
+                    {hasDisplayedPreGraduation
                       ? '4학년 예비졸업사정'
                       : selectedSchedule?.title}
                   </Text>
                   <Text style={styles.calendarEventTime}>
-                    {isPreGraduationDay
-                      ? '10:20'
+                    {hasDisplayedPreGraduation
+                      ? '10:00'
                       : selectedSchedule?.allDay
-                        ? '하루 종일'
+                        ? translate(language, 'home.allDay')
                         : selectedSchedule?.startTime}
                   </Text>
                 </View>
@@ -986,7 +953,7 @@ export default function StudentHomeScreen() {
         onPress={() => router.push('/assistant-inquiry')}
         style={({ pressed }) => [
           styles.floatingInquiry,
-          { bottom: Math.max(insets.bottom + 20, 46) },
+          { bottom: 84 },
           pressed && styles.pressed,
         ]}
       >
@@ -1108,6 +1075,7 @@ export default function StudentHomeScreen() {
           </View>
         </View>
       </Modal>
+      <StudentBottomNavigation activeTab="home" />
     </SafeAreaView>
   );
 }
@@ -1367,7 +1335,7 @@ const styles = StyleSheet.create({
   profileBadgeText: {
     color: '#50545E',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 10,
+    fontSize: 12,
   },
   profileNameRow: {
     flexDirection: 'row',
@@ -1377,17 +1345,17 @@ const styles = StyleSheet.create({
   profileName: {
     color: '#1E2024',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 16,
+    fontSize: 18,
   },
   studentNumber: {
     color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
-    fontSize: 12,
+    fontSize: 14,
   },
   profileDepartment: {
     color: '#9CA3B5',
     fontFamily: 'FreesentationRegular',
-    fontSize: 11,
+    fontSize: 13,
   },
   mainSection: {
     marginTop: 16,
@@ -1515,6 +1483,12 @@ const styles = StyleSheet.create({
     width: 18,
     height: 4,
   },
+  menuTouchTarget: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   instagramBanner: {
     minHeight: 72,
     marginTop: 16,
@@ -1629,7 +1603,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: '#1E2024',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 18,
+    fontSize: 20,
   },
   menuIcon: {
     width: 18,
@@ -1655,7 +1629,7 @@ const styles = StyleSheet.create({
   noticeMoreText: {
     color: '#000000',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 12,
+    fontSize: 14,
   },
   homePopupBackdrop: {
     flex: 1,

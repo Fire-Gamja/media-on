@@ -128,5 +128,6 @@ const styles = StyleSheet.create({
   },
   sheet: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
   },
 });

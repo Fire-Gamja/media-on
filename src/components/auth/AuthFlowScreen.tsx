@@ -1,6 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,8 +15,7 @@ import {
   AUTH_FONTS,
 } from '../../constants/auth-theme';
 import AuthButton from './AuthButton';
-
-const backIcon = require('../../../assets/figma/auth/back.png');
+import { PlatformHeaderIcon } from '../common/PlatformHeaderIcon';
 
 type AuthFlowScreenProps = {
   title: string;
@@ -70,7 +68,7 @@ export default function AuthFlowScreen({
               pressed && styles.pressed,
             ]}
           >
-            <Image source={backIcon} style={styles.backIcon} />
+            <PlatformHeaderIcon color={AUTH_COLORS.text} name="back" />
           </Pressable>
 
           <View style={styles.form}>
@@ -109,12 +107,10 @@ const styles = StyleSheet.create({
     zIndex: 2,
     top: 15,
     left: 16,
-    width: 30,
-    height: 30,
-  },
-  backIcon: {
-    width: 30,
-    height: 30,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   form: {
     paddingTop: 126,

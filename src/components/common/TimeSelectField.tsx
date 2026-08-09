@@ -1,11 +1,5 @@
-import { useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
@@ -18,6 +12,11 @@ type TimeSelectFieldProps = {
   onChange: (value: string) => void;
 };
 
+const WHEEL_ITEM_HEIGHT = 54;
+const WHEEL_VISIBLE_ITEMS = 5;
+const WHEEL_PADDING =
+  WHEEL_ITEM_HEIGHT * Math.floor(WHEEL_VISIBLE_ITEMS / 2);
+
 export function TimeSelectField({
   label,
   value,
@@ -25,6 +24,35 @@ export function TimeSelectField({
   onChange,
 }: TimeSelectFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [draftValue, setDraftValue] = useState(value);
+  const listRef = useRef<FlatList<string>>(null);
+  const safeOptions = useMemo(
+    () => (options.length > 0 ? options : [value]),
+    [options, value],
+  );
+  const selectedIndex = Math.max(0, safeOptions.indexOf(draftValue));
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const nextValue = safeOptions.includes(value) ? value : safeOptions[0];
+    setDraftValue(nextValue);
+    const nextIndex = Math.max(0, safeOptions.indexOf(nextValue));
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({
+        animated: false,
+        offset: nextIndex * WHEEL_ITEM_HEIGHT,
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, safeOptions, value]);
+
+  const updateFromOffset = (offsetY: number) => {
+    const nextIndex = Math.min(
+      safeOptions.length - 1,
+      Math.max(0, Math.round(offsetY / WHEEL_ITEM_HEIGHT)),
+    );
+    setDraftValue(safeOptions[nextIndex]);
+  };
 
   return (
     <View style={styles.field}>
@@ -33,10 +61,7 @@ export function TimeSelectField({
         accessibilityRole="button"
         accessibilityLabel={`${label} 선택`}
         onPress={() => setIsOpen(true)}
-        style={({ pressed }) => [
-          styles.selectButton,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.selectButton, pressed && styles.pressed]}
       >
         <Text style={styles.value}>{value}</Text>
         <Text style={styles.chevron}>⌄</Text>
@@ -49,51 +74,104 @@ export function TimeSelectField({
         visible={isOpen}
       >
         <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{label}</Text>
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={() => setIsOpen(false)}
-            >
-              <Text style={styles.close}>닫기</Text>
-            </Pressable>
-          </View>
-          <FlatList
-            data={options}
-            keyExtractor={(item) => item}
-            contentContainerStyle={styles.optionList}
-            style={styles.list}
-            renderItem={({ item }) => {
-              const isSelected = value === item;
-
-              return (
-                <Pressable
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => {
-                    onChange(item);
-                    setIsOpen(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.option,
-                    isSelected && styles.optionSelected,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      isSelected && styles.optionTextSelected,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                  {isSelected ? <Text style={styles.check}>✓</Text> : null}
-                </Pressable>
-              );
+          <View style={styles.handle} />
+          <Text style={styles.sheetTitle}>{label}</Text>
+          <View
+            accessibilityActions={[
+              { name: 'increment', label: '다음 값' },
+              { name: 'decrement', label: '이전 값' },
+            ]}
+            accessibilityLabel={`${label} ${draftValue}`}
+            accessibilityRole="adjustable"
+            accessibilityValue={{
+              min: 1,
+              max: safeOptions.length,
+              now: selectedIndex + 1,
+              text: draftValue,
             }}
-          />
+            onAccessibilityAction={({ nativeEvent }) => {
+              const amount = nativeEvent.actionName === 'increment' ? 1 : -1;
+              const nextIndex = Math.min(
+                safeOptions.length - 1,
+                Math.max(0, selectedIndex + amount),
+              );
+              setDraftValue(safeOptions[nextIndex]);
+              listRef.current?.scrollToOffset({
+                animated: true,
+                offset: nextIndex * WHEEL_ITEM_HEIGHT,
+              });
+            }}
+            style={styles.wheelViewport}
+          >
+            <View pointerEvents="none" style={styles.selectionBand} />
+            <FlatList
+              ref={listRef}
+              bounces={false}
+              contentContainerStyle={styles.wheelContent}
+              data={safeOptions}
+              decelerationRate="fast"
+              disableIntervalMomentum
+              getItemLayout={(_, index) => ({
+                index,
+                length: WHEEL_ITEM_HEIGHT,
+                offset: index * WHEEL_ITEM_HEIGHT,
+              })}
+              keyExtractor={(item, index) => `${item}-${index}`}
+              onMomentumScrollEnd={({ nativeEvent }) =>
+                updateFromOffset(nativeEvent.contentOffset.y)
+              }
+              onScroll={({ nativeEvent }) =>
+                updateFromOffset(nativeEvent.contentOffset.y)
+              }
+              overScrollMode="never"
+              renderItem={({ item, index }) => {
+                const distance = Math.abs(index - selectedIndex);
+                return (
+                  <Pressable
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    onPress={() => {
+                      setDraftValue(item);
+                      listRef.current?.scrollToOffset({
+                        animated: true,
+                        offset: index * WHEEL_ITEM_HEIGHT,
+                      });
+                    }}
+                    style={styles.wheelItem}
+                  >
+                    <Text
+                      style={[
+                        styles.wheelText,
+                        distance === 1 && styles.wheelTextNear,
+                        distance >= 2 && styles.wheelTextFar,
+                        distance === 0 && styles.wheelTextSelected,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                  </Pressable>
+                );
+              }}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={WHEEL_ITEM_HEIGHT}
+              style={styles.wheel}
+            />
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              onChange(draftValue);
+              setIsOpen(false);
+            }}
+            style={({ pressed }) => [
+              styles.confirmButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.confirmText}>확인</Text>
+          </Pressable>
         </SafeAreaView>
       </BottomSheetModal>
     </View>
@@ -101,14 +179,12 @@ export function TimeSelectField({
 }
 
 const styles = StyleSheet.create({
-  field: {
-    flex: 1,
-  },
+  field: { flex: 1 },
   label: {
     marginBottom: 9,
     color: COLORS.text,
+    fontFamily: 'FreesentationSemiBold',
     fontSize: 14,
-    fontWeight: '800',
   },
   selectButton: {
     height: 56,
@@ -123,70 +199,84 @@ const styles = StyleSheet.create({
   },
   value: {
     color: COLORS.text,
+    fontFamily: 'FreesentationSemiBold',
     fontSize: 15,
-    fontWeight: '700',
   },
-  chevron: {
-    color: COLORS.subText,
-    fontSize: 20,
-  },
+  chevron: { color: COLORS.subText, fontSize: 20 },
   sheet: {
-    maxHeight: '72%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     backgroundColor: COLORS.surface,
   },
-  sheetHeader: {
-    height: 64,
-    paddingHorizontal: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  handle: {
+    width: 30,
+    height: 5,
+    alignSelf: 'center',
+    borderRadius: 3,
+    backgroundColor: '#626262',
   },
   sheetTitle: {
+    marginTop: 16,
     color: COLORS.text,
+    fontFamily: 'FreesentationExtraBold',
     fontSize: 18,
-    fontWeight: '800',
+    textAlign: 'center',
   },
-  close: {
-    color: COLORS.navy,
-    fontSize: 14,
-    fontWeight: '800',
+  wheelViewport: {
+    position: 'relative',
+    height: WHEEL_ITEM_HEIGHT * WHEEL_VISIBLE_ITEMS,
+    marginTop: 8,
+    overflow: 'hidden',
   },
-  list: {
-    maxHeight: 430,
+  wheel: { flex: 1 },
+  wheelContent: { paddingVertical: WHEEL_PADDING },
+  selectionBand: {
+    position: 'absolute',
+    top: WHEEL_PADDING,
+    right: 36,
+    left: 36,
+    height: WHEEL_ITEM_HEIGHT,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#D7DBE5',
+    backgroundColor: '#F8F9FF',
   },
-  optionList: {
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  option: {
-    minHeight: 50,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
+  wheelItem: {
+    height: WHEEL_ITEM_HEIGHT,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 12,
+    justifyContent: 'center',
   },
-  optionSelected: {
-    backgroundColor: COLORS.softNavy,
-  },
-  optionText: {
+  wheelText: {
     color: COLORS.text,
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 31,
+    opacity: 0.2,
+  },
+  wheelTextNear: { fontSize: 27, opacity: 0.45 },
+  wheelTextFar: { fontSize: 23, opacity: 0.16 },
+  wheelTextSelected: {
+    color: '#3550FF',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 38,
+    opacity: 1,
+  },
+  confirmButton: {
+    height: 52,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 26,
+    backgroundColor: '#3550FF',
+  },
+  confirmText: {
+    color: COLORS.white,
+    fontFamily: 'FreesentationExtraBold',
     fontSize: 15,
   },
-  optionTextSelected: {
-    color: COLORS.navy,
-    fontWeight: '800',
-  },
-  check: {
-    color: COLORS.navy,
-    fontSize: 17,
-    fontWeight: '900',
-  },
-  pressed: {
-    opacity: 0.65,
-  },
+  pressed: { opacity: 0.65 },
 });

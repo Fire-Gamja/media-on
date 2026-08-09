@@ -210,7 +210,7 @@ export default function StudentScheduleScreen() {
                   if (endTime <= value) {
                     setEndTime(
                       SCHEDULE_TIME_OPTIONS.find((time) => time > value) ??
-                        '23:30',
+                        '23:50',
                     );
                   }
                 }}
@@ -372,8 +372,8 @@ function formatKoreanDate(dateKey: string) {
   return `${dateKey.replaceAll('-', '.')} /`;
 }
 
-const SCHEDULE_TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
-  const minutes = index * 30;
+const SCHEDULE_TIME_OPTIONS = Array.from({ length: 144 }, (_, index) => {
+  const minutes = index * 10;
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(
     minutes % 60,
   ).padStart(2, '0')}`;

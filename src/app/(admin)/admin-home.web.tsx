@@ -65,13 +65,11 @@ import {
 } from "../../services/notices";
 import {
   cancelPreGraduationReservation,
+  formatPreGraduationDate,
   getPreGraduationSchedule,
   getPreGraduationSettings,
-  getPreGraduationWeekdayLabel,
-  PRE_GRADUATION_WEEKDAYS,
   updatePreGraduationSettings,
   type PreGraduationSlot,
-  type PreGraduationWeekday,
 } from "../../services/pre-graduation";
 import {
   adminDeleteRoomReservationRequest,
@@ -174,9 +172,7 @@ export default function AdminDesktopHomeScreen() {
     [],
   );
   const [graduationAccess, setGraduationAccess] = useState(false);
-  const [graduationWeekdays, setGraduationWeekdays] = useState<
-    PreGraduationWeekday[]
-  >([]);
+  const [graduationDates, setGraduationDates] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState<SectionId>("overview");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -239,7 +235,7 @@ export default function AdminDesktopHomeScreen() {
       setInquiries(nextInquiries);
       setNotices(nextNotices);
       setGraduationAccess(nextGraduationSettings.access_enabled);
-      setGraduationWeekdays(nextGraduationSettings.enabled_weekdays);
+      setGraduationDates(nextGraduationSettings.enabled_dates);
       setGraduationSlots(nextGraduationSlots);
     } catch (error) {
       const message = getAuthErrorMessage(error);
@@ -526,15 +522,15 @@ export default function AdminDesktopHomeScreen() {
   };
 
   const handleGraduationSave = () => {
-    if (graduationAccess && graduationWeekdays.length === 0) {
-      Alert.alert("요일 선택", "신청받을 요일을 한 개 이상 선택해 주세요.");
+    if (graduationAccess && graduationDates.length === 0) {
+      Alert.alert("날짜 선택", "신청받을 날짜를 한 개 이상 선택해 주세요.");
       return;
     }
     void runAction(
       async () => {
         await updatePreGraduationSettings({
           accessEnabled: graduationAccess,
-          enabledWeekdays: graduationWeekdays,
+          enabledDates: graduationDates,
         });
       },
       graduationAccess
@@ -709,19 +705,11 @@ export default function AdminDesktopHomeScreen() {
             {activeSection === "graduation" ? (
               <GraduationSettingsCard
                 accessEnabled={graduationAccess}
-                enabledWeekdays={graduationWeekdays}
+                enabledDates={graduationDates}
                 isSaving={isProcessing}
                 onAccessChange={setGraduationAccess}
                 onSave={handleGraduationSave}
-                onToggleWeekday={(weekday) =>
-                  setGraduationWeekdays((current) =>
-                    current.includes(weekday)
-                      ? current.filter((item) => item !== weekday)
-                      : [...current, weekday].sort(
-                          (left, right) => left - right,
-                        ),
-                  )
-                }
+                onDatesChange={setGraduationDates}
               />
             ) : null}
 
@@ -1572,12 +1560,12 @@ function GraduationDetail({
         category="4학년 예비졸업사정"
         identity={`${slot.student_number ?? "학번 미확인"} · ${slot.student_name ?? "학생"}`}
         status="예약 완료"
-        title={`${getPreGraduationWeekdayLabel(slot.weekday, true)} ${slot.slot_start} 예약`}
+        title={`${formatPreGraduationDate(slot.reservation_date, "ko-KR", true)} ${slot.slot_start} 예약`}
       />
       <DetailSection title="예약 정보">
         <DetailRow
-          label="요일"
-          value={getPreGraduationWeekdayLabel(slot.weekday, true)}
+          label="날짜"
+          value={formatPreGraduationDate(slot.reservation_date, "ko-KR", true)}
         />
         <DetailRow
           label="상담 시간"
@@ -1783,18 +1771,18 @@ function DeleteSection({
 
 function GraduationSettingsCard({
   accessEnabled,
-  enabledWeekdays,
+  enabledDates,
   isSaving,
   onAccessChange,
   onSave,
-  onToggleWeekday,
+  onDatesChange,
 }: {
   accessEnabled: boolean;
-  enabledWeekdays: PreGraduationWeekday[];
+  enabledDates: string[];
   isSaving: boolean;
   onAccessChange: (value: boolean) => void;
   onSave: () => void;
-  onToggleWeekday: (weekday: PreGraduationWeekday) => void;
+  onDatesChange: (dates: string[]) => void;
 }) {
   return (
     <View style={styles.graduationSettings}>
@@ -1812,33 +1800,28 @@ function GraduationSettingsCard({
           value={accessEnabled}
         />
       </View>
-      <Text style={styles.weekdayLabel}>신청받을 요일</Text>
-      <View style={styles.weekdayRow}>
-        {PRE_GRADUATION_WEEKDAYS.map((weekday) => {
-          const selected = enabledWeekdays.includes(weekday.value);
-          return (
-            <Pressable
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: selected }}
-              key={weekday.value}
-              onPress={() => onToggleWeekday(weekday.value)}
-              style={[
-                styles.weekdayButton,
-                selected && styles.weekdayButtonActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.weekdayText,
-                  selected && styles.weekdayTextActive,
-                ]}
-              >
-                {weekday.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <Text style={styles.weekdayLabel}>신청받을 날짜</Text>
+      <TextInput
+        accessibilityLabel="예비졸업사정 신청 날짜"
+        defaultValue={enabledDates.join(", ")}
+        onEndEditing={({ nativeEvent }) =>
+          onDatesChange(
+            Array.from(
+              new Set(
+                nativeEvent.text
+                  .split(",")
+                  .map((date) => date.trim())
+                  .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date)),
+              ),
+            ).sort(),
+          )
+        }
+        placeholder="2026-09-07, 2026-09-08"
+        style={styles.graduationDateInput}
+      />
+      <Text style={styles.graduationSettingsDescription}>
+        실제 날짜를 YYYY-MM-DD 형식으로 입력하세요. 10:00~17:40, 20분 단위이며 12:00~13:00은 제외됩니다.
+      </Text>
       <Pressable
         accessibilityRole="button"
         disabled={isSaving}
@@ -2005,9 +1988,9 @@ function getRecordSummary(record: WorkspaceRecord) {
   return {
     icon: "graduation" as const,
     identity: `${record.data.student_number ?? "학번 미확인"} · ${record.data.student_name ?? "학생"}`,
-    title: `${getPreGraduationWeekdayLabel(record.data.weekday, true)} ${record.data.slot_start}`,
+    title: `${formatPreGraduationDate(record.data.reservation_date, "ko-KR", true)} ${record.data.slot_start}`,
     meta: `${record.data.slot_start} ~ ${record.data.slot_end}`,
-    date: getPreGraduationWeekdayLabel(record.data.weekday),
+    date: record.data.reservation_date,
   };
 }
 
@@ -2795,6 +2778,18 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontFamily: "FreesentationSemiBold",
     fontSize: 12,
+  },
+  graduationDateInput: {
+    height: 46,
+    marginTop: 8,
+    paddingHorizontal: 13,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    color: COLORS.text,
+    fontFamily: "FreesentationRegular",
+    fontSize: 14,
+    backgroundColor: COLORS.surface,
   },
   weekdayRow: { marginTop: 8, flexDirection: "row", gap: 7 },
   weekdayButton: {

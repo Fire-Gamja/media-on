@@ -1,17 +1,16 @@
 import { supabase } from '../lib/supabase';
 
-export type PreGraduationWeekday = 1 | 2 | 3 | 4 | 5;
-
 export type PreGraduationSettings = {
   id: number;
   access_enabled: boolean;
-  enabled_weekdays: PreGraduationWeekday[];
+  enabled_dates: string[];
   updated_by: string | null;
   updated_at: string;
 };
 
 export type PreGraduationSlot = {
-  weekday: PreGraduationWeekday;
+  reservation_date: string;
+  weekday: number;
   slot_start: string;
   slot_end: string;
   reservation_id: string | null;
@@ -20,22 +19,10 @@ export type PreGraduationSlot = {
   is_mine: boolean;
 };
 
-export const PRE_GRADUATION_WEEKDAYS: ReadonlyArray<{
-  value: PreGraduationWeekday;
-  label: string;
-  fullLabel: string;
-}> = [
-  { value: 1, label: '월', fullLabel: '월요일' },
-  { value: 2, label: '화', fullLabel: '화요일' },
-  { value: 3, label: '수', fullLabel: '수요일' },
-  { value: 4, label: '목', fullLabel: '목요일' },
-  { value: 5, label: '금', fullLabel: '금요일' },
-];
-
 export const DEFAULT_PRE_GRADUATION_SETTINGS: PreGraduationSettings = {
   id: 1,
   access_enabled: false,
-  enabled_weekdays: [],
+  enabled_dates: [],
   updated_by: null,
   updated_at: new Date(0).toISOString(),
 };
@@ -49,15 +36,11 @@ const requireClient = () => {
 };
 
 export async function getPreGraduationSettings() {
-  if (!supabase) {
-    return DEFAULT_PRE_GRADUATION_SETTINGS;
-  }
+  if (!supabase) return DEFAULT_PRE_GRADUATION_SETTINGS;
 
   const { data, error } = await supabase
     .from('pre_graduation_settings')
-    .select(
-      'id, access_enabled, enabled_weekdays, updated_by, updated_at',
-    )
+    .select('id, access_enabled, enabled_dates, updated_by, updated_at')
     .eq('id', 1)
     .maybeSingle<PreGraduationSettings>();
 
@@ -65,48 +48,34 @@ export async function getPreGraduationSettings() {
     throw new Error('예비졸업사정 신청 설정을 불러오지 못했습니다.');
   }
 
-  return {
-    ...data,
-    enabled_weekdays: normalizeWeekdays(data.enabled_weekdays),
-  };
+  return { ...data, enabled_dates: normalizeDates(data.enabled_dates) };
 }
 
 export async function updatePreGraduationSettings(input: {
   accessEnabled: boolean;
-  enabledWeekdays: PreGraduationWeekday[];
+  enabledDates: string[];
 }) {
   const { data, error } = await requireClient().rpc(
     'update_pre_graduation_settings',
     {
       next_access_enabled: input.accessEnabled,
-      next_enabled_weekdays: normalizeWeekdays(input.enabledWeekdays),
+      next_enabled_dates: normalizeDates(input.enabledDates),
     },
   );
 
   if (error || !data) {
-    throwPreGraduationError(
-      error,
-      '예비졸업사정 신청 설정을 저장하지 못했습니다.',
-    );
+    throwPreGraduationError(error, '예비졸업사정 신청 설정을 저장하지 못했습니다.');
   }
 
   const settings = data as PreGraduationSettings;
-  return {
-    ...settings,
-    enabled_weekdays: normalizeWeekdays(settings.enabled_weekdays),
-  };
+  return { ...settings, enabled_dates: normalizeDates(settings.enabled_dates) };
 }
 
 export async function getPreGraduationSchedule() {
-  const { data, error } = await requireClient().rpc(
-    'get_pre_graduation_schedule',
-  );
+  const { data, error } = await requireClient().rpc('get_pre_graduation_schedule');
 
   if (error) {
-    throwPreGraduationError(
-      error,
-      '예비졸업사정 예약 현황을 불러오지 못했습니다.',
-    );
+    throwPreGraduationError(error, '예비졸업사정 예약 현황을 불러오지 못했습니다.');
   }
 
   return ((data ?? []) as PreGraduationSlot[]).map((slot) => ({
@@ -118,66 +87,54 @@ export async function getPreGraduationSchedule() {
 }
 
 export async function reservePreGraduationSlot(input: {
-  weekday: PreGraduationWeekday;
+  reservationDate: string;
   startTime: string;
 }) {
   const { data, error } = await requireClient().rpc(
     'reserve_pre_graduation_slot',
     {
-      requested_weekday: input.weekday,
+      requested_reservation_date: input.reservationDate,
       requested_start_time: input.startTime,
     },
   );
 
   if (error || !data) {
-    throwPreGraduationError(
-      error,
-      '예비졸업사정 예약을 완료하지 못했습니다.',
-    );
+    throwPreGraduationError(error, '예비졸업사정 예약을 완료하지 못했습니다.');
   }
 
   return data as string;
 }
 
-export async function cancelPreGraduationReservation(
-  reservationId: string,
-) {
+export async function cancelPreGraduationReservation(reservationId: string) {
   const { error } = await requireClient().rpc(
     'cancel_pre_graduation_reservation',
-    {
-      target_reservation_id: reservationId,
-    },
+    { target_reservation_id: reservationId },
   );
 
   if (error) {
-    throwPreGraduationError(
-      error,
-      '예비졸업사정 예약을 취소하지 못했습니다.',
-    );
+    throwPreGraduationError(error, '예비졸업사정 예약을 취소하지 못했습니다.');
   }
 }
 
-export function getPreGraduationWeekdayLabel(
-  weekday: PreGraduationWeekday,
-  full = false,
+export function formatPreGraduationDate(
+  dateKey: string,
+  locale = 'ko-KR',
+  includeYear = false,
 ) {
-  const option = PRE_GRADUATION_WEEKDAYS.find(
-    (item) => item.value === weekday,
-  );
-  return full ? option?.fullLabel ?? '' : option?.label ?? '';
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat(locale, {
+    ...(includeYear ? { year: 'numeric' as const } : {}),
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(date);
 }
 
-function normalizeWeekdays(
-  weekdays: readonly number[] | null | undefined,
-): PreGraduationWeekday[] {
+function normalizeDates(dates: readonly string[] | null | undefined) {
   return Array.from(
-    new Set(
-      (weekdays ?? []).filter(
-        (weekday): weekday is PreGraduationWeekday =>
-          Number.isInteger(weekday) && weekday >= 1 && weekday <= 5,
-      ),
-    ),
-  ).sort((left, right) => left - right);
+    new Set((dates ?? []).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))),
+  ).sort();
 }
 
 function throwPreGraduationError(
@@ -192,14 +149,11 @@ function throwPreGraduationError(
   if (message.includes('PRE_GRADUATION_ACCESS_CLOSED')) {
     throw new Error('현재 예비졸업사정 신청 기간이 아닙니다.');
   }
-  if (message.includes('PRE_GRADUATION_WEEKDAY_REQUIRED')) {
-    throw new Error('신청받을 요일을 한 개 이상 선택해 주세요.');
+  if (message.includes('PRE_GRADUATION_DATE_REQUIRED')) {
+    throw new Error('신청받을 날짜를 한 개 이상 선택해 주세요.');
   }
-  if (message.includes('PRE_GRADUATION_WEEKDAY_CLOSED')) {
-    throw new Error('현재 신청을 받지 않는 요일입니다.');
-  }
-  if (message.includes('PRE_GRADUATION_ALREADY_RESERVED')) {
-    throw new Error('이미 예약한 시간이 있습니다. 기존 예약을 먼저 취소해 주세요.');
+  if (message.includes('PRE_GRADUATION_DATE_CLOSED')) {
+    throw new Error('현재 신청을 받지 않는 날짜입니다.');
   }
   if (message.includes('PRE_GRADUATION_SLOT_TAKEN')) {
     throw new Error('방금 다른 학생이 예약한 시간입니다. 다른 시간을 선택해 주세요.');

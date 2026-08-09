@@ -12,7 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PlatformHeaderIcon } from '../../../components/common/PlatformHeaderIcon';
+import { StudentBottomNavigation } from '../../../components/student/StudentBottomNavigation';
+import { StudentTopBar } from '../../../components/student/StudentTopBar';
+import { useAppSettings } from '../../../context/app-settings-context';
+import { translate } from '../../../i18n/translations';
 import { COLORS } from '../../../constants/colors';
 import { getAuthErrorMessage } from '../../../services/auth';
 import {
@@ -22,6 +25,7 @@ import {
 } from '../../../services/notices';
 
 export default function NoticesScreen() {
+  const { language } = useAppSettings();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -49,24 +53,7 @@ export default function NoticesScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
 
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="뒤로 가기"
-          hitSlop={8}
-          onPress={() => router.back()}
-          style={({ pressed }) => [
-            styles.headerIconButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <PlatformHeaderIcon name="back" />
-        </Pressable>
-        <Text pointerEvents="none" style={styles.headerTitle}>
-          학부 공지사항
-        </Text>
-        <View style={styles.headerIconButton} />
-      </View>
+      <StudentTopBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -80,6 +67,7 @@ export default function NoticesScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        <Text style={styles.pageTitle}>{translate(language, 'notices.title')}</Text>
         {isLoading ? (
           <View style={styles.stateBox}>
             <ActivityIndicator color="#182365" size="large" />
@@ -128,6 +116,7 @@ export default function NoticesScreen() {
           </View>
         )}
       </ScrollView>
+      <StudentBottomNavigation activeTab="notices" />
     </SafeAreaView>
   );
 }
@@ -240,5 +229,11 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.65,
+  },
+  pageTitle: {
+    marginBottom: 18,
+    color: '#1E2024',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 22,
   },
 });

@@ -14,25 +14,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../../components/common/AppIcon';
+import { BottomSheetModal } from '../../components/common/BottomSheetModal';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
+import MonthCalendar, { fromDateKey, toDateKey } from '../../components/student/MonthCalendar';
 import { COLORS } from '../../constants/colors';
 import { getAuthErrorMessage } from '../../services/auth';
 import {
   cancelPreGraduationReservation,
+  formatPreGraduationDate,
   getPreGraduationSchedule,
   getPreGraduationSettings,
-  getPreGraduationWeekdayLabel,
-  PRE_GRADUATION_WEEKDAYS,
   updatePreGraduationSettings,
   type PreGraduationSlot,
-  type PreGraduationWeekday,
 } from '../../services/pre-graduation';
 
 export default function AdminPreGraduationScreen() {
   const [accessEnabled, setAccessEnabled] = useState(false);
-  const [enabledWeekdays, setEnabledWeekdays] = useState<
-    PreGraduationWeekday[]
-  >([]);
+  const [enabledDates, setEnabledDates] = useState<string[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  );
+  const [calendarDate, setCalendarDate] = useState(toDateKey(new Date()));
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [slots, setSlots] = useState<PreGraduationSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,7 +51,7 @@ export default function AdminPreGraduationScreen() {
         getPreGraduationSchedule(),
       ]);
       setAccessEnabled(settings.access_enabled);
-      setEnabledWeekdays(settings.enabled_weekdays);
+      setEnabledDates(settings.enabled_dates);
       setSlots(schedule);
     } catch (error) {
       setErrorMessage(getAuthErrorMessage(error));
@@ -68,19 +71,11 @@ export default function AdminPreGraduationScreen() {
     [slots],
   );
 
-  const toggleWeekday = (weekday: PreGraduationWeekday) => {
-    setEnabledWeekdays((current) =>
-      current.includes(weekday)
-        ? current.filter((item) => item !== weekday)
-        : [...current, weekday].sort((left, right) => left - right),
-    );
-  };
-
   const handleSave = async () => {
-    if (accessEnabled && enabledWeekdays.length === 0) {
+    if (accessEnabled && enabledDates.length === 0) {
       Alert.alert(
-        '요일 선택',
-        '접근을 허용하려면 신청받을 요일을 한 개 이상 선택해 주세요.',
+        '날짜 선택',
+        '접근을 허용하려면 신청받을 날짜를 한 개 이상 선택해 주세요.',
       );
       return;
     }
@@ -89,10 +84,10 @@ export default function AdminPreGraduationScreen() {
       setIsSaving(true);
       const settings = await updatePreGraduationSettings({
         accessEnabled,
-        enabledWeekdays,
+        enabledDates,
       });
       setAccessEnabled(settings.access_enabled);
-      setEnabledWeekdays(settings.enabled_weekdays);
+      setEnabledDates(settings.enabled_dates);
       Alert.alert(
         '저장 완료',
         settings.access_enabled
@@ -113,7 +108,7 @@ export default function AdminPreGraduationScreen() {
 
     Alert.alert(
       '예약 삭제',
-      `${slot.student_number ?? '학번 미확인'} · ${slot.student_name ?? '학생'}의 ${getPreGraduationWeekdayLabel(slot.weekday, true)} ${slot.slot_start} 예약을 삭제하시겠습니까?`,
+      `${slot.student_number ?? '학번 미확인'} · ${slot.student_name ?? '학생'}의 ${formatPreGraduationDate(slot.reservation_date, 'ko-KR', true)} ${slot.slot_start} 예약을 삭제하시겠습니까?`,
       [
         { text: '취소', style: 'cancel' },
         {
@@ -182,8 +177,8 @@ export default function AdminPreGraduationScreen() {
             <View style={styles.guideTextArea}>
               <Text style={styles.guideTitle}>4학년 예비졸업사정</Text>
               <Text style={styles.guideText}>
-                전체 접근 허용과 신청 요일을 설정합니다. 시간은
-                10:20~16:20, 1인당 20분으로 고정됩니다.
+                전체 접근 허용과 실제 신청 날짜를 설정합니다. 시간은
+                10:00~17:40, 20분 단위이며 12:00~13:00은 제외됩니다.
               </Text>
             </View>
           </View>
@@ -230,48 +225,37 @@ export default function AdminPreGraduationScreen() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>신청받을 요일</Text>
+            <Text style={styles.sectionTitle}>신청받을 날짜</Text>
             <Text style={styles.sectionDescription}>
-              활성화한 요일만 학생 예약 화면에서 선택할 수 있습니다.
+              선택한 날짜만 학생 예약 화면과 알림에 표시됩니다.
             </Text>
-            <View style={styles.weekdayRow}>
-              {PRE_GRADUATION_WEEKDAYS.map((weekday) => {
-                const isSelected = enabledWeekdays.includes(weekday.value);
-
-                return (
+            <View style={styles.dateList}>
+              {enabledDates.map((date) => (
+                <View key={date} style={styles.dateChip}>
+                  <Text style={styles.dateChipText}>
+                    {formatPreGraduationDate(date)}
+                  </Text>
                   <Pressable
-                    key={weekday.value}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isSelected }}
-                    onPress={() => toggleWeekday(weekday.value)}
-                    style={[
-                      styles.weekdayButton,
-                      isSelected && styles.weekdayButtonSelected,
-                    ]}
+                    accessibilityLabel={`${date} 삭제`}
+                    hitSlop={8}
+                    onPress={() => setEnabledDates((current) => current.filter((item) => item !== date))}
                   >
-                    {isSelected ? (
-                      <AppIcon
-                        color={COLORS.white}
-                        name="check"
-                        size={14}
-                      />
-                    ) : null}
-                    <Text
-                      style={[
-                        styles.weekdayText,
-                        isSelected && styles.weekdayTextSelected,
-                      ]}
-                    >
-                      {weekday.label}
-                    </Text>
+                    <Text style={styles.dateRemove}>×</Text>
                   </Pressable>
-                );
-              })}
+                </View>
+              ))}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setIsDatePickerOpen(true)}
+                style={styles.addDateButton}
+              >
+                <Text style={styles.addDateText}>+ 날짜 추가</Text>
+              </Pressable>
             </View>
             <View style={styles.timeInfo}>
               <AppIcon color={COLORS.navy} name="hours" size={20} />
               <Text style={styles.timeInfoText}>
-                10:20 ~ 16:20 · 20분 단위 · 학생당 1회
+                10:00 ~ 17:40 · 20분 단위 · 12:00 ~ 13:00 제외
               </Text>
             </View>
           </View>
@@ -316,7 +300,7 @@ export default function AdminPreGraduationScreen() {
                   >
                     <View style={styles.dayBadge}>
                       <Text style={styles.dayBadgeText}>
-                        {getPreGraduationWeekdayLabel(slot.weekday)}
+                        {fromDateKey(slot.reservation_date).getDate()}일
                       </Text>
                     </View>
                     <View style={styles.reservationDetails}>
@@ -325,7 +309,7 @@ export default function AdminPreGraduationScreen() {
                         {slot.student_name ?? '학생'}
                       </Text>
                       <Text style={styles.reservationTime}>
-                        {slot.slot_start} ~ {slot.slot_end}
+                        {formatPreGraduationDate(slot.reservation_date)} · {slot.slot_start} ~ {slot.slot_end}
                       </Text>
                     </View>
                     <Pressable
@@ -353,6 +337,35 @@ export default function AdminPreGraduationScreen() {
           </View>
         </ScrollView>
       )}
+      <BottomSheetModal
+        accessibilityLabel="날짜 선택 닫기"
+        onRequestClose={() => setIsDatePickerOpen(false)}
+        visible={isDatePickerOpen}
+      >
+        <View style={styles.calendarSheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>신청 날짜 선택</Text>
+          <MonthCalendar
+            eventDates={new Set(enabledDates)}
+            minimumDate={toDateKey(new Date())}
+            month={calendarMonth}
+            onChangeMonth={setCalendarMonth}
+            onSelectDate={setCalendarDate}
+            selectedDate={calendarDate}
+            showMonthControls
+          />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setEnabledDates((current) => Array.from(new Set([...current, calendarDate])).sort());
+              setIsDatePickerOpen(false);
+            }}
+            style={styles.sheetConfirm}
+          >
+            <Text style={styles.sheetConfirmText}>이 날짜 추가</Text>
+          </Pressable>
+        </View>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 }
@@ -503,34 +516,44 @@ const styles = StyleSheet.create({
   accessStateTextClosed: {
     color: COLORS.subText,
   },
-  weekdayRow: {
+  dateList: {
     marginTop: 16,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
-  weekdayButton: {
-    flex: 1,
-    height: 48,
+  dateChip: {
+    minHeight: 42,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
+    gap: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-  },
-  weekdayButtonSelected: {
     borderColor: COLORS.navy,
-    backgroundColor: COLORS.navy,
+    borderRadius: 12,
+    backgroundColor: COLORS.softNavy,
   },
-  weekdayText: {
-    color: COLORS.text,
+  dateChipText: {
+    color: COLORS.navy,
     fontFamily: 'FreesentationSemiBold',
-    fontSize: 15,
+    fontSize: 14,
   },
-  weekdayTextSelected: {
-    color: COLORS.white,
+  dateRemove: { color: COLORS.navy, fontSize: 20, lineHeight: 22 },
+  addDateButton: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.navy,
+    borderRadius: 12,
+  },
+  addDateText: {
+    color: COLORS.navy,
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 14,
   },
   timeInfo: {
     marginTop: 18,
@@ -637,5 +660,41 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  calendarSheet: {
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 30,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    backgroundColor: COLORS.surface,
+  },
+  sheetHandle: {
+    width: 34,
+    height: 5,
+    alignSelf: 'center',
+    borderRadius: 3,
+    backgroundColor: '#9CA3AF',
+  },
+  sheetTitle: {
+    marginVertical: 18,
+    color: COLORS.text,
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  sheetConfirm: {
+    height: 52,
+    marginTop: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: COLORS.navy,
+  },
+  sheetConfirmText: {
+    color: COLORS.white,
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 15,
   },
 });

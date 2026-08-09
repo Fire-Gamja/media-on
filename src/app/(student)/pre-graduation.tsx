@@ -16,11 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import { useAppSettings } from '../../context/app-settings-context';
-import {
-  type AppLanguage,
-  translate,
-  type TranslationKey,
-} from '../../i18n/translations';
+import { type AppLanguage, translate } from '../../i18n/translations';
 import {
   getAuthErrorMessage,
   getCurrentProfile,
@@ -29,21 +25,13 @@ import {
 import {
   cancelPreGraduationReservation,
   DEFAULT_PRE_GRADUATION_SETTINGS,
+  formatPreGraduationDate,
   getPreGraduationSchedule,
   getPreGraduationSettings,
   reservePreGraduationSlot,
   type PreGraduationSettings,
   type PreGraduationSlot,
-  type PreGraduationWeekday,
 } from '../../services/pre-graduation';
-
-const EVENT_DAYS: Record<PreGraduationWeekday, number> = {
-  1: 7,
-  2: 1,
-  3: 2,
-  4: 3,
-  5: 4,
-};
 
 const LANGUAGE_LOCALES: Record<AppLanguage, string> = {
   ko: 'ko-KR',
@@ -61,8 +49,7 @@ export default function PreGraduationScreen() {
     DEFAULT_PRE_GRADUATION_SETTINGS,
   );
   const [slots, setSlots] = useState<PreGraduationSlot[]>([]);
-  const [selectedWeekday, setSelectedWeekday] =
-    useState<PreGraduationWeekday>(1);
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] =
     useState<PreGraduationSlot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,17 +70,15 @@ export default function PreGraduationScreen() {
       setProfile(nextProfile);
       setSettings(nextSettings);
 
-      const firstEnabledWeekday = nextSettings.enabled_weekdays[0] ?? 1;
-      setSelectedWeekday((current) =>
-        nextSettings.enabled_weekdays.includes(current)
-          ? current
-          : firstEnabledWeekday,
+      const firstEnabledDate = nextSettings.enabled_dates[0] ?? '';
+      setSelectedDate((current) =>
+        nextSettings.enabled_dates.includes(current) ? current : firstEnabledDate,
       );
 
       if (
         nextProfile.grade === 4 &&
         nextSettings.access_enabled &&
-        nextSettings.enabled_weekdays.length > 0
+        nextSettings.enabled_dates.length > 0
       ) {
         setSlots(await getPreGraduationSchedule());
       } else {
@@ -118,21 +103,21 @@ export default function PreGraduationScreen() {
     [slots],
   );
   const selectedSlots = useMemo(
-    () => slots.filter((slot) => slot.weekday === selectedWeekday),
-    [selectedWeekday, slots],
+    () => slots.filter((slot) => slot.reservation_date === selectedDate),
+    [selectedDate, slots],
   );
   const blockedMessage =
     profile && profile.grade !== 4
       ? '4학년 학생만 예비졸업사정을 신청할 수 있습니다.'
       : !settings.access_enabled
         ? '관리자가 신청을 열면 예약할 수 있습니다.'
-        : settings.enabled_weekdays.length === 0
-          ? '현재 신청 가능한 요일이 없습니다.'
+        : settings.enabled_dates.length === 0
+          ? '현재 신청 가능한 날짜가 없습니다.'
           : null;
   const canReserve = !errorMessage && !blockedMessage;
 
-  const selectWeekday = (weekday: PreGraduationWeekday) => {
-    setSelectedWeekday(weekday);
+  const selectDate = (date: string) => {
+    setSelectedDate(date);
     setSelectedSlot(null);
   };
 
@@ -155,7 +140,7 @@ export default function PreGraduationScreen() {
     try {
       setIsSubmitting(true);
       await reservePreGraduationSlot({
-        weekday: selectedSlot.weekday,
+        reservationDate: selectedSlot.reservation_date,
         startTime: selectedSlot.slot_start,
       });
       setShowConfirmation(false);
@@ -177,7 +162,7 @@ export default function PreGraduationScreen() {
 
     Alert.alert(
       translate(language, 'pre.cancelReservation'),
-      `${formatReservationDate(slot.weekday, language)} ${slot.slot_start} 예약을 취소하시겠습니까?`,
+      `${formatReservationDate(slot.reservation_date, language)} ${slot.slot_start} 예약을 취소하시겠습니까?`,
       [
         { text: '유지', style: 'cancel' },
         {
@@ -272,10 +257,7 @@ export default function PreGraduationScreen() {
                         {translate(language, 'pre.mine')}
                       </Text>
                       <Text style={styles.myReservationTime}>
-                        {formatReservationDate(
-                          reservation.weekday,
-                          language,
-                        )}{' '}
+                        {formatReservationDate(reservation.reservation_date, language)}{' '}
                         {reservation.slot_start}
                       </Text>
                     </Pressable>
@@ -292,14 +274,15 @@ export default function PreGraduationScreen() {
                   horizontal
                   showsHorizontalScrollIndicator={false}
                 >
-                  {settings.enabled_weekdays.map((weekday) => {
-                    const selected = weekday === selectedWeekday;
+                  {settings.enabled_dates.map((date) => {
+                    const selected = date === selectedDate;
+                    const [, , day] = date.split('-');
                     return (
                       <Pressable
-                        key={weekday}
+                        key={date}
                         accessibilityRole="radio"
                         accessibilityState={{ checked: selected }}
-                        onPress={() => selectWeekday(weekday)}
+                        onPress={() => selectDate(date)}
                         style={[
                           styles.dateCard,
                           selected && styles.selectedCard,
@@ -311,7 +294,7 @@ export default function PreGraduationScreen() {
                             selected && styles.selectedText,
                           ]}
                         >
-                          {EVENT_DAYS[weekday]}
+                          {Number(day)}
                           {language === 'ko' ? '일' : ''}
                         </Text>
                         <Text
@@ -321,10 +304,7 @@ export default function PreGraduationScreen() {
                             selected && styles.selectedText,
                           ]}
                         >
-                          {translate(
-                            language,
-                            `weekday.${weekday}` as TranslationKey,
-                          )}
+                          {formatWeekday(date, language)}
                         </Text>
                       </Pressable>
                     );
@@ -340,7 +320,7 @@ export default function PreGraduationScreen() {
                   {selectedSlots.map((slot) => {
                     const occupied = Boolean(slot.reservation_id);
                     const selected =
-                      selectedSlot?.weekday === slot.weekday &&
+                      selectedSlot?.reservation_date === slot.reservation_date &&
                       selectedSlot.slot_start === slot.slot_start;
                     const disabled =
                       isSubmitting || (occupied && !slot.is_mine);
@@ -352,7 +332,7 @@ export default function PreGraduationScreen() {
 
                     return (
                       <Pressable
-                        key={`${slot.weekday}-${slot.slot_start}`}
+                        key={`${slot.reservation_date}-${slot.slot_start}`}
                         accessibilityRole="button"
                         accessibilityState={{ disabled, selected }}
                         disabled={disabled}
@@ -519,7 +499,7 @@ function ReservationConfirmationModal({
           <View style={styles.confirmationContent}>
             <View style={styles.datePill}>
               <Text style={styles.datePillText}>
-                {formatReservationDate(slot.weekday, language)}{' '}
+                {formatReservationDate(slot.reservation_date, language)}{' '}
                 <Text style={styles.datePillTime}>{slot.slot_start}</Text>
               </Text>
             </View>
@@ -560,16 +540,17 @@ function ReservationConfirmationModal({
 }
 
 function formatReservationDate(
-  weekday: PreGraduationWeekday,
+  dateKey: string,
   language: AppLanguage,
 ) {
-  const date = new Date(2026, 8, EVENT_DAYS[weekday]);
+  return formatPreGraduationDate(dateKey, LANGUAGE_LOCALES[language], true);
+}
+
+function formatWeekday(dateKey: string, language: AppLanguage) {
+  const [year, month, day] = dateKey.split('-').map(Number);
   return new Intl.DateTimeFormat(LANGUAGE_LOCALES[language], {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
     weekday: 'short',
-  }).format(date);
+  }).format(new Date(year, month - 1, day));
 }
 
 const styles = StyleSheet.create({

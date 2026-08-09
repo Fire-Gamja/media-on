@@ -25,7 +25,10 @@ import FormField from '../components/common/FormField';
 import { BottomSheetModal } from '../components/common/BottomSheetModal';
 import { PlatformHeaderIcon } from '../components/common/PlatformHeaderIcon';
 import PrimaryButton from '../components/common/PrimaryButton';
+import { StudentBottomNavigation } from '../components/student/StudentBottomNavigation';
 import { COLORS } from '../constants/colors';
+import { useAppSettings } from '../context/app-settings-context';
+import { translate } from '../i18n/translations';
 import {
   getProfileAvatarPresetValue,
   getProfileAvatarSource,
@@ -56,10 +59,13 @@ type EditableProfileField = 'major' | 'status' | 'phone';
 const AVATAR_MODAL_DISMISS_FALLBACK_MS = 400;
 
 export default function ProfileScreen() {
-  const { mustChangePassword } = useLocalSearchParams<{
+  const { language } = useAppSettings();
+  const { fromTab, mustChangePassword } = useLocalSearchParams<{
+    fromTab?: string;
     mustChangePassword?: string;
   }>();
   const isPasswordChangeRequired = mustChangePassword === '1';
+  const isMyTab = fromTab === '1' && !isPasswordChangeRequired;
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [name, setName] = useState('');
   const [grade, setGrade] = useState<number>(1);
@@ -383,21 +389,25 @@ export default function ProfileScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="뒤로 가기"
-            hitSlop={10}
-            onPress={handleBack}
-            style={({ pressed }) => [pressed && styles.pressed]}
-          >
-            <PlatformHeaderIcon name="back" />
-          </Pressable>
+          {isMyTab && !showPasswordEditor ? (
+            <View style={styles.headerSpacer} />
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="뒤로 가기"
+              hitSlop={10}
+              onPress={handleBack}
+              style={({ pressed }) => [pressed && styles.pressed]}
+            >
+              <PlatformHeaderIcon name="back" />
+            </Pressable>
+          )}
           <Text style={styles.headerTitle}>
             {isPasswordChangeRequired
               ? '새 비밀번호 설정'
               : showPasswordEditor
                 ? '비밀번호 변경'
-                : '내 정보'}
+                : translate(language, 'profile.title')}
           </Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -508,32 +518,32 @@ export default function ProfileScreen() {
                       pressed && styles.pressed,
                     ]}
                   >
-                    <Text style={styles.avatarChange}>프로필 사진 변경</Text>
+                    <Text style={styles.avatarChange}>{translate(language, 'profile.photoChange')}</Text>
                   </Pressable>
                   <Text style={styles.profileName}>{profile.name}</Text>
                 </View>
 
                 <View style={styles.profileDivider} />
                 <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>기본 정보</Text>
-                  <ProfileInfoRow label="이름" value={profile.name} />
-                  <ProfileInfoRow label="학번" value={profile.student_number} />
-                  <ProfileInfoRow label="학년" value={`${profile.grade}학년`} />
+                  <Text style={styles.sectionTitle}>{translate(language, 'profile.basicInfo')}</Text>
+                  <ProfileInfoRow label={translate(language, 'profile.name')} value={profile.name} />
+                  <ProfileInfoRow label={translate(language, 'profile.studentNumber')} value={profile.student_number} />
+                  <ProfileInfoRow label={translate(language, 'profile.grade')} value={`${profile.grade}${language === 'ko' ? '학년' : ''}`} />
                   <ProfileInfoRow
                     editable
-                    label="전공"
+                    label={translate(language, 'profile.major')}
                     onEdit={() => setEditingField('major')}
                     value={major}
                   />
                   <ProfileInfoRow
                     editable
-                    label="학적 상태"
+                    label={translate(language, 'profile.status')}
                     onEdit={() => setEditingField('status')}
                     value={enrollmentStatus}
                   />
                   <ProfileInfoRow
                     editable
-                    label="휴대폰번호"
+                    label={translate(language, 'profile.phone')}
                     onEdit={() => setEditingField('phone')}
                     value={phoneNumber}
                   />
@@ -544,7 +554,7 @@ export default function ProfileScreen() {
                   onPress={() => setShowPasswordEditor(true)}
                   style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
                 >
-                  <Text style={styles.menuText}>비밀번호 변경</Text>
+                  <Text style={styles.menuText}>{translate(language, 'profile.password')}</Text>
                   <Text style={styles.menuChevron}>›</Text>
                 </Pressable>
                 <Pressable
@@ -552,7 +562,7 @@ export default function ProfileScreen() {
                   onPress={() => router.push('/account-deletion')}
                   style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
                 >
-                  <Text style={styles.deleteMenuText}>회원 탈퇴</Text>
+                  <Text style={styles.deleteMenuText}>{translate(language, 'profile.delete')}</Text>
                   <Text style={styles.menuChevron}>›</Text>
                 </Pressable>
                 <Pressable
@@ -560,13 +570,16 @@ export default function ProfileScreen() {
                   onPress={handleLogout}
                   style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed]}
                 >
-                  <Text style={styles.logoutText}>로그아웃</Text>
+                  <Text style={styles.logoutText}>{translate(language, 'profile.logout')}</Text>
                 </Pressable>
               </>
             )}
           </ScrollView>
         )}
       </KeyboardAvoidingView>
+      {isMyTab && !showPasswordEditor ? (
+        <StudentBottomNavigation activeTab="my" />
+      ) : null}
 
       <BottomSheetModal
         accessibilityLabel="정보 수정 닫기"
@@ -714,6 +727,7 @@ function ProfileInfoRow({
   onEdit?: () => void;
   value: string;
 }) {
+  const { language } = useAppSettings();
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -727,7 +741,7 @@ function ProfileInfoRow({
           onPress={onEdit}
           style={styles.editChip}
         >
-          <Text style={styles.editChipText}>수정</Text>
+          <Text style={styles.editChipText}>{translate(language, 'profile.edit')}</Text>
         </Pressable>
       ) : null}
     </View>
