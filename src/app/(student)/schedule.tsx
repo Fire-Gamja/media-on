@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 15,
-    backgroundColor: '#182365',
+    backgroundColor: '#3550FF',
   },
   submitButtonDisabled: {
     backgroundColor: '#EAEAEA',
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 14,
-    backgroundColor: '#182365',
+    backgroundColor: '#3550FF',
   },
   calendarConfirmText: {
     color: '#FFFFFF',

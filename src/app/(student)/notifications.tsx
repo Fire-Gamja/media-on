@@ -1,4 +1,5 @@
 import { router, useFocusEffect, type Href } from 'expo-router';
+import { Image as SvgImage } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useState } from 'react';
 import {
@@ -15,20 +16,23 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppIcon } from '../../components/common/AppIcon';
-import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
+  deleteAllMyNotifications,
   deleteNotification,
   getMyNotifications,
   markNotificationRead,
   type AppNotification,
 } from '../../services/notifications';
 
+const backIcon = require('../../../assets/figma/student-v2/back-button.svg');
+
 export default function StudentNotificationsScreen() {
   const [notifications, setNotifications] =
     useState<AppNotification[]>([]);
   const [isLoading, setIsLoading] = useState(isSupabaseConfigured);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const loadNotifications = useCallback(async (refreshing = false) => {
     if (!isSupabaseConfigured) {
@@ -79,6 +83,29 @@ export default function StudentNotificationsScreen() {
     }
   };
 
+  const removeAllNotifications = () => {
+    Alert.alert(
+      '알림 전체 삭제',
+      '모든 알림을 삭제하시겠습니까? 삭제한 알림은 복구할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '전체 삭제',
+          style: 'destructive',
+          onPress: () => {
+            setIsDeletingAll(true);
+            void deleteAllMyNotifications()
+              .then(() => setNotifications([]))
+              .catch(() => {
+                Alert.alert('삭제 실패', '알림을 모두 삭제하지 못했습니다.');
+              })
+              .finally(() => setIsDeletingAll(false));
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar style="dark" />
@@ -94,7 +121,11 @@ export default function StudentNotificationsScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <PlatformHeaderIcon name="back" />
+          <SvgImage
+            contentFit="contain"
+            source={backIcon}
+            style={styles.backIcon}
+          />
         </Pressable>
         <Text style={styles.headerTitle}>알림</Text>
         <View style={styles.headerIconButton} />
@@ -112,6 +143,26 @@ export default function StudentNotificationsScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {!isLoading && notifications.length > 0 ? (
+          <View style={styles.deleteAllRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="알림 전체 삭제"
+              disabled={isDeletingAll}
+              hitSlop={8}
+              onPress={removeAllNotifications}
+              style={({ pressed }) => [
+                styles.deleteAllButton,
+                (pressed || isDeletingAll) && styles.pressed,
+              ]}
+            >
+              <Text style={styles.deleteAllText}>
+                {isDeletingAll ? '삭제 중' : '전체 삭제'}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {isLoading ? (
           <View style={styles.stateBox}>
             <ActivityIndicator color="#182365" size="large" />
@@ -139,22 +190,11 @@ export default function StudentNotificationsScreen() {
               >
                 <Pressable
                   onPress={() => void openNotification(notification)}
-                  style={[
-                    styles.notificationCard,
-                    !notification.is_read && styles.unreadCard,
-                  ]}
+                  style={styles.notificationCard}
                 >
                   <View style={styles.notificationTitleRow}>
                     <View style={styles.titleArea}>
-                      {!notification.is_read ? (
-                        <View style={styles.unreadDot} />
-                      ) : null}
-                      <Text
-                        style={[
-                          styles.notificationTitle,
-                          !notification.is_read && styles.unreadTitle,
-                        ]}
-                      >
+                      <Text numberOfLines={1} style={styles.notificationTitle}>
                         {notification.title}
                       </Text>
                     </View>
@@ -176,11 +216,18 @@ export default function StudentNotificationsScreen() {
 }
 
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(value));
+  const date = new Date(value);
+  const today = new Date();
+  const isToday =
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+
+  if (isToday) {
+    return '오늘';
+  }
+
+  return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.`;
 }
 
 const styles = StyleSheet.create({
@@ -190,33 +237,54 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 56,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#F2F4F7',
     backgroundColor: '#FFFFFF',
   },
   headerIconButton: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backIcon: {
+    width: 24,
+    height: 24,
+  },
   headerTitle: {
     flex: 1,
-    color: '#2D2D2D',
-    fontFamily: 'FreesentationExtraBold',
-    fontSize: 24,
+    color: '#1A2035',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 18,
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#FFFFFF',
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 28,
+    paddingTop: 14,
+    paddingBottom: 20,
+  },
+  deleteAllRow: {
+    minHeight: 18,
+    marginBottom: 14,
+    paddingHorizontal: 4,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  deleteAllButton: {
+    minHeight: 18,
+    justifyContent: 'center',
+  },
+  deleteAllText: {
+    color: '#7E7E7E',
+    fontFamily: 'FreesentationRegular',
+    fontSize: 14,
   },
   list: {
     gap: 16,
@@ -235,7 +303,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   notificationCard: {
-    minHeight: 77,
+    minHeight: 78,
     paddingHorizontal: 24,
     paddingVertical: 16,
     justifyContent: 'center',
@@ -244,10 +312,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: '#FFFFFF',
   },
-  unreadCard: {
-    borderColor: '#C7CDEE',
-    backgroundColor: '#F1F3FC',
-  },
   notificationTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -255,35 +319,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   notificationTitle: {
-    color: '#2D2D2D',
+    color: '#000000',
     fontFamily: 'FreesentationSemiBold',
     fontSize: 16,
   },
   titleArea: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  unreadDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#182365',
-  },
-  unreadTitle: {
-    fontFamily: 'FreesentationExtraBold',
   },
   notificationTime: {
-    color: '#9C9C9C',
+    color: '#8C8C8C',
     fontFamily: 'FreesentationRegular',
     fontSize: 12,
   },
   notificationDescription: {
-    marginTop: 10,
-    color: '#2D2D2D',
+    marginTop: 12,
+    color: '#000000',
     fontFamily: 'FreesentationRegular',
-    fontSize: 13,
+    fontSize: 14,
   },
   stateBox: {
     minHeight: 300,

@@ -42,6 +42,26 @@ export async function deleteNotification(id: string) {
   }
 }
 
+export async function deleteAllMyNotifications() {
+  const client = requireClient();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+
+  if (!user) {
+    throw new Error('로그인 정보를 확인하지 못했습니다.');
+  }
+
+  const { error } = await client
+    .from('app_notifications')
+    .delete()
+    .eq('user_id', user.id);
+
+  if (error) {
+    throw new Error('알림을 모두 삭제하지 못했습니다.');
+  }
+}
+
 export async function getUnreadNotificationCount() {
   const { count, error } = await requireClient()
     .from('app_notifications')
