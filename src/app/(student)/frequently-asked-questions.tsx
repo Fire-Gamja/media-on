@@ -20,7 +20,11 @@ import {
   FREQUENTLY_ASKED_QUESTIONS,
   type FrequentlyAskedQuestion,
 } from '../../content/frequently-asked-questions';
-import { translate, translateFaqCategory } from '../../i18n/translations';
+import {
+  translate,
+  translateFaqCategory,
+  translateFaqQuestion,
+} from '../../i18n/translations';
 
 const ALL_CATEGORIES = '__all__';
 
@@ -48,13 +52,20 @@ export default function FrequentlyAskedQuestionsScreen() {
         item.category === selectedCategory;
       const queryMatches =
         !normalizedQuery ||
-        [item.question, item.answer, item.category, ...(item.keywords ?? [])]
+        [
+          item.question,
+          translateFaqQuestion(language, item.id, item.question),
+          item.answer,
+          item.category,
+          translateFaqCategory(language, item.category),
+          ...(item.keywords ?? []),
+        ]
           .map(normalize)
           .some((value) => value.includes(normalizedQuery));
 
       return categoryMatches && queryMatches;
     });
-  }, [query, selectedCategory]);
+  }, [language, query, selectedCategory]);
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
@@ -181,7 +192,9 @@ function QuestionItem({
           <Text style={styles.questionCategory}>
             {translateFaqCategory(language, item.category)}
           </Text>
-          <Text style={styles.questionText}>{item.question}</Text>
+          <Text style={styles.questionText}>
+            {translateFaqQuestion(language, item.id, item.question)}
+          </Text>
         </View>
         <Text style={styles.chevron}>{open ? '⌃' : '⌄'}</Text>
       </View>

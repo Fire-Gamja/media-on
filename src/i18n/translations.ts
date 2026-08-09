@@ -356,6 +356,90 @@ const faqCategoryTranslations: Record<AppLanguage, Record<string, string>> = {
   },
 };
 
+const faqQuestionTranslations: Record<AppLanguage, Record<string, string>> = {
+  ko: {},
+  en: {
+    'general-leave-of-absence': 'How do I apply for a general leave of absence?',
+    'military-leave-of-absence': 'When and how do I apply for military leave?',
+    'early-military-leave': 'Can I take leave more than 30 days before enlistment?',
+    withdrawal: 'How do I apply to withdraw from university?',
+    'official-absence': 'How do I receive an excused-absence form?',
+    'course-registration-site': 'Where can I check course registration and timetables?',
+    'course-registration-guide': 'Where can I check minimum credits and required liberal arts courses?',
+    'multimedia-required-courses': 'Which courses are required for the Multimedia major?',
+    'video-media-required-courses': 'Which courses are required for the Video Media major?',
+    'graduation-requirements': 'Where can I check graduation requirements?',
+    'employment-attendance': 'Who can apply for employment attendance, and how?',
+    'preferred-major-change': 'When can I change my preferred major?',
+    'major-change-course-registration': 'Which major should I follow before changing majors?',
+    'double-major': 'How do I apply for a double major?',
+  },
+  zh: {
+    'general-leave-of-absence': '如何申请普通休学？',
+    'military-leave-of-absence': '何时以及如何申请服兵役休学？',
+    'early-military-leave': '距离入伍超过30天，可以提前休学吗？',
+    withdrawal: '如何申请退学？',
+    'official-absence': '如何开具公假证明？',
+    'course-registration-site': '在哪里查看选课和课程表？',
+    'course-registration-guide': '在哪里查看最低学分和教养必修课程？',
+    'multimedia-required-courses': '多媒体专业的毕业必修课程有哪些？',
+    'video-media-required-courses': '影像媒体专业的毕业必修课程有哪些？',
+    'graduation-requirements': '在哪里查看毕业要求？',
+    'employment-attendance': '哪些人可以申请就业考勤，如何申请？',
+    'preferred-major-change': '什么时候可以申请变更意向专业？',
+    'major-change-course-registration': '变更专业前应按哪个专业选课？',
+    'double-major': '如何申请双专业？',
+  },
+  ja: {
+    'general-leave-of-absence': '一般休学はどのように申請しますか？',
+    'military-leave-of-absence': '兵役休学はいつ、どのように申請しますか？',
+    'early-military-leave': '入隊まで30日以上ある場合、先に休学できますか？',
+    withdrawal: '退学はどのように申請しますか？',
+    'official-absence': '公欠届はどのように発行してもらえますか？',
+    'course-registration-site': '履修登録と時間割はどこで確認できますか？',
+    'course-registration-guide': '最低修得単位と教養必修科目はどこで確認できますか？',
+    'multimedia-required-courses': 'マルチメディア専攻の卒業必修科目は何ですか？',
+    'video-media-required-courses': '映像メディア専攻の卒業必修科目は何ですか？',
+    'graduation-requirements': '卒業要件はどこで確認できますか？',
+    'employment-attendance': '就職届は誰が、どのように申請しますか？',
+    'preferred-major-change': '希望専攻の変更はいつ申請しますか？',
+    'major-change-course-registration': '専攻変更前はどの専攻を基準に履修登録しますか？',
+    'double-major': '複数専攻はどのように申請しますか？',
+  },
+  vi: {
+    'general-leave-of-absence': 'Làm thế nào để xin bảo lưu thông thường?',
+    'military-leave-of-absence': 'Khi nào và làm thế nào để xin bảo lưu vì nghĩa vụ quân sự?',
+    'early-military-leave': 'Có thể bảo lưu sớm khi còn hơn 30 ngày mới nhập ngũ không?',
+    withdrawal: 'Làm thế nào để xin thôi học?',
+    'official-absence': 'Làm thế nào để nhận giấy vắng có phép?',
+    'course-registration-site': 'Xem đăng ký môn học và thời khóa biểu ở đâu?',
+    'course-registration-guide': 'Xem số tín chỉ tối thiểu và môn đại cương bắt buộc ở đâu?',
+    'multimedia-required-courses': 'Các môn bắt buộc để tốt nghiệp ngành Đa phương tiện là gì?',
+    'video-media-required-courses': 'Các môn bắt buộc để tốt nghiệp ngành Truyền thông hình ảnh là gì?',
+    'graduation-requirements': 'Xem điều kiện tốt nghiệp ở đâu?',
+    'employment-attendance': 'Ai có thể đăng ký chuyên cần khi đi làm và đăng ký thế nào?',
+    'preferred-major-change': 'Khi nào có thể đổi chuyên ngành mong muốn?',
+    'major-change-course-registration': 'Trước khi đổi chuyên ngành nên đăng ký môn theo ngành nào?',
+    'double-major': 'Làm thế nào để đăng ký song ngành?',
+  },
+  th: {
+    'general-leave-of-absence': 'จะขอลาพักการศึกษาทั่วไปได้อย่างไร?',
+    'military-leave-of-absence': 'ควรขอลาพักเพื่อรับราชการทหารเมื่อใดและอย่างไร?',
+    'early-military-leave': 'หากเหลือมากกว่า 30 วันก่อนเข้ากรม สามารถลาพักล่วงหน้าได้หรือไม่?',
+    withdrawal: 'จะยื่นคำร้องลาออกจากมหาวิทยาลัยได้อย่างไร?',
+    'official-absence': 'จะขอเอกสารการลาโดยได้รับอนุญาตได้อย่างไร?',
+    'course-registration-site': 'ตรวจสอบการลงทะเบียนและตารางเรียนได้ที่ไหน?',
+    'course-registration-guide': 'ตรวจสอบหน่วยกิตขั้นต่ำและวิชาศึกษาทั่วไปบังคับได้ที่ไหน?',
+    'multimedia-required-courses': 'วิชาบังคับสำหรับจบสาขามัลติมีเดียมีอะไรบ้าง?',
+    'video-media-required-courses': 'วิชาบังคับสำหรับจบสาขาสื่อวิดีโอมีอะไรบ้าง?',
+    'graduation-requirements': 'ตรวจสอบเงื่อนไขการจบการศึกษาได้ที่ไหน?',
+    'employment-attendance': 'ใครสามารถยื่นเรื่องการเข้าเรียนกรณีมีงานทำ และยื่นอย่างไร?',
+    'preferred-major-change': 'สามารถขอเปลี่ยนสาขาที่ต้องการได้เมื่อใด?',
+    'major-change-course-registration': 'ก่อนเปลี่ยนสาขาควรลงทะเบียนตามหลักสูตรสาขาใด?',
+    'double-major': 'จะสมัครวิชาเอกคู่ได้อย่างไร?',
+  },
+};
+
 export function isAppLanguage(value: unknown): value is AppLanguage {
   return LANGUAGE_OPTIONS.some((option) => option.code === value);
 }
@@ -368,4 +452,12 @@ export function translateFaqCategory(
   category: string,
 ) {
   return faqCategoryTranslations[language][category] ?? category;
+}
+
+export function translateFaqQuestion(
+  language: AppLanguage,
+  id: string,
+  fallback: string,
+) {
+  return faqQuestionTranslations[language][id] ?? fallback;
 }
