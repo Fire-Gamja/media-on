@@ -296,7 +296,7 @@ export default function EquipmentScreen() {
                     {selectedHeroImage ? (
                       <ExpoImage
                         accessible={false}
-                        contentFit="contain"
+                        contentFit="cover"
                         source={selectedHeroImage}
                         style={styles.heroImage}
                         transition={150}
@@ -908,6 +908,7 @@ const styles = StyleSheet.create({
     width: 241,
     height: 200,
     borderRadius: 12,
+    overflow: 'hidden',
     backgroundColor: '#FFFFFF',
   },
   heroImagePlaceholderText: {
