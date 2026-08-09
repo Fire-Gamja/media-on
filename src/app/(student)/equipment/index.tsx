@@ -1,13 +1,13 @@
 import { Image as ExpoImage } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -36,6 +36,18 @@ const icons = {
   plus: require('../../../../assets/figma/student-v2/plus-icon.svg'),
 } as const;
 
+const equipmentImages = {
+  djiPocket2: require('../../../../assets/images/equipment/dji-pocket-2.jpg'),
+  dslr: require('../../../../assets/images/equipment/dslr.jpg'),
+  galaxyTab: require('../../../../assets/images/equipment/galaxy-tab.jpg'),
+  gimbal: require('../../../../assets/images/equipment/gimbal.jpg'),
+  notebook: require('../../../../assets/images/equipment/notebook.jpg'),
+  penTablet: require('../../../../assets/images/equipment/pen-tablet.jpg'),
+  projector: require('../../../../assets/images/equipment/projector.jpg'),
+  sdCard: require('../../../../assets/images/equipment/sd-card.jpg'),
+  tripod: require('../../../../assets/images/equipment/tripod.jpg'),
+} as const;
+
 type RentalLine = {
   key: string;
   equipmentId: string;
@@ -51,6 +63,11 @@ type DateSheetState = {
 type QuantitySheetState = {
   lineIndex: number;
 } | null;
+
+const QUANTITY_WHEEL_ITEM_HEIGHT = 56;
+const QUANTITY_WHEEL_VISIBLE_ITEMS = 5;
+const QUANTITY_WHEEL_PADDING =
+  QUANTITY_WHEEL_ITEM_HEIGHT * Math.floor(QUANTITY_WHEEL_VISIBLE_ITEMS / 2);
 
 export default function EquipmentScreen() {
   const { equipmentId: rawEquipmentId } = useLocalSearchParams<{
@@ -124,6 +141,12 @@ export default function EquipmentScreen() {
     items.length > 1
       ? items[(Math.max(0, selectedHeroIndex) + 1) % items.length]
       : null;
+  const selectedHeroImage = selectedHeroItem
+    ? getEquipmentImage(selectedHeroItem.name)
+    : null;
+  const nextHeroImage = nextHeroItem
+    ? getEquipmentImage(nextHeroItem.name)
+    : null;
 
   const selectNextHeroItem = () => {
     if (!nextHeroItem) return;
@@ -270,18 +293,37 @@ export default function EquipmentScreen() {
               {selectedHeroItem ? (
                 <View style={styles.heroContent}>
                   <View style={styles.heroArtwork}>
-                    <View style={styles.heroImagePlaceholder}>
-                      <Text style={styles.heroImagePlaceholderText}>
-                        기자재 이미지
-                      </Text>
-                    </View>
+                    {selectedHeroImage ? (
+                      <ExpoImage
+                        accessible={false}
+                        contentFit="contain"
+                        source={selectedHeroImage}
+                        style={styles.heroImage}
+                        transition={150}
+                      />
+                    ) : (
+                      <View style={styles.heroImagePlaceholder}>
+                        <Text style={styles.heroImagePlaceholderText}>
+                          기자재 이미지
+                        </Text>
+                      </View>
+                    )}
                     {nextHeroItem ? (
                       <Pressable
                         accessibilityLabel={`${nextHeroItem.name} 선택`}
                         onPress={selectNextHeroItem}
                         style={styles.nextPreview}
                       >
-                        <View style={styles.previewPlaceholder} />
+                        {nextHeroImage ? (
+                          <ExpoImage
+                            accessible={false}
+                            contentFit="cover"
+                            source={nextHeroImage}
+                            style={styles.previewImage}
+                          />
+                        ) : (
+                          <View style={styles.previewPlaceholder} />
+                        )}
                       </Pressable>
                     ) : null}
                   </View>
@@ -635,11 +677,29 @@ function QuantitySheet({
   value: number;
   visible: boolean;
 }) {
-  const [draftValue, setDraftValue] = useState(Math.min(value, maximum));
-  const dialValues = Array.from(
-    { length: Math.max(9, maximum + 1) },
-    (_, index) => index,
+  const safeMaximum = Math.max(1, maximum);
+  const initialValue = Math.min(Math.max(1, value), safeMaximum);
+  const [draftValue, setDraftValue] = useState(initialValue);
+  const dialValues = useMemo(
+    () => Array.from({ length: safeMaximum }, (_, index) => index + 1),
+    [safeMaximum],
   );
+  const wheelRef = useRef<FlatList<number>>(null);
+
+  const scrollToQuantity = (quantity: number, animated = true) => {
+    const nextValue = Math.min(Math.max(1, quantity), safeMaximum);
+    setDraftValue(nextValue);
+    wheelRef.current?.scrollToOffset({
+      animated,
+      offset: (nextValue - 1) * QUANTITY_WHEEL_ITEM_HEIGHT,
+    });
+  };
+
+  const updateQuantityFromOffset = (offsetY: number) => {
+    const nextIndex = Math.round(offsetY / QUANTITY_WHEEL_ITEM_HEIGHT);
+    const nextValue = Math.min(Math.max(1, nextIndex + 1), safeMaximum);
+    setDraftValue((current) => (current === nextValue ? current : nextValue));
+  };
 
   return (
     <Modal
@@ -652,42 +712,84 @@ function QuantitySheet({
         <Pressable onPress={onClose} style={styles.modalBackdrop} />
         <SafeAreaView edges={['bottom']} style={styles.quantitySheet}>
           <View style={styles.sheetHandle} />
-          <ScrollView
-            contentContainerStyle={styles.dialContent}
-            showsVerticalScrollIndicator={false}
-            style={styles.dial}
+          <View
+            accessibilityActions={[
+              { name: 'increment', label: '수량 늘리기' },
+              { name: 'decrement', label: '수량 줄이기' },
+            ]}
+            accessibilityLabel={`수량 ${draftValue}개`}
+            accessibilityRole="adjustable"
+            accessibilityValue={{
+              max: safeMaximum,
+              min: 1,
+              now: draftValue,
+              text: `${draftValue}개`,
+            }}
+            onAccessibilityAction={({ nativeEvent }) => {
+              if (nativeEvent.actionName === 'increment') {
+                scrollToQuantity(draftValue + 1);
+              } else if (nativeEvent.actionName === 'decrement') {
+                scrollToQuantity(draftValue - 1);
+              }
+            }}
+            style={styles.dialViewport}
           >
-            {dialValues.map((quantity) => {
-              const distance = Math.abs(quantity - draftValue);
-              const isSelectable = quantity >= 1 && quantity <= maximum;
-              const isSelected = quantity === draftValue;
+            <View pointerEvents="none" style={styles.dialSelection} />
+            <FlatList
+              bounces={false}
+              contentContainerStyle={styles.dialContent}
+              data={dialValues}
+              decelerationRate="fast"
+              disableIntervalMomentum
+              getItemLayout={(_, index) => ({
+                index,
+                length: QUANTITY_WHEEL_ITEM_HEIGHT,
+                offset: QUANTITY_WHEEL_ITEM_HEIGHT * index,
+              })}
+              initialScrollIndex={initialValue - 1}
+              keyExtractor={(quantity) => String(quantity)}
+              onMomentumScrollEnd={({ nativeEvent }) =>
+                updateQuantityFromOffset(nativeEvent.contentOffset.y)
+              }
+              onScroll={({ nativeEvent }) =>
+                updateQuantityFromOffset(nativeEvent.contentOffset.y)
+              }
+              overScrollMode="never"
+              ref={wheelRef}
+              renderItem={({ item: quantity }) => {
+                const signedDistance = quantity - draftValue;
+                const distance = Math.abs(signedDistance);
 
-              return (
-                <Pressable
-                  disabled={!isSelectable}
-                  key={quantity}
-                  onPress={() => setDraftValue(quantity)}
-                  style={[
-                    styles.dialItem,
-                    isSelected && styles.selectedDialItem,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dialText,
-                      distance === 1 && styles.dialTextNear,
-                      distance === 2 && styles.dialTextMid,
-                      distance >= 3 && styles.dialTextFar,
-                      !isSelectable && styles.dialTextDisabled,
-                      isSelected && styles.selectedDialText,
-                    ]}
+                return (
+                  <Pressable
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    onPress={() => scrollToQuantity(quantity)}
+                    style={styles.dialItem}
                   >
-                    {quantity}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                    <Text
+                      style={[
+                        styles.dialText,
+                        distance === 1 && styles.dialTextNear,
+                        distance >= 2 && styles.dialTextFar,
+                        signedDistance < 0 && styles.dialTextAbove,
+                        signedDistance > 0 && styles.dialTextBelow,
+                        distance === 0 && styles.selectedDialText,
+                      ]}
+                    >
+                      {quantity}
+                    </Text>
+                  </Pressable>
+                );
+              }}
+              scrollEnabled={dialValues.length > 1}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={false}
+              snapToAlignment="start"
+              snapToInterval={QUANTITY_WHEEL_ITEM_HEIGHT}
+              style={styles.dial}
+            />
+          </View>
           <Pressable
             onPress={() => onConfirm(draftValue)}
             style={({ pressed }) => [
@@ -730,6 +832,28 @@ function formatKoreanDate(dateKey: string) {
   return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}`;
 }
 
+function getEquipmentImage(name: string): number | null {
+  const normalizedName = name.toLowerCase().replaceAll(' ', '');
+
+  if (normalizedName.includes('dji') && normalizedName.includes('pocket2')) {
+    return equipmentImages.djiPocket2;
+  }
+  if (normalizedName.includes('dslr')) return equipmentImages.dslr;
+  if (normalizedName.includes('갤럭시탭')) return equipmentImages.galaxyTab;
+  if (normalizedName.includes('짐벌') || normalizedName.includes('gimbal')) {
+    return equipmentImages.gimbal;
+  }
+  if (normalizedName.includes('노트북')) return equipmentImages.notebook;
+  if (normalizedName.includes('펜태블릿') || normalizedName.includes('와콤')) {
+    return equipmentImages.penTablet;
+  }
+  if (normalizedName.includes('프로젝터')) return equipmentImages.projector;
+  if (normalizedName.includes('sd카드')) return equipmentImages.sdCard;
+  if (normalizedName.includes('삼각대')) return equipmentImages.tripod;
+
+  return null;
+}
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
   header: {
@@ -763,7 +887,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: '#1B2A4A',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 15,
+    fontSize: 18,
   },
   heroContent: { alignItems: 'center', paddingTop: 24 },
   heroArtwork: {
@@ -780,6 +904,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#EEF0F4',
   },
+  heroImage: {
+    width: 241,
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+  },
   heroImagePlaceholderText: {
     color: '#9AA2B1',
     fontFamily: 'FreesentationSemiBold',
@@ -795,12 +925,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     opacity: 0.4,
   },
+  previewImage: { width: '100%', height: '100%', backgroundColor: '#FFFFFF' },
   previewPlaceholder: { width: '100%', height: '100%', backgroundColor: '#D8DCE4' },
   heroMeta: { alignItems: 'center', gap: 6, paddingTop: 16 },
   heroName: {
     color: '#000000',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 16,
+    fontSize: 14,
   },
   heroDescription: {
     color: '#6B7078',
@@ -811,7 +942,7 @@ const styles = StyleSheet.create({
   heroStock: {
     color: '#000000',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 12,
+    fontSize: 14,
   },
   sectionDivider: { height: 8, backgroundColor: '#F5F6FA' },
   formSection: { paddingHorizontal: 16, paddingTop: 16, gap: 24 },
@@ -824,7 +955,7 @@ const styles = StyleSheet.create({
   additionalTitle: {
     color: '#1B2A4A',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 15,
+    fontSize: 18,
   },
   removeText: {
     color: '#8A94A6',
@@ -835,7 +966,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     color: '#1B2A4A',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 15,
+    fontSize: 18,
   },
   selectField: {
     minHeight: 44,
@@ -876,7 +1007,7 @@ const styles = StyleSheet.create({
   optionText: {
     color: '#333D4B',
     fontFamily: 'FreesentationRegular',
-    fontSize: 13,
+    fontSize: 14,
   },
   dateGroup: { gap: 8 },
   dateRow: { flexDirection: 'row', gap: 12 },
@@ -895,7 +1026,7 @@ const styles = StyleSheet.create({
   dateValue: {
     color: '#333D4B',
     fontFamily: 'FreesentationSemiBold',
-    fontSize: 13,
+    fontSize: 14,
   },
   calendarIcon: { width: 16, height: 16 },
   rangeSummary: {
@@ -1028,35 +1159,49 @@ const styles = StyleSheet.create({
     fontFamily: 'FreesentationExtraBold',
     fontSize: 15,
   },
-  dial: { maxHeight: 390 },
-  dialContent: { alignItems: 'center', paddingVertical: 4 },
+  dialViewport: {
+    position: 'relative',
+    height: QUANTITY_WHEEL_ITEM_HEIGHT * QUANTITY_WHEEL_VISIBLE_ITEMS,
+    overflow: 'hidden',
+  },
+  dial: { flex: 1 },
+  dialContent: {
+    alignItems: 'center',
+    paddingVertical: QUANTITY_WHEEL_PADDING,
+  },
+  dialSelection: {
+    position: 'absolute',
+    top: QUANTITY_WHEEL_PADDING,
+    right: 36,
+    left: 36,
+    height: QUANTITY_WHEEL_ITEM_HEIGHT,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#D7DBE5',
+    backgroundColor: '#F8F9FF',
+  },
   dialItem: {
     width: 271,
-    height: 44,
+    height: QUANTITY_WHEEL_ITEM_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selectedDialItem: {
-    height: 76,
-    borderTopWidth: 2,
-    borderBottomWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#E4E4E7',
-  },
   dialText: {
     color: '#18181B',
-    fontFamily: 'FreesentationRegular',
-    fontSize: 32,
-    opacity: 0.5,
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 38,
+    opacity: 0.14,
   },
-  dialTextNear: { fontSize: 32, opacity: 0.5 },
-  dialTextMid: { fontSize: 24, opacity: 0.3 },
-  dialTextFar: { fontSize: 18, opacity: 0.15 },
-  dialTextDisabled: { opacity: 0.08 },
+  dialTextNear: { fontSize: 32, opacity: 0.45, transform: [{ scale: 0.86 }] },
+  dialTextFar: { fontSize: 26, opacity: 0.14, transform: [{ scale: 0.7 }] },
+  dialTextAbove: { transform: [{ perspective: 600 }, { rotateX: '-32deg' }] },
+  dialTextBelow: { transform: [{ perspective: 600 }, { rotateX: '32deg' }] },
   selectedDialText: {
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 50,
+    fontSize: 48,
     opacity: 1,
+    transform: [{ scale: 1 }],
   },
   disabled: { opacity: 0.55 },
   pressed: { opacity: 0.65 },
