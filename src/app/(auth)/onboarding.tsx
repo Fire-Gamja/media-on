@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
 import {
@@ -24,6 +24,7 @@ const BACKGROUND_IMAGE_ASPECT_RATIO = 16 / 9;
 const BACKGROUND_CROP_POSITION = 0.656;
 
 export default function OnboardingScreen() {
+  const { initialPage } = useLocalSearchParams<{ initialPage?: string }>();
   const { height, width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -38,6 +39,12 @@ export default function OnboardingScreen() {
       useNativeDriver: true,
     }).start();
   }, [entranceProgress]);
+
+  useEffect(() => {
+    if (initialPage === "login") {
+      scrollRef.current?.scrollTo({ x: width, animated: false });
+    }
+  }, [initialPage, width]);
 
   const showLoginPage = () => {
     scrollRef.current?.scrollTo({ x: width, animated: true });
@@ -55,13 +62,16 @@ export default function OnboardingScreen() {
         ref={scrollRef}
         accessibilityRole="adjustable"
         bounces={false}
+        contentOffset={
+          initialPage === "login" ? { x: width, y: 0 } : { x: 0, y: 0 }
+        }
         decelerationRate="fast"
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
       >
+        <SlidingAuthBackground height={height} width={width} />
         <View style={[styles.page, { height, width }]}>
-          <AuthBackground height={height} width={width} />
           <LinearGradient
             colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.16)", "rgba(0,0,0,0)"]}
             locations={[0, 0.5, 1]}
@@ -106,13 +116,12 @@ export default function OnboardingScreen() {
               accessibilityIgnoresInvertColors
               resizeMode="contain"
               source={swipeArrow}
-              style={styles.swipeArrow}
+              style={[styles.swipeArrow, styles.swipeArrowReversed]}
             />
           </Pressable>
         </View>
 
         <View style={[styles.page, { height, width }]}>
-          <AuthBackground height={height} width={width} />
           <View style={[styles.brand, { top: height * 0.574 }]}>
             <Text style={styles.department}>서원대학교</Text>
             <Text style={styles.department}>미디어콘텐츠학부</Text>
@@ -163,11 +172,15 @@ type AuthBackgroundProps = {
   width: number;
 };
 
-function AuthBackground({ height, width }: AuthBackgroundProps) {
-  const imageWidth = Math.max(width, height * BACKGROUND_IMAGE_ASPECT_RATIO);
+function SlidingAuthBackground({ height, width }: AuthBackgroundProps) {
+  const trackWidth = width * 2;
+  const imageWidth = Math.max(trackWidth, height * BACKGROUND_IMAGE_ASPECT_RATIO);
 
   return (
-    <>
+    <View
+      pointerEvents="none"
+      style={[styles.slidingBackground, { height, width: trackWidth }]}
+    >
       <Image
         accessibilityIgnoresInvertColors
         resizeMode="cover"
@@ -176,13 +189,13 @@ function AuthBackground({ height, width }: AuthBackgroundProps) {
           styles.backgroundImage,
           {
             height,
-            left: -(imageWidth - width) * BACKGROUND_CROP_POSITION,
+            left: -(imageWidth - trackWidth) * BACKGROUND_CROP_POSITION,
             width: imageWidth,
           },
         ]}
       />
       <View style={styles.backgroundOverlay} />
-    </>
+    </View>
   );
 }
 
@@ -194,7 +207,12 @@ const styles = StyleSheet.create({
   },
   page: {
     overflow: "hidden",
-    backgroundColor: AUTH_COLORS.background,
+  },
+  slidingBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    overflow: "hidden",
   },
   backgroundImage: {
     position: "absolute",
@@ -252,6 +270,9 @@ const styles = StyleSheet.create({
   swipeArrow: {
     width: 87,
     height: 6,
+  },
+  swipeArrowReversed: {
+    transform: [{ scaleX: -1 }],
   },
   brand: {
     position: "absolute",

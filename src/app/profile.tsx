@@ -201,7 +201,7 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOutUser();
-          router.replace('/login');
+          router.replace({ pathname: '/login', params: { fromLogout: '1' } });
         },
       },
     ]);

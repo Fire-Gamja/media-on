@@ -244,7 +244,7 @@ export default function AdminDesktopHomeScreen() {
     } catch (error) {
       const message = getAuthErrorMessage(error);
       if (message.includes("로그인")) {
-        router.replace("/login");
+        router.replace({ pathname: "/login", params: { fromLogout: "1" } });
       } else {
         setErrorMessage(message);
       }
@@ -521,7 +521,7 @@ export default function AdminDesktopHomeScreen() {
   const handleLogout = () => {
     confirmAction("관리자 계정에서 로그아웃하시겠습니까?", async () => {
       await signOutUser();
-      router.replace("/login");
+      router.replace({ pathname: "/login", params: { fromLogout: "1" } });
     });
   };
 

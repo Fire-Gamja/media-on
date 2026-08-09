@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { COLORS } from '../../constants/colors';
 import {
   NOTICE_COUNT_OPTIONS,
@@ -25,20 +26,20 @@ export default function NoticeSettingsScreen() {
       <StatusBar style="dark" />
 
       <View style={styles.header}>
-        <View style={styles.headerSide} />
-        <Text style={styles.headerTitle}>공지사항 설정</Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="공지사항 설정 닫기"
+          accessibilityLabel="뒤로 가기"
           hitSlop={10}
           onPress={() => router.back()}
           style={({ pressed }) => [
-            styles.closeButton,
+            styles.headerSide,
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.closeText}>×</Text>
+          <PlatformHeaderIcon name="back" />
         </Pressable>
+        <Text style={styles.headerTitle}>공지사항 설정</Text>
+        <View style={styles.headerSide} />
       </View>
 
       <View style={styles.screen}>
@@ -106,8 +107,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   header: {
-    height: 68,
-    paddingHorizontal: 20,
+    height: 56,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -116,116 +117,105 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   headerSide: {
-    width: 44,
-  },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeText: {
-    color: COLORS.text,
-    fontSize: 40,
-    lineHeight: 42,
-    fontWeight: '300',
+  headerTitle: {
+    color: '#2D2D2D',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 20,
   },
   pressed: {
     opacity: 0.6,
   },
   screen: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: COLORS.surface,
   },
   content: {
     paddingHorizontal: 24,
-    paddingTop: 38,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   heading: {
-    color: COLORS.text,
-    fontSize: 25,
-    lineHeight: 36,
-    fontWeight: '800',
+    color: '#111B2C',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 24,
+    lineHeight: 32,
   },
   label: {
-    marginTop: 38,
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '700',
+    marginTop: 32,
+    color: '#111B2C',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 14,
   },
   optionList: {
-    marginTop: 22,
+    marginTop: 20,
     gap: 16,
   },
   optionRow: {
-    minHeight: 68,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
   optionPressed: {
     opacity: 0.72,
   },
   radio: {
-    width: 26,
-    height: 26,
-    marginRight: 14,
+    width: 22,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#8090A0',
-    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#B9C0D4',
+    borderRadius: 11,
     backgroundColor: COLORS.surface,
   },
   radioSelected: {
-    borderWidth: 7,
-    borderColor: '#1688F8',
+    borderWidth: 6,
+    borderColor: '#3550FF',
   },
   radioCenter: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: COLORS.surface,
   },
   optionCard: {
     flex: 1,
-    height: 68,
-    paddingHorizontal: 26,
+    height: 56,
+    paddingHorizontal: 24,
     justifyContent: 'center',
-    borderRadius: 17,
-    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    backgroundColor: '#F4F6FA',
   },
   optionText: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: '700',
+    color: '#111B2C',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 16,
   },
   footer: {
     paddingHorizontal: 24,
-    paddingTop: 18,
-    paddingBottom: 18,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    paddingTop: 16,
+    paddingBottom: 12,
     backgroundColor: COLORS.surface,
   },
   saveButton: {
-    height: 58,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    backgroundColor: '#1688F8',
+    borderRadius: 14,
+    backgroundColor: '#3550FF',
   },
   saveButtonPressed: {
-    backgroundColor: '#0873D7',
+    backgroundColor: '#293FDC',
   },
   saveButtonText: {
     color: COLORS.white,
-    fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'FreesentationExtraBold',
+    fontSize: 16,
   },
 });

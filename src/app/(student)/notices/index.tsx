@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,8 +20,6 @@ import {
   getPublishedNotices,
   type Notice,
 } from '../../../services/notices';
-
-const sirenIcon = require('../../../../assets/figma/student/siren.png');
 
 export default function NoticesScreen() {
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -65,19 +62,10 @@ export default function NoticesScreen() {
         >
           <PlatformHeaderIcon name="back" />
         </Pressable>
-        <Text style={styles.headerTitle}>학과 공지사항</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="홈으로 이동"
-          hitSlop={8}
-          onPress={() => router.replace('/home')}
-          style={({ pressed }) => [
-            styles.headerIconButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <PlatformHeaderIcon name="home" />
-        </Pressable>
+        <Text pointerEvents="none" style={styles.headerTitle}>
+          학부 공지사항
+        </Text>
+        <View style={styles.headerIconButton} />
       </View>
 
       <ScrollView
@@ -128,22 +116,13 @@ export default function NoticesScreen() {
                 ]}
               >
                 <View style={styles.noticeTextArea}>
-                  <View style={styles.titleRow}>
-                    {notice.is_urgent ? (
-                      <Image source={sirenIcon} style={styles.sirenIcon} />
-                    ) : null}
-                    <Text numberOfLines={2} style={styles.title}>
-                      {formatNoticeTitle(
-                        notice.title,
-                        notice.is_urgent,
-                      )}
-                    </Text>
-                  </View>
+                  <Text numberOfLines={2} style={styles.title}>
+                    {formatNoticeTitle(notice.title, notice.is_urgent)}
+                  </Text>
                   <Text style={styles.date}>
                     {formatDate(notice.published_at ?? notice.created_at)}
                   </Text>
                 </View>
-                <Text style={styles.chevron}>›</Text>
               </Pressable>
             ))}
           </View>
@@ -158,9 +137,7 @@ function formatDate(value: string) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
   const day = `${date.getDate()}`.padStart(2, '0');
-  const hour = `${date.getHours()}`.padStart(2, '0');
-  const minute = `${date.getMinutes()}`.padStart(2, '0');
-  return `${year}.${month}.${day}~ ${hour}:${minute}`;
+  return `${year}.${month}.${day}`;
 }
 
 const styles = StyleSheet.create({
@@ -173,78 +150,57 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
     backgroundColor: '#FFFFFF',
   },
   headerIconButton: {
-    width: 38,
-    height: 38,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    flex: 1,
+    position: 'absolute',
+    right: 48,
+    left: 48,
     color: '#2D2D2D',
     fontFamily: 'FreesentationExtraBold',
-    fontSize: 20,
+    fontSize: 18,
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#FFFFFF',
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 28,
+    paddingBottom: 20,
   },
-  list: {
-    gap: 16,
-  },
+  list: {},
   noticeRow: {
-    minHeight: 77,
-    paddingHorizontal: 24,
+    minHeight: 78,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#F2F2F2',
-    borderRadius: 16,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F2',
     backgroundColor: '#FFFFFF',
   },
   noticeTextArea: {
     flex: 1,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 7,
-  },
-  sirenIcon: {
-    width: 18,
-    height: 18,
-    marginTop: 1,
-    resizeMode: 'contain',
-  },
   title: {
-    flex: 1,
-    color: '#2D2D2D',
+    color: '#000000',
     fontFamily: 'FreesentationSemiBold',
     fontSize: 16,
     lineHeight: 21,
   },
   date: {
-    marginTop: 8,
-    color: '#2D2D2D',
+    marginTop: 12,
+    color: '#000000',
     fontFamily: 'FreesentationRegular',
-    fontSize: 13,
-  },
-  chevron: {
-    color: '#5C5C5C',
-    fontFamily: 'FreesentationRegular',
-    fontSize: 34,
-    lineHeight: 36,
+    fontSize: 14,
   },
   stateBox: {
     minHeight: 300,

@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
@@ -29,6 +29,7 @@ const eyeIcon = require("../../../assets/figma/auth/eye.png");
 type LoginStep = "identifier" | "password";
 
 export default function LoginScreen() {
+  const { fromLogout } = useLocalSearchParams<{ fromLogout?: string }>();
   const [step, setStep] = useState<LoginStep>("identifier");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +45,14 @@ export default function LoginScreen() {
     if (step === "password") {
       setPassword("");
       setStep("identifier");
+      return;
+    }
+
+    if (fromLogout === "1") {
+      router.replace({
+        pathname: "/onboarding",
+        params: { initialPage: "login" },
+      });
       return;
     }
 

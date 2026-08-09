@@ -120,7 +120,9 @@ export default function StudentScheduleScreen() {
             <PlatformHeaderIcon name="back" />
           </Pressable>
 
-          <Text style={styles.headerTitle}>일정 등록</Text>
+          <Text pointerEvents="none" style={styles.headerTitle}>
+            일정 등록
+          </Text>
 
           <View style={styles.headerIconButton} />
         </View>
@@ -396,6 +398,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
     backgroundColor: '#FFFFFF',
@@ -407,10 +410,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    flex: 1,
+    position: 'absolute',
+    right: 48,
+    left: 48,
     color: '#2D2D2D',
     fontFamily: 'FreesentationExtraBold',
     fontSize: 20,
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,

@@ -64,7 +64,7 @@ export function LegalAgreementGate({ children }: PropsWithChildren) {
 
   const signOut = async () => {
     await signOutUser();
-    router.replace('/login');
+    router.replace({ pathname: '/login', params: { fromLogout: '1' } });
   };
 
   if (status === 'allowed') {

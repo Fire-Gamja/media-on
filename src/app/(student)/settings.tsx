@@ -119,7 +119,7 @@ export default function StudentSettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOutUser();
-          router.replace('/login');
+          router.replace({ pathname: '/login', params: { fromLogout: '1' } });
         },
       },
     ]);
