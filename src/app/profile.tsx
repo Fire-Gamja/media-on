@@ -22,6 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FormField from '../components/common/FormField';
+import { BottomSheetModal } from '../components/common/BottomSheetModal';
 import { PlatformHeaderIcon } from '../components/common/PlatformHeaderIcon';
 import PrimaryButton from '../components/common/PrimaryButton';
 import { COLORS } from '../constants/colors';
@@ -506,62 +507,55 @@ export default function ProfileScreen() {
         )}
       </KeyboardAvoidingView>
 
-      <Modal
-        animationType="slide"
+      <BottomSheetModal
+        accessibilityLabel="정보 수정 닫기"
+        backdropColor="rgba(0,0,0,0.3)"
         onRequestClose={closeProfileEditor}
-        transparent
         visible={editingField !== null}
       >
-        <View style={styles.editModalBackdrop}>
-          <Pressable
-            accessibilityLabel="정보 수정 닫기"
-            onPress={closeProfileEditor}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.editSheet}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.editSheetTitle}>
-              {editingField === 'major'
-                ? '전공'
-                : editingField === 'status'
-                  ? '학적 상태'
-                  : '휴대폰번호'}
-            </Text>
-            {editingField === 'major' ? (
-              <SelectionGroup
-                label=""
-                options={MAJORS.map((value) => ({ label: value, value }))}
-                selectedValue={major}
-                onSelect={setMajor}
-              />
-            ) : editingField === 'status' ? (
-              <SelectionGroup
-                label=""
-                options={ENROLLMENT_STATUSES.map((value) => ({
-                  label: value,
-                  value,
-                }))}
-                selectedValue={enrollmentStatus}
-                onSelect={setEnrollmentStatus}
-              />
-            ) : (
-              <FormField
-                label="휴대폰번호"
-                value={phoneNumber}
-                onChangeText={(value) => setPhoneNumber(formatPhoneNumber(value))}
-                keyboardType="phone-pad"
-                maxLength={13}
-                placeholder="010-0000-0000"
-              />
-            )}
-            <PrimaryButton
-              title="선택 완료"
-              loading={isSaving}
-              onPress={() => void handleSave()}
+        <View style={styles.editSheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.editSheetTitle}>
+            {editingField === 'major'
+              ? '전공'
+              : editingField === 'status'
+                ? '학적 상태'
+                : '휴대폰번호'}
+          </Text>
+          {editingField === 'major' ? (
+            <SelectionGroup
+              label=""
+              options={MAJORS.map((value) => ({ label: value, value }))}
+              selectedValue={major}
+              onSelect={setMajor}
             />
-          </View>
+          ) : editingField === 'status' ? (
+            <SelectionGroup
+              label=""
+              options={ENROLLMENT_STATUSES.map((value) => ({
+                label: value,
+                value,
+              }))}
+              selectedValue={enrollmentStatus}
+              onSelect={setEnrollmentStatus}
+            />
+          ) : (
+            <FormField
+              label="휴대폰번호"
+              value={phoneNumber}
+              onChangeText={(value) => setPhoneNumber(formatPhoneNumber(value))}
+              keyboardType="phone-pad"
+              maxLength={13}
+              placeholder="010-0000-0000"
+            />
+          )}
+          <PrimaryButton
+            title="선택 완료"
+            loading={isSaving}
+            onPress={() => void handleSave()}
+          />
         </View>
-      </Modal>
+      </BottomSheetModal>
 
       <Modal
         animationType="fade"
@@ -1111,11 +1105,6 @@ const styles = StyleSheet.create({
     color: '#666666',
     fontSize: 14,
     lineHeight: 21,
-  },
-  editModalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   editSheet: {
     padding: 20,

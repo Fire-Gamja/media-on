@@ -18,6 +18,7 @@ import MonthCalendar, {
   fromDateKey,
   toDateKey,
 } from '../../components/student/MonthCalendar';
+import { BottomSheetModal } from '../../components/common/BottomSheetModal';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import { TimeSelectField } from '../../components/common/TimeSelectField';
 import { maskProfanityInput } from '../../lib/content-filter';
@@ -261,52 +262,45 @@ export default function StudentScheduleScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal
-        animationType="fade"
+      <BottomSheetModal
+        accessibilityLabel="날짜 선택 닫기"
+        backdropColor="rgba(0, 0, 0, 0.45)"
         onRequestClose={() => setDateField(null)}
-        transparent
         visible={dateField !== null}
       >
-        <View style={styles.modalBackdrop}>
-          <Pressable
-            accessibilityLabel="날짜 선택 닫기"
-            onPress={() => setDateField(null)}
-            style={StyleSheet.absoluteFill}
+        <View style={styles.calendarSheet}>
+          <View style={styles.sheetHandle} />
+          <MonthCalendar
+            month={visibleMonth}
+            onChangeMonth={setVisibleMonth}
+            onSelectDate={setDraftDate}
+            selectedDate={draftDate}
+            showMonthControls
           />
-          <View style={styles.calendarSheet}>
-            <View style={styles.sheetHandle} />
-            <MonthCalendar
-              month={visibleMonth}
-              onChangeMonth={setVisibleMonth}
-              onSelectDate={setDraftDate}
-              selectedDate={draftDate}
-              showMonthControls
-            />
-            <View style={styles.calendarActions}>
-              <Pressable
-                onPress={() => setDateField(null)}
-                style={({ pressed }) => [
-                  styles.calendarCancel,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.calendarCancelText}>취소</Text>
-              </Pressable>
-              <Pressable
-                onPress={applyDate}
-                style={({ pressed }) => [
-                  styles.calendarConfirm,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.calendarConfirmText}>
-                  {selectedDateLabel} 선택
-                </Text>
-              </Pressable>
-            </View>
+          <View style={styles.calendarActions}>
+            <Pressable
+              onPress={() => setDateField(null)}
+              style={({ pressed }) => [
+                styles.calendarCancel,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.calendarCancelText}>취소</Text>
+            </Pressable>
+            <Pressable
+              onPress={applyDate}
+              style={({ pressed }) => [
+                styles.calendarConfirm,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.calendarConfirmText}>
+                {selectedDateLabel} 선택
+              </Text>
+            </Pressable>
           </View>
         </View>
-      </Modal>
+      </BottomSheetModal>
 
       <Modal
         animationType="fade"
@@ -545,11 +539,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.68,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   calendarSheet: {
     paddingHorizontal: 20,

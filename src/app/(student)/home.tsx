@@ -28,6 +28,7 @@ import MonthCalendar, {
   toDateKey,
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
+import { BottomSheetModal } from '../../components/common/BottomSheetModal';
 import { useAppSettings } from '../../context/app-settings-context';
 import { useNoticeSettings } from '../../context/notice-settings-context';
 import { translate, type TranslationKey } from '../../i18n/translations';
@@ -992,42 +993,35 @@ export default function StudentHomeScreen() {
         <AppIcon color="#FFFFFF" monochrome name="assistant" size={29} />
       </Pressable>
 
-      <Modal
-        animationType="fade"
+      <BottomSheetModal
+        accessibilityLabel="일정 메뉴 닫기"
+        backdropColor="rgba(0, 0, 0, 0.45)"
         onRequestClose={() => setSelectedDate(null)}
-        transparent
         visible={selectedDate !== null}
       >
-        <View style={styles.modalBackdrop}>
+        <View style={styles.dateSheet}>
+          <Text style={styles.dateSheetTitle}>
+            {selectedDate ? formatSelectedDate(selectedDate) : ''}
+          </Text>
           <Pressable
-            accessibilityLabel="일정 메뉴 닫기"
-            onPress={() => setSelectedDate(null)}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.dateSheet}>
-            <Text style={styles.dateSheetTitle}>
-              {selectedDate ? formatSelectedDate(selectedDate) : ''}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="선택한 날짜에 일정 추가"
-              onPress={() => {
-                const date = selectedDate;
-                setSelectedDate(null);
-                if (date) {
-                  router.push({ pathname: '/schedule', params: { date } });
-                }
-              }}
-              style={({ pressed }) => [
-                styles.addScheduleButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.addScheduleText}>+</Text>
-            </Pressable>
-          </View>
+            accessibilityRole="button"
+            accessibilityLabel="선택한 날짜에 일정 추가"
+            onPress={() => {
+              const date = selectedDate;
+              setSelectedDate(null);
+              if (date) {
+                router.push({ pathname: '/schedule', params: { date } });
+              }
+            }}
+            style={({ pressed }) => [
+              styles.addScheduleButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.addScheduleText}>+</Text>
+          </Pressable>
         </View>
-      </Modal>
+      </BottomSheetModal>
       <Modal
         animationType="fade"
         onRequestClose={() => void dismissHomePopup(false)}
@@ -1947,11 +1941,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.65,
-  },
-  modalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   dateSheet: {
     minHeight: 162,

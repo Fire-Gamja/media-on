@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -17,6 +16,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { InlineDropdown } from '../../components/common/InlineDropdown';
+import { BottomSheetModal } from '../../components/common/BottomSheetModal';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
 import MonthCalendar, {
   fromDateKey,
@@ -476,44 +476,37 @@ function DateRangeSheet({
   };
 
   return (
-    <Modal
-      animationType="fade"
+    <BottomSheetModal
+      accessibilityLabel="날짜 선택 닫기"
+      backdropColor="rgba(0, 0, 0, 0.5)"
       onRequestClose={onClose}
-      transparent
       visible={visible}
     >
-      <View style={styles.modalRoot}>
-        <Pressable
-          accessibilityLabel="날짜 선택 닫기"
-          onPress={onClose}
-          style={styles.modalBackdrop}
+      <SafeAreaView edges={['bottom']} style={styles.dateSheet}>
+        <View style={styles.sheetHandle} />
+        <MonthCalendar
+          minimumDate={minimumDate}
+          month={month}
+          onChangeMonth={setMonth}
+          onSelectDate={selectDate}
+          selectedEndDate={draftEnd}
+          selectedStartDate={draftStart}
+          showMonthControls
         />
-        <SafeAreaView edges={['bottom']} style={styles.dateSheet}>
-          <View style={styles.sheetHandle} />
-          <MonthCalendar
-            minimumDate={minimumDate}
-            month={month}
-            onChangeMonth={setMonth}
-            onSelectDate={selectDate}
-            selectedEndDate={draftEnd}
-            selectedStartDate={draftStart}
-            showMonthControls
-          />
-          <Pressable
-            onPress={() => onConfirm(draftStart, draftEnd)}
-            style={({ pressed }) => [
-              styles.sheetConfirmButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.sheetConfirmText}>
-              {formatKoreanDate(draftStart)} ~ {formatKoreanDate(draftEnd)} (총{' '}
-              {inclusiveDays(draftStart, draftEnd)}일)
-            </Text>
-          </Pressable>
-        </SafeAreaView>
-      </View>
-    </Modal>
+        <Pressable
+          onPress={() => onConfirm(draftStart, draftEnd)}
+          style={({ pressed }) => [
+            styles.sheetConfirmButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.sheetConfirmText}>
+            {formatKoreanDate(draftStart)} ~ {formatKoreanDate(draftEnd)} (총{' '}
+            {inclusiveDays(draftStart, draftEnd)}일)
+          </Text>
+        </Pressable>
+      </SafeAreaView>
+    </BottomSheetModal>
   );
 }
 
@@ -555,19 +548,13 @@ function TimeWheelSheet({
   };
 
   return (
-    <Modal
-      animationType="fade"
+    <BottomSheetModal
+      accessibilityLabel={`${label} 선택 닫기`}
+      backdropColor="rgba(0, 0, 0, 0.5)"
       onRequestClose={onClose}
-      transparent
       visible={visible}
     >
-      <View style={styles.modalRoot}>
-        <Pressable
-          accessibilityLabel={`${label} 선택 닫기`}
-          onPress={onClose}
-          style={styles.modalBackdrop}
-        />
-        <SafeAreaView edges={['bottom']} style={styles.timeSheet}>
+      <SafeAreaView edges={['bottom']} style={styles.timeSheet}>
           <View style={styles.sheetHandle} />
           <View
             accessibilityActions={[
@@ -655,9 +642,8 @@ function TimeWheelSheet({
           >
             <Text style={styles.sheetConfirmText}>확인</Text>
           </Pressable>
-        </SafeAreaView>
-      </View>
-    </Modal>
+      </SafeAreaView>
+    </BottomSheetModal>
   );
 }
 
@@ -863,15 +849,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'FreesentationExtraBold',
     fontSize: 14,
-  },
-  modalRoot: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   dateSheet: {
     paddingHorizontal: 16,

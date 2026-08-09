@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../constants/colors';
+import { BottomSheetModal } from './BottomSheetModal';
 
 type TimeSelectFieldProps = {
   label: string;
@@ -42,70 +42,60 @@ export function TimeSelectField({
         <Text style={styles.chevron}>⌄</Text>
       </Pressable>
 
-      <Modal
-        animationType="slide"
+      <BottomSheetModal
+        accessibilityLabel={`${label} 선택 닫기`}
+        backdropColor="rgba(0, 0, 0, 0.42)"
         onRequestClose={() => setIsOpen(false)}
-        transparent
         visible={isOpen}
       >
-        <Pressable
-          accessibilityLabel={`${label} 선택 닫기`}
-          onPress={() => setIsOpen(false)}
-          style={styles.backdrop}
-        >
-          <SafeAreaView edges={['bottom']} style={styles.sheet}>
-            <Pressable>
-              <View style={styles.sheetHeader}>
-                <Text style={styles.sheetTitle}>{label}</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  hitSlop={10}
-                  onPress={() => setIsOpen(false)}
-                >
-                  <Text style={styles.close}>닫기</Text>
-                </Pressable>
-              </View>
-              <FlatList
-                data={options}
-                keyExtractor={(item) => item}
-                contentContainerStyle={styles.optionList}
-                style={styles.list}
-                renderItem={({ item }) => {
-                  const isSelected = value === item;
-
-                  return (
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: isSelected }}
-                      onPress={() => {
-                        onChange(item);
-                        setIsOpen(false);
-                      }}
-                      style={({ pressed }) => [
-                        styles.option,
-                        isSelected && styles.optionSelected,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          isSelected && styles.optionTextSelected,
-                        ]}
-                      >
-                        {item}
-                      </Text>
-                      {isSelected ? (
-                        <Text style={styles.check}>✓</Text>
-                      ) : null}
-                    </Pressable>
-                  );
-                }}
-              />
+        <SafeAreaView edges={['bottom']} style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{label}</Text>
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => setIsOpen(false)}
+            >
+              <Text style={styles.close}>닫기</Text>
             </Pressable>
-          </SafeAreaView>
-        </Pressable>
-      </Modal>
+          </View>
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item}
+            contentContainerStyle={styles.optionList}
+            style={styles.list}
+            renderItem={({ item }) => {
+              const isSelected = value === item;
+
+              return (
+                <Pressable
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  onPress={() => {
+                    onChange(item);
+                    setIsOpen(false);
+                  }}
+                  style={({ pressed }) => [
+                    styles.option,
+                    isSelected && styles.optionSelected,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.optionText,
+                      isSelected && styles.optionTextSelected,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                  {isSelected ? <Text style={styles.check}>✓</Text> : null}
+                </Pressable>
+              );
+            }}
+          />
+        </SafeAreaView>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -139,11 +129,6 @@ const styles = StyleSheet.create({
   chevron: {
     color: COLORS.subText,
     fontSize: 20,
-  },
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.42)',
   },
   sheet: {
     maxHeight: '72%',
