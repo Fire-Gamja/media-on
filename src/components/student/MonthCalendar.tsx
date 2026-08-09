@@ -9,6 +9,9 @@ const calendarIcons = {
 type MonthCalendarProps = {
   month: Date;
   selectedDate?: string | null;
+  selectedStartDate?: string | null;
+  selectedEndDate?: string | null;
+  minimumDate?: string | null;
   eventDates?: ReadonlySet<string>;
   onSelectDate?: (date: string) => void;
   onChangeMonth?: (month: Date) => void;
@@ -26,6 +29,9 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 export default function MonthCalendar({
   month,
   selectedDate,
+  selectedStartDate,
+  selectedEndDate,
+  minimumDate,
   eventDates,
   onSelectDate,
   onChangeMonth,
@@ -106,15 +112,27 @@ export default function MonthCalendar({
         {weeks.map((week) => (
           <View key={week[0].dateKey} style={styles.dateRow}>
             {week.map((cell, weekday) => {
-              const isSelected = selectedDate === cell.dateKey;
+              const isRangeStart = selectedStartDate === cell.dateKey;
+              const isRangeEnd = selectedEndDate === cell.dateKey;
+              const isInRange = Boolean(
+                selectedStartDate &&
+                  selectedEndDate &&
+                  cell.dateKey > selectedStartDate &&
+                  cell.dateKey < selectedEndDate,
+              );
+              const isSelected =
+                selectedDate === cell.dateKey || isRangeStart || isRangeEnd;
               const isToday = todayKey === cell.dateKey;
               const hasEvent = eventDates?.has(cell.dateKey) === true;
+              const isDisabled = Boolean(
+                minimumDate && cell.dateKey < minimumDate,
+              );
 
               return (
                 <Pressable
                   key={cell.dateKey}
                   accessibilityRole={onSelectDate ? 'button' : undefined}
-                  disabled={!onSelectDate}
+                  disabled={!onSelectDate || isDisabled}
                   onPress={() => onSelectDate?.(cell.dateKey)}
                   style={({ pressed }) => [
                     styles.cell,
@@ -125,6 +143,7 @@ export default function MonthCalendar({
                     style={[
                       styles.dateCircle,
                       hasEvent && styles.dateCircleEvent,
+                      isInRange && styles.dateCircleInRange,
                       isToday && styles.dateCircleToday,
                       isSelected && styles.dateCircleSelected,
                     ]}
@@ -133,6 +152,7 @@ export default function MonthCalendar({
                       style={[
                         styles.dateText,
                         !cell.isCurrentMonth && styles.otherMonth,
+                        isDisabled && styles.disabledDate,
                         weekday === 0 && styles.sunday,
                         weekday === 6 && styles.saturday,
                         isToday && styles.dateTextToday,
@@ -256,6 +276,9 @@ const styles = StyleSheet.create({
   dateCircleEvent: {
     backgroundColor: '#EBF0FF',
   },
+  dateCircleInRange: {
+    backgroundColor: '#EEF1FF',
+  },
   dateText: {
     color: '#1E2024',
     fontFamily: 'FreesentationRegular',
@@ -271,6 +294,9 @@ const styles = StyleSheet.create({
   },
   otherMonth: {
     opacity: 0.35,
+  },
+  disabledDate: {
+    opacity: 0.25,
   },
   sunday: {
     color: '#FF6464',

@@ -158,6 +158,36 @@ export async function createEquipmentRentalRequest(
   await sendPushNotificationEvent('equipment_request_submitted', data.id);
 }
 
+export async function createEquipmentRentalRequests(
+  inputs: readonly EquipmentRentalInput[],
+) {
+  if (inputs.length === 0) return;
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('equipment_rental_requests')
+    .insert(
+      inputs.map((input) => ({
+        equipment_id: input.equipmentId,
+        quantity: input.quantity,
+        pickup_date: input.pickupDate,
+        return_date: input.returnDate,
+        purpose: maskProfanity(input.purpose),
+      })),
+    )
+    .select('id');
+
+  if (error || !data || data.length !== inputs.length) {
+    throw new Error('기자재 대여를 신청하지 못했습니다.');
+  }
+
+  await Promise.all(
+    data.map(({ id }: { id: string }) =>
+      sendPushNotificationEvent('equipment_request_submitted', id),
+    ),
+  );
+}
+
 export async function getMyEquipmentRentalRequests(
   limit?: number,
 ): Promise<EquipmentRentalRequest[]> {
