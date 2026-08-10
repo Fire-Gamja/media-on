@@ -53,8 +53,9 @@ const MAJORS = [
   '멀티미디어전공',
   '전공 미정',
 ] as const;
+const GRADES = [1, 2, 3, 4] as const;
 const ENROLLMENT_STATUSES = ['재학', '휴학', '졸업', '제적·자퇴'] as const;
-type EditableProfileField = 'major' | 'status' | 'phone';
+type EditableProfileField = 'grade' | 'major' | 'status' | 'phone';
 
 const AVATAR_MODAL_DISMISS_FALLBACK_MS = 400;
 
@@ -87,7 +88,10 @@ export default function ProfileScreen() {
   );
   const [editingField, setEditingField] =
     useState<EditableProfileField | null>(null);
+  const lastEditingFieldRef = useRef<EditableProfileField>('grade');
   const [showPasswordEditor, setShowPasswordEditor] = useState(false);
+  const renderedEditingField =
+    editingField ?? lastEditingFieldRef.current;
 
   const applyProfile = useCallback((nextProfile: StudentProfile) => {
     setProfile(nextProfile);
@@ -280,6 +284,11 @@ export default function ProfileScreen() {
       applyProfile(profile);
     }
     setEditingField(null);
+  };
+
+  const openProfileEditor = (field: EditableProfileField) => {
+    lastEditingFieldRef.current = field;
+    setEditingField(field);
   };
 
   const handleSave = async () => {
@@ -528,23 +537,28 @@ export default function ProfileScreen() {
                   <Text style={styles.sectionTitle}>{translate(language, 'profile.basicInfo')}</Text>
                   <ProfileInfoRow label={translate(language, 'profile.name')} value={profile.name} />
                   <ProfileInfoRow label={translate(language, 'profile.studentNumber')} value={profile.student_number} />
-                  <ProfileInfoRow label={translate(language, 'profile.grade')} value={`${profile.grade}${language === 'ko' ? '학년' : ''}`} />
+                  <ProfileInfoRow
+                    editable
+                    label={translate(language, 'profile.grade')}
+                    onEdit={() => openProfileEditor('grade')}
+                    value={`${profile.grade}${language === 'ko' ? '학년' : ''}`}
+                  />
                   <ProfileInfoRow
                     editable
                     label={translate(language, 'profile.major')}
-                    onEdit={() => setEditingField('major')}
+                    onEdit={() => openProfileEditor('major')}
                     value={major}
                   />
                   <ProfileInfoRow
                     editable
                     label={translate(language, 'profile.status')}
-                    onEdit={() => setEditingField('status')}
+                    onEdit={() => openProfileEditor('status')}
                     value={enrollmentStatus}
                   />
                   <ProfileInfoRow
                     editable
                     label={translate(language, 'profile.phone')}
-                    onEdit={() => setEditingField('phone')}
+                    onEdit={() => openProfileEditor('phone')}
                     value={phoneNumber}
                   />
                 </View>
@@ -590,20 +604,49 @@ export default function ProfileScreen() {
         <View style={styles.editSheet}>
           <View style={styles.sheetHandle} />
           <Text style={styles.editSheetTitle}>
-            {editingField === 'major'
-              ? '전공'
-              : editingField === 'status'
-                ? '학적 상태'
-                : '휴대폰번호'}
+            {renderedEditingField === 'grade'
+              ? '학년'
+              : renderedEditingField === 'major'
+                ? '전공'
+                : renderedEditingField === 'status'
+                  ? '학적 상태'
+                  : '휴대폰번호'}
           </Text>
-          {editingField === 'major' ? (
+          {renderedEditingField === 'grade' ? (
+            <>
+              <SelectionGroup
+                label=""
+                options={GRADES.map((value) => ({
+                  label: `${value}학년`,
+                  value,
+                }))}
+                selectedValue={grade}
+                onSelect={(value) => {
+                  setGrade(value);
+                  if (value === 1) {
+                    setMajor('전공 미정');
+                  }
+                }}
+              />
+              {grade > 1 && major === '전공 미정' ? (
+                <SelectionGroup
+                  label="전공을 선택해 주세요"
+                  options={MAJORS.filter(
+                    (value) => value !== '전공 미정',
+                  ).map((value) => ({ label: value, value }))}
+                  selectedValue={major}
+                  onSelect={setMajor}
+                />
+              ) : null}
+            </>
+          ) : renderedEditingField === 'major' ? (
             <SelectionGroup
               label=""
               options={MAJORS.map((value) => ({ label: value, value }))}
               selectedValue={major}
               onSelect={setMajor}
             />
-          ) : editingField === 'status' ? (
+          ) : renderedEditingField === 'status' ? (
             <SelectionGroup
               label=""
               options={ENROLLMENT_STATUSES.map((value) => ({
@@ -627,6 +670,7 @@ export default function ProfileScreen() {
             title="선택 완료"
             loading={isSaving}
             onPress={() => void handleSave()}
+            style={isSaving ? undefined : styles.editSaveButton}
           />
         </View>
       </BottomSheetModal>
@@ -786,6 +830,9 @@ function SelectionGroup<T extends string | number>({
               ]}
             >
               <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.8}
+                numberOfLines={1}
                 style={[
                   styles.optionText,
                   isSelected && styles.optionTextSelected,
@@ -1061,12 +1108,12 @@ const styles = StyleSheet.create({
   },
   optionWrap: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
   },
   optionButton: {
+    flex: 1,
     minHeight: 42,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -1202,5 +1249,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     textAlign: 'center',
+  },
+  editSaveButton: {
+    backgroundColor: '#3550FF',
   },
 });
