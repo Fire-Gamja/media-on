@@ -13,6 +13,8 @@ export type StudentTabId =
   | 'timetable'
   | 'my';
 
+export const STUDENT_BOTTOM_NAV_HEIGHT = 64;
+
 const TABS: ReadonlyArray<{
   id: StudentTabId;
   labelKey: TranslationKey;
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tabs: {
-    height: 64,
+    height: STUDENT_BOTTOM_NAV_HEIGHT,
     flexDirection: 'row',
     alignItems: 'stretch',
   },

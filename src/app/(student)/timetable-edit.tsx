@@ -133,7 +133,7 @@ export default function TimetableEditScreen() {
             <Field compact label={translate(language, 'timetable.room')} onChangeText={setRoom} placeholder="BA-101" value={room} />
           </View>
 
-          <Text style={styles.fieldLabel}>{translate(language, 'timetable.weekday')}</Text>
+          <Text style={[styles.fieldLabel, styles.standaloneFieldLabel]}>{translate(language, 'timetable.weekday')}</Text>
           <View style={styles.segmentRow}>
             {WEEKDAYS.map((item) => (
               <Pressable key={item.value} onPress={() => setWeekday(item.value)} style={[styles.segment, weekday === item.value && styles.segmentSelected]}>
@@ -161,7 +161,7 @@ export default function TimetableEditScreen() {
             />
           </View>
 
-          <Text style={styles.fieldLabel}>{translate(language, 'timetable.credits')}</Text>
+          <Text style={[styles.fieldLabel, styles.standaloneFieldLabel]}>{translate(language, 'timetable.credits')}</Text>
           <View style={styles.creditRow}>
             {[1, 2, 3].map((credit) => (
               <Pressable key={credit} onPress={() => setCredits(credit)} style={[styles.creditButton, credits === credit && styles.creditSelected]}>
@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
   field: { marginTop: 18 },
   compactField: { flex: 1 },
   fieldLabel: { marginBottom: 8, color: '#343943', fontFamily: 'FreesentationSemiBold', fontSize: 14 },
+  standaloneFieldLabel: { marginTop: 8 },
   input: { height: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: '#DDE0E6', borderRadius: 13, color: '#222630', fontFamily: 'FreesentationRegular', fontSize: 15, backgroundColor: '#FFFFFF' },
   twoColumns: { flexDirection: 'row', gap: 10 },
   segmentRow: { marginBottom: 20, flexDirection: 'row', gap: 7 },

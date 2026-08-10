@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import {
   SafeAreaView,
+  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
 import MonthCalendar, {
@@ -27,7 +28,10 @@ import MonthCalendar, {
 } from '../../components/student/MonthCalendar';
 import { AppIcon } from '../../components/common/AppIcon';
 import { BottomSheetModal } from '../../components/common/BottomSheetModal';
-import { StudentBottomNavigation } from '../../components/student/StudentBottomNavigation';
+import {
+  STUDENT_BOTTOM_NAV_HEIGHT,
+  StudentBottomNavigation,
+} from '../../components/student/StudentBottomNavigation';
 import {
   QUICK_MENU_ITEM_BY_ID,
   type QuickMenuId,
@@ -129,6 +133,7 @@ const FALLBACK_NOTICES: HomeNotice[] = [
 
 export default function StudentHomeScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { language } = useAppSettings();
   const { noticeCount } = useNoticeSettings();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -953,7 +958,7 @@ export default function StudentHomeScreen() {
         onPress={() => router.push('/assistant-inquiry')}
         style={({ pressed }) => [
           styles.floatingInquiry,
-          { bottom: 84 },
+          { bottom: STUDENT_BOTTOM_NAV_HEIGHT + insets.bottom + 24 },
           pressed && styles.pressed,
         ]}
       >

@@ -15,7 +15,6 @@ const icons = {
   report: require('../../../assets/figma/student-v2/toolbox.svg'),
   graduation: require('../../../assets/figma/student-v2/book-open.svg'),
   notice: require('../../../assets/figma/student-v2/notice-banner-icon.svg'),
-  message: require('../../../assets/figma/student-v2/message-square.svg'),
 } as const;
 
 const APPLICATIONS: ReadonlyArray<{
@@ -72,13 +71,6 @@ export default function ApplicationsScreen() {
           <Text style={styles.hoursText}>{translate(language, 'applications.hoursText')}</Text>
         </View>
       </ScrollView>
-      <Pressable
-        accessibilityLabel={translate(language, 'home.assistant')}
-        onPress={() => router.push('/assistant-inquiry')}
-        style={styles.floatingButton}
-      >
-        <Image contentFit="contain" source={icons.message} style={styles.floatingIcon} />
-      </Pressable>
       <StudentBottomNavigation activeTab="applications" />
     </SafeAreaView>
   );
@@ -119,7 +111,5 @@ const styles = StyleSheet.create({
   hoursCard: { marginTop: 22, padding: 17, borderRadius: 16, backgroundColor: '#F5F6FA' },
   hoursTitle: { color: '#1E2024', fontFamily: 'FreesentationExtraBold', fontSize: 14 },
   hoursText: { marginTop: 6, color: '#646A76', fontFamily: 'FreesentationRegular', fontSize: 12, lineHeight: 18 },
-  floatingButton: { position: 'absolute', right: 18, bottom: 84, width: 48, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24, backgroundColor: '#141E46', elevation: 6 },
-  floatingIcon: { width: 22, height: 22, tintColor: '#FFFFFF' },
   pressed: { opacity: 0.64 },
 });
