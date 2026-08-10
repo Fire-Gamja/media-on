@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import {
   Alert,
@@ -8,30 +9,25 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AuthButton from '../../components/auth/AuthButton';
+import AuthField from '../../components/auth/AuthField';
 import { PlatformHeaderIcon } from '../../components/common/PlatformHeaderIcon';
+import {
+  AUTH_COLORS,
+  AUTH_FONTS,
+} from '../../constants/auth-theme';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import {
   getAuthErrorMessage,
   registerStudent,
 } from '../../services/auth';
 
-const COLORS = {
-  navy: '#182366',
-  white: '#FFFFFF',
-  background: '#F7F8FC',
-  border: '#D9DDEB',
-  text: '#111827',
-  subText: '#6B7280',
-  placeholder: '#9CA3AF',
-  selectedBackground: '#E9ECF8',
-  error: '#DC2626',
-};
+const eyeIcon = require('../../../assets/figma/auth/eye.png');
 
 const GRADES = ['1학년', '2학년', '3학년', '4학년'] as const;
 
@@ -254,113 +250,111 @@ export default function SignUpScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={styles.safeArea}
+    >
+      <StatusBar style="light" />
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.header}>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          contentContainerStyle={styles.scrollContent}
+          keyboardDismissMode={
+            Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+          }
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <Pressable
             onPress={handlePrevious}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="이전 화면으로 이동"
-          >
-            <PlatformHeaderIcon name="back" />
-          </Pressable>
-
-          <Text style={styles.headerTitle}>회원가입</Text>
-
-          <Text style={styles.stepText}>{step}/3</Text>
-        </View>
-
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${(step / 3) * 100}%` },
-            ]}
-          />
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {step === 1 && (
-            <StepOne
-              name={name}
-              studentNumber={studentNumber}
-              password={password}
-              passwordConfirm={passwordConfirm}
-              showPassword={showPassword}
-              passwordIsValid={passwordIsValid}
-              passwordMatches={passwordMatches}
-              onChangeName={setName}
-              onChangeStudentNumber={setStudentNumber}
-              onChangePassword={setPassword}
-              onChangePasswordConfirm={setPasswordConfirm}
-              onTogglePassword={() =>
-                setShowPassword((previous) => !previous)
-              }
-            />
-          )}
-
-          {step === 2 && (
-            <StepTwo
-              grade={grade}
-              major={major}
-              enrollmentStatus={enrollmentStatus}
-              onChangeGrade={(selectedGrade) => {
-                setGrade(selectedGrade);
-
-                if (selectedGrade === '1학년') {
-                  setMajor('전공 미정');
-                } else if (major === '전공 미정') {
-                  setMajor(null);
-                }
-              }}
-              onChangeMajor={setMajor}
-              onChangeEnrollmentStatus={setEnrollmentStatus}
-            />
-          )}
-
-          {step === 3 && (
-            <StepThree
-              phoneNumber={phoneNumber}
-              privacyAgreed={privacyAgreed}
-              termsAgreed={termsAgreed}
-              onChangePhoneNumber={(value) =>
-                setPhoneNumber(formattedPhoneNumber(value))
-              }
-              onChangePrivacyAgreed={setPrivacyAgreed}
-              onChangeTermsAgreed={setTermsAgreed}
-            />
-          )}
-        </ScrollView>
-
-        <View style={styles.bottomArea}>
-          <Pressable
             style={({ pressed }) => [
-              styles.nextButton,
-              isSubmitting && styles.nextButtonDisabled,
-              pressed && !isSubmitting && styles.buttonPressed,
+              styles.backButton,
+              pressed && styles.buttonPressed,
             ]}
-            onPress={
-              step === 3 ? () => void handleSubmit() : handleNext
-            }
-            disabled={isSubmitting}
           >
-            <Text style={styles.nextButtonText}>
-              {step === 3
-                ? isSubmitting
-                  ? '신청 중...'
-                  : '가입 신청'
-                : '다음'}
-            </Text>
+            <PlatformHeaderIcon
+              color={AUTH_COLORS.text}
+              name="back"
+              size={30}
+            />
           </Pressable>
-        </View>
+
+          <Text
+            accessibilityLabel={`회원가입 ${step}단계, 전체 3단계`}
+            style={styles.stepText}
+          >
+            {step}/3
+          </Text>
+
+          <View style={styles.formContent}>
+            {step === 1 ? (
+              <StepOne
+                name={name}
+                studentNumber={studentNumber}
+                password={password}
+                passwordConfirm={passwordConfirm}
+                showPassword={showPassword}
+                passwordIsValid={passwordIsValid}
+                passwordMatches={passwordMatches}
+                onChangeName={setName}
+                onChangeStudentNumber={setStudentNumber}
+                onChangePassword={setPassword}
+                onChangePasswordConfirm={setPasswordConfirm}
+                onTogglePassword={() =>
+                  setShowPassword((previous) => !previous)
+                }
+              />
+            ) : null}
+
+            {step === 2 ? (
+              <StepTwo
+                grade={grade}
+                major={major}
+                enrollmentStatus={enrollmentStatus}
+                onChangeGrade={(selectedGrade) => {
+                  setGrade(selectedGrade);
+
+                  if (selectedGrade === '1학년') {
+                    setMajor('전공 미정');
+                  } else if (major === '전공 미정') {
+                    setMajor(null);
+                  }
+                }}
+                onChangeMajor={setMajor}
+                onChangeEnrollmentStatus={setEnrollmentStatus}
+              />
+            ) : null}
+
+            {step === 3 ? (
+              <StepThree
+                phoneNumber={phoneNumber}
+                privacyAgreed={privacyAgreed}
+                termsAgreed={termsAgreed}
+                onChangePhoneNumber={(value) =>
+                  setPhoneNumber(formattedPhoneNumber(value))
+                }
+                onChangePrivacyAgreed={setPrivacyAgreed}
+                onChangeTermsAgreed={setTermsAgreed}
+              />
+            ) : null}
+
+            <AuthButton
+              title={step === 3 ? '가입 신청' : '다음'}
+              loading={isSubmitting}
+              onPress={
+                step === 3 ? () => void handleSubmit() : handleNext
+              }
+              style={styles.nextButton}
+            />
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -402,77 +396,69 @@ function StepOne({
         description="가입 승인 확인을 위해 정확한 정보를 입력해 주세요."
       />
 
-      <FormField label="이름">
-        <TextInput
+      <View style={styles.fieldList}>
+        <AuthField
+          label="이름"
           value={name}
           onChangeText={onChangeName}
-          style={styles.input}
           placeholder="이름을 입력해 주세요"
-          placeholderTextColor={COLORS.placeholder}
           autoCorrect={false}
           returnKeyType="next"
         />
-      </FormField>
 
-      <FormField label="학번">
-        <TextInput
+        <AuthField
+          label="학번"
           value={studentNumber}
           onChangeText={(value) =>
             onChangeStudentNumber(value.replace(/\D/g, ''))
           }
-          style={styles.input}
           placeholder="학번을 입력해 주세요"
-          placeholderTextColor={COLORS.placeholder}
           keyboardType="number-pad"
           maxLength={20}
+          returnKeyType="next"
         />
-      </FormField>
 
-      <FormField label="비밀번호">
-        <View style={styles.passwordContainer}>
-          <TextInput
-            value={password}
-            onChangeText={onChangePassword}
-            style={styles.passwordInput}
-            placeholder="영문·숫자 포함 8자 이상"
-            placeholderTextColor={COLORS.placeholder}
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Pressable onPress={onTogglePassword} hitSlop={10}>
-            <Text style={styles.passwordToggle}>
-              {showPassword ? '숨기기' : '보기'}
-            </Text>
-          </Pressable>
-        </View>
-
-        {password.length > 0 && !passwordIsValid && (
-          <Text style={styles.errorText}>
-            영문과 숫자를 포함해 8자 이상 입력해 주세요.
-          </Text>
-        )}
-      </FormField>
-
-      <FormField label="비밀번호 확인">
-        <TextInput
-          value={passwordConfirm}
-          onChangeText={onChangePasswordConfirm}
-          style={styles.input}
-          placeholder="비밀번호를 다시 입력해 주세요"
-          placeholderTextColor={COLORS.placeholder}
+        <AuthField
+          label="비밀번호"
+          value={password}
+          onChangeText={onChangePassword}
+          placeholder="영문·숫자 포함 8자 이상"
           secureTextEntry={!showPassword}
           autoCapitalize="none"
           autoCorrect={false}
+          errorMessage={
+            password.length > 0 && !passwordIsValid
+              ? '영문과 숫자를 포함해 8자 이상 입력해 주세요.'
+              : undefined
+          }
+          rightActionLabel={
+            showPassword ? '비밀번호 숨기기' : '비밀번호 보기'
+          }
+          rightActionIcon={eyeIcon}
+          onRightActionPress={onTogglePassword}
         />
 
-        {passwordConfirm.length > 0 && !passwordMatches && (
-          <Text style={styles.errorText}>
-            비밀번호가 일치하지 않습니다.
-          </Text>
-        )}
-      </FormField>
+        <AuthField
+          label="비밀번호 확인"
+          value={passwordConfirm}
+          onChangeText={onChangePasswordConfirm}
+          placeholder="비밀번호를 다시 입력해 주세요"
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          errorMessage={
+            passwordConfirm.length > 0 && !passwordMatches
+              ? '비밀번호가 일치하지 않습니다.'
+              : undefined
+          }
+          rightActionLabel={
+            showPassword ? '비밀번호 숨기기' : '비밀번호 보기'
+          }
+          rightActionIcon={eyeIcon}
+          onRightActionPress={onTogglePassword}
+          returnKeyType="done"
+        />
+      </View>
     </>
   );
 }
@@ -558,17 +544,17 @@ function StepThree({
         description="가입 승인 결과와 계정 복구에 사용됩니다."
       />
 
-      <FormField label="휴대전화번호">
-        <TextInput
+      <View style={styles.fieldList}>
+        <AuthField
+          label="휴대전화번호"
           value={phoneNumber}
           onChangeText={onChangePhoneNumber}
-          style={styles.input}
           placeholder="010-0000-0000"
-          placeholderTextColor={COLORS.placeholder}
           keyboardType="phone-pad"
           maxLength={13}
+          returnKeyType="done"
         />
-      </FormField>
+      </View>
 
       <View style={styles.agreementBox}>
         <AgreementRow
@@ -633,20 +619,6 @@ function SectionHeader({
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <Text style={styles.sectionDescription}>{description}</Text>
-    </View>
-  );
-}
-
-type FormFieldProps = {
-  label: string;
-  children: React.ReactNode;
-};
-
-function FormField({ label, children }: FormFieldProps) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      {children}
     </View>
   );
 }
@@ -753,114 +725,67 @@ function AgreementRow({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: AUTH_COLORS.background,
   },
   keyboardView: {
     flex: 1,
   },
-  header: {
-    height: 58,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 36,
   },
-  backText: {
+  backButton: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 15,
+    left: 16,
     width: 30,
-    color: COLORS.navy,
-    fontSize: 38,
-    lineHeight: 40,
-  },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: '800',
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stepText: {
-    width: 30,
-    color: COLORS.subText,
+    position: 'absolute',
+    top: 18,
+    right: 20,
+    color: AUTH_COLORS.subText,
+    fontFamily: AUTH_FONTS.semiBold,
     fontSize: 14,
-    fontWeight: '700',
+    lineHeight: 20,
     textAlign: 'right',
   },
-  progressTrack: {
-    height: 4,
-    backgroundColor: COLORS.border,
-  },
-  progressFill: {
-    height: 4,
-    backgroundColor: COLORS.navy,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    paddingBottom: 40,
+  formContent: {
+    paddingTop: 126,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
-    marginBottom: 32,
+    marginBottom: 28,
   },
   sectionTitle: {
-    color: COLORS.text,
-    fontSize: 25,
-    lineHeight: 34,
-    fontWeight: '800',
+    maxWidth: 334,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.extraBold,
+    fontSize: 24,
+    lineHeight: 28,
   },
   sectionDescription: {
-    marginTop: 10,
-    color: COLORS.subText,
+    marginTop: 8,
+    color: AUTH_COLORS.subText,
+    fontFamily: AUTH_FONTS.regular,
     fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 20,
   },
-  field: {
-    marginBottom: 22,
+  fieldList: {
+    gap: 18,
   },
   label: {
     marginBottom: 9,
-    color: COLORS.text,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  input: {
-    height: 56,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    backgroundColor: COLORS.white,
-    color: COLORS.text,
-    fontSize: 16,
-  },
-  passwordContainer: {
-    height: 56,
-    paddingLeft: 16,
-    paddingRight: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    backgroundColor: COLORS.white,
-  },
-  passwordInput: {
-    flex: 1,
-    height: '100%',
-    color: COLORS.text,
-    fontSize: 16,
-  },
-  passwordToggle: {
-    color: COLORS.navy,
+    color: AUTH_COLORS.subText,
+    fontFamily: AUTH_FONTS.semiBold,
     fontSize: 14,
-    fontWeight: '700',
-  },
-  errorText: {
-    marginTop: 8,
-    color: COLORS.error,
-    fontSize: 12,
-    lineHeight: 18,
   },
   selectionSection: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   optionContainer: {
     flexDirection: 'row',
@@ -873,29 +798,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    backgroundColor: COLORS.white,
+    borderColor: AUTH_COLORS.inputBorder,
+    borderRadius: 4,
+    backgroundColor: AUTH_COLORS.input,
   },
   optionButtonSelected: {
-    borderColor: COLORS.navy,
-    backgroundColor: COLORS.selectedBackground,
+    borderColor: AUTH_COLORS.primary,
+    backgroundColor: AUTH_COLORS.primary,
   },
   optionText: {
-    color: COLORS.subText,
+    color: AUTH_COLORS.subText,
+    fontFamily: AUTH_FONTS.semiBold,
     fontSize: 14,
-    fontWeight: '600',
   },
   optionTextSelected: {
-    color: COLORS.navy,
-    fontWeight: '800',
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.extraBold,
   },
   agreementBox: {
-    padding: 18,
+    marginTop: 24,
+    padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    backgroundColor: COLORS.white,
+    borderColor: AUTH_COLORS.inputBorder,
+    borderRadius: 4,
+    backgroundColor: AUTH_COLORS.input,
   },
   agreementRow: {
     minHeight: 48,
@@ -911,84 +837,67 @@ const styles = StyleSheet.create({
   agreementDivider: {
     height: 1,
     marginVertical: 5,
-    backgroundColor: COLORS.border,
+    backgroundColor: AUTH_COLORS.inputBorder,
   },
   checkbox: {
-    width: 23,
-    height: 23,
-    marginRight: 12,
+    width: 22,
+    height: 22,
+    marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 6,
-    backgroundColor: COLORS.white,
+    borderColor: AUTH_COLORS.inputFocused,
+    borderRadius: 4,
+    backgroundColor: AUTH_COLORS.background,
   },
   checkboxSelected: {
-    borderColor: COLORS.navy,
-    backgroundColor: COLORS.navy,
+    borderColor: AUTH_COLORS.primary,
+    backgroundColor: AUTH_COLORS.primary,
   },
   checkboxMark: {
-    color: COLORS.white,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.extraBold,
     fontSize: 15,
-    fontWeight: '800',
   },
   agreementText: {
     flex: 1,
-    color: COLORS.text,
+    color: AUTH_COLORS.text,
+    fontFamily: AUTH_FONTS.regular,
     fontSize: 14,
     lineHeight: 20,
   },
   agreementTextEmphasized: {
-    fontWeight: '800',
+    fontFamily: AUTH_FONTS.extraBold,
   },
   agreementView: {
-    color: COLORS.navy,
+    color: AUTH_COLORS.link,
+    fontFamily: AUTH_FONTS.semiBold,
     fontSize: 12,
-    fontWeight: '800',
     textDecorationLine: 'underline',
   },
   approvalGuide: {
-    marginTop: 24,
-    padding: 18,
-    borderRadius: 14,
-    backgroundColor: COLORS.selectedBackground,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 4,
+    backgroundColor: AUTH_COLORS.overlay,
   },
   approvalGuideTitle: {
-    color: COLORS.navy,
+    color: AUTH_COLORS.link,
+    fontFamily: AUTH_FONTS.extraBold,
     fontSize: 14,
-    fontWeight: '800',
   },
   approvalGuideText: {
     marginTop: 8,
-    color: COLORS.subText,
+    color: AUTH_COLORS.subText,
+    fontFamily: AUTH_FONTS.regular,
     fontSize: 13,
     lineHeight: 20,
   },
-  bottomArea: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 12 : 20,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.white,
-  },
   nextButton: {
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: COLORS.navy,
-  },
-  nextButtonText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  nextButtonDisabled: {
-    opacity: 0.55,
+    marginTop: 38,
+    marginBottom: 12,
   },
   buttonPressed: {
-    opacity: 0.8,
+    opacity: 0.65,
   },
 });
