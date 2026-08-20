@@ -38,7 +38,12 @@ export default function RootLayout() {
               screenOptions={{
                 headerShown: false,
               }}
-            />
+            >
+              <Stack.Screen
+                name="profile"
+                options={{ animation: 'none', gestureEnabled: false }}
+              />
+            </Stack>
           </AppSettingsProvider>
         </SafeAreaProvider>
       </KeyboardProvider>

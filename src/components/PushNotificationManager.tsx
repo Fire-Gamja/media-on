@@ -5,7 +5,10 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { supabase } from '../lib/supabase';
-import { registerCurrentDeviceForPush } from '../services/push-notifications';
+import {
+  registerCurrentDeviceForPush,
+  requestRequiredNotificationPermission,
+} from '../services/push-notifications';
 
 export function PushNotificationManager() {
   useEffect(() => {
@@ -27,8 +30,18 @@ export function PushNotificationManager() {
       }
     };
 
-    void registerIfSignedIn().catch((error) => {
-      console.warn('푸시 알림 등록에 실패했습니다.', error);
+    const initializePushNotifications = async () => {
+      const granted = await requestRequiredNotificationPermission();
+
+      if (!isMounted || !granted) {
+        return;
+      }
+
+      await registerIfSignedIn();
+    };
+
+    void initializePushNotifications().catch((error) => {
+      console.warn('푸시 알림 초기화에 실패했습니다.', error);
     });
 
     const {

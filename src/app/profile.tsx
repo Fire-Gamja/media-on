@@ -26,6 +26,7 @@ import { BottomSheetModal } from '../components/common/BottomSheetModal';
 import { PlatformHeaderIcon } from '../components/common/PlatformHeaderIcon';
 import PrimaryButton from '../components/common/PrimaryButton';
 import { StudentBottomNavigation } from '../components/student/StudentBottomNavigation';
+import { StudentTopBar } from '../components/student/StudentTopBar';
 import { COLORS } from '../constants/colors';
 import { useAppSettings } from '../context/app-settings-context';
 import { translate } from '../i18n/translations';
@@ -397,10 +398,10 @@ export default function ProfileScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.header}>
-          {isMyTab && !showPasswordEditor ? (
-            <View style={styles.headerSpacer} />
-          ) : (
+        {isMyTab && !showPasswordEditor ? (
+          <StudentTopBar />
+        ) : (
+          <View style={styles.header}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="뒤로 가기"
@@ -410,16 +411,16 @@ export default function ProfileScreen() {
             >
               <PlatformHeaderIcon name="back" />
             </Pressable>
-          )}
-          <Text style={styles.headerTitle}>
-            {isPasswordChangeRequired
-              ? '새 비밀번호 설정'
-              : showPasswordEditor
-                ? '비밀번호 변경'
-                : translate(language, 'profile.title')}
-          </Text>
-          <View style={styles.headerSpacer} />
-        </View>
+            <Text style={styles.headerTitle}>
+              {isPasswordChangeRequired
+                ? '새 비밀번호 설정'
+                : showPasswordEditor
+                  ? '비밀번호 변경'
+                  : translate(language, 'profile.title')}
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+        )}
 
         {isLoading ? (
           <View style={styles.stateBox}>

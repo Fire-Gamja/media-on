@@ -13,7 +13,24 @@ export default function StudentLayout() {
             screenOptions={{
               headerShown: false,
             }}
-          />
+          >
+            <Stack.Screen
+              name="home"
+              options={{ animation: 'none', gestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="notices/index"
+              options={{ animation: 'none', gestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="applications"
+              options={{ animation: 'none', gestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="timetable"
+              options={{ animation: 'none', gestureEnabled: false }}
+            />
+          </Stack>
         </NoticeSettingsProvider>
       </LegalAgreementGate>
     </StudentAccessGate>
