@@ -7,6 +7,8 @@ export type Notice = {
   content: string;
   is_published: boolean;
   is_urgent: boolean;
+  is_pinned: boolean;
+  expires_at: string | null;
   urgent_resend_count: number;
   last_urgent_resent_at: string | null;
   published_at: string | null;
@@ -19,6 +21,8 @@ export type NoticeInput = {
   content: string;
   isPublished: boolean;
   isUrgent: boolean;
+  isPinned?: boolean;
+  expiresAt?: string | null;
 };
 
 const requireSupabase = () => {
@@ -30,7 +34,7 @@ const requireSupabase = () => {
 };
 
 const noticeColumns =
-  'id, title, content, is_published, is_urgent, urgent_resend_count, last_urgent_resent_at, published_at, created_at, updated_at';
+  'id, title, content, is_published, is_urgent, is_pinned, expires_at, urgent_resend_count, last_urgent_resent_at, published_at, created_at, updated_at';
 
 export function formatNoticeTitle(title: string, isUrgent: boolean) {
   const titleWithoutUrgentLabel = title
@@ -48,6 +52,8 @@ export async function getPublishedNotices(limit?: number): Promise<Notice[]> {
     .from('notices')
     .select(noticeColumns)
     .eq('is_published', true)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .order('is_pinned', { ascending: false })
     .order('is_urgent', { ascending: false })
     .order('published_at', { ascending: false });
 
@@ -85,6 +91,8 @@ export async function getAdminNotices(): Promise<Notice[]> {
   const { data, error } = await client
     .from('notices')
     .select(noticeColumns)
+    .order('is_pinned', { ascending: false })
+    .order('is_urgent', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -118,6 +126,8 @@ export async function createNotice(input: NoticeInput) {
       content: input.content.trim(),
       is_published: input.isPublished,
       is_urgent: input.isUrgent,
+      ...(input.isPinned === undefined ? {} : { is_pinned: input.isPinned }),
+      ...(input.expiresAt === undefined ? {} : { expires_at: input.expiresAt }),
       published_at: input.isPublished ? new Date().toISOString() : null,
     })
     .select('id')
@@ -152,6 +162,8 @@ export async function updateNotice(id: string, input: NoticeInput) {
       content: input.content.trim(),
       is_published: input.isPublished,
       is_urgent: input.isUrgent,
+      ...(input.isPinned === undefined ? {} : { is_pinned: input.isPinned }),
+      ...(input.expiresAt === undefined ? {} : { expires_at: input.expiresAt }),
       published_at: input.isPublished
         ? (currentNotice.published_at ?? new Date().toISOString())
         : null,
