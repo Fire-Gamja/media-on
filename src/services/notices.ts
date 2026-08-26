@@ -9,11 +9,20 @@ export type Notice = {
   is_urgent: boolean;
   is_pinned: boolean;
   expires_at: string | null;
+  attachments: NoticeAttachment[];
   urgent_resend_count: number;
   last_urgent_resent_at: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type NoticeAttachment = {
+  path: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  kind: 'image' | 'file';
 };
 
 export type NoticeInput = {
@@ -34,7 +43,8 @@ const requireSupabase = () => {
 };
 
 const noticeColumns =
-  'id, title, content, is_published, is_urgent, is_pinned, expires_at, urgent_resend_count, last_urgent_resent_at, published_at, created_at, updated_at';
+  'id, title, content, is_published, is_urgent, is_pinned, expires_at, attachments, urgent_resend_count, last_urgent_resent_at, published_at, created_at, updated_at';
+const noticeAttachmentsBucket = 'notice-attachments';
 
 export function formatNoticeTitle(title: string, isUrgent: boolean) {
   const titleWithoutUrgentLabel = title
@@ -84,6 +94,32 @@ export async function getPublishedNotice(id: string): Promise<Notice> {
   }
 
   return data as Notice;
+}
+
+export async function getNoticeAttachmentUrls(
+  attachments: NoticeAttachment[],
+): Promise<Record<string, string>> {
+  if (attachments.length === 0) {
+    return {};
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client.storage
+    .from(noticeAttachmentsBucket)
+    .createSignedUrls(
+      attachments.map((attachment) => attachment.path),
+      60 * 60,
+    );
+
+  if (error) {
+    throw new Error('공지 첨부파일을 불러오지 못했습니다.');
+  }
+
+  return Object.fromEntries(
+    (data ?? [])
+      .filter((item) => item.signedUrl)
+      .map((item) => [item.path, item.signedUrl]),
+  );
 }
 
 export async function getAdminNotices(): Promise<Notice[]> {

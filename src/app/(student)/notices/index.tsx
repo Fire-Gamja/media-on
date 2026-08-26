@@ -110,6 +110,13 @@ export default function NoticesScreen() {
                   <Text style={styles.date}>
                     {formatDate(notice.published_at ?? notice.created_at)}
                   </Text>
+                  {notice.attachments.length > 0 ? (
+                    <View style={styles.attachmentBadge}>
+                      <Text style={styles.attachmentBadgeText}>
+                        첨부 {notice.attachments.length}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </Pressable>
             ))}
@@ -191,6 +198,19 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontFamily: 'FreesentationRegular',
     fontSize: 14,
+  },
+  attachmentBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#EEF1FF',
+  },
+  attachmentBadgeText: {
+    color: '#3550FF',
+    fontFamily: 'FreesentationSemiBold',
+    fontSize: 11,
   },
   stateBox: {
     minHeight: 300,
