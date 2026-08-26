@@ -68,7 +68,11 @@ export default function TimetableScreen() {
           <View style={styles.grid}>
             <View style={styles.gridHeader}>
               <View style={styles.timeHeader} />
-              {WEEKDAYS.map((day) => <Text key={day} style={styles.dayHeader}>{day}</Text>)}
+              {WEEKDAYS.map((day) => (
+                <View key={day} style={styles.dayHeaderCell}>
+                  <Text style={styles.dayHeader}>{day}</Text>
+                </View>
+              ))}
             </View>
             {Array.from({ length: 8 }, (_, index) => {
               const period = index + 1;
@@ -145,7 +149,8 @@ const styles = StyleSheet.create({
   grid: { width: TIME_WIDTH + CELL_WIDTH * 5, height: HEADER_HEIGHT + PERIOD_HEIGHT * 8, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   gridHeader: { height: HEADER_HEIGHT, flexDirection: 'row', backgroundColor: '#F7F8FA' },
   timeHeader: { width: TIME_WIDTH, borderRightWidth: 1, borderColor: '#E6E8ED' },
-  dayHeader: { width: CELL_WIDTH, textAlign: 'center', textAlignVertical: 'center', color: '#535965', fontFamily: 'FreesentationSemiBold', fontSize: 12 },
+  dayHeaderCell: { width: CELL_WIDTH, height: HEADER_HEIGHT, alignItems: 'center', justifyContent: 'center' },
+  dayHeader: { color: '#535965', fontFamily: 'FreesentationSemiBold', fontSize: 12, textAlign: 'center' },
   periodRow: { height: PERIOD_HEIGHT, flexDirection: 'row' },
   timeCell: { width: TIME_WIDTH, alignItems: 'center', justifyContent: 'center', borderTopWidth: 1, borderRightWidth: 1, borderColor: '#E6E8ED' },
   periodNumber: { color: '#414753', fontFamily: 'FreesentationExtraBold', fontSize: 11 },
